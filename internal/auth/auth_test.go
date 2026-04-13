@@ -266,7 +266,7 @@ func TestDeleteToken_ClearsConfig(t *testing.T) {
 		t.Fatal("config file should still exist")
 	}
 
-	apiKey, _ := cfg["api_key"]
+	apiKey := cfg["api_key"]
 	if apiKey != nil && apiKey != "" {
 		t.Errorf("api_key should be empty after delete, got %v", apiKey)
 	}

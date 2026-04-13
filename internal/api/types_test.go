@@ -87,9 +87,7 @@ func TestProject_NilOptionalFields(t *testing.T) {
 	}
 
 	// nil pointer fields should serialize as null (present in JSON)
-	if _, exists := raw["icon_url"]; !exists {
-		// The field exists but is null, which is expected for pointer types
-	}
+	_ = raw["icon_url"] // verifying it exists - null is expected for pointer types
 }
 
 func TestApp_JSONRoundTrip(t *testing.T) {
