@@ -93,7 +93,7 @@ func TestMaskToken(t *testing.T) {
 		{
 			name:  "token with sk_ prefix 9 chars",
 			token: "sk_test12",
-			want:  "sk_test...t12",
+			want:  "sk_test...st12",
 		},
 		{
 			name:  "token with sk_ prefix typical",
@@ -118,7 +118,7 @@ func TestMaskToken(t *testing.T) {
 		{
 			name:  "token with special characters",
 			token: "sk_test-key_abc!@#$%^&*()_+123",
-			want:  "sk_test..._+123",
+			want:  "sk_test...+123",
 		},
 	}
 

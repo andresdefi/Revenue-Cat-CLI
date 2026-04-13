@@ -246,17 +246,18 @@ func TestPrint_TableFormat(t *testing.T) {
 	})
 
 	// Table output should contain headers and rows
+	// go-pretty StyleLight renders headers in uppercase
 	if !strings.Contains(output, "ID") {
-		t.Error("table output should contain 'ID' header")
+		t.Errorf("table output should contain 'ID' header, got: %q", output)
 	}
-	if !strings.Contains(output, "Name") {
-		t.Error("table output should contain 'Name' header")
+	if !strings.Contains(output, "NAME") {
+		t.Errorf("table output should contain 'NAME' header, got: %q", output)
 	}
 	if !strings.Contains(output, "Alice") {
-		t.Error("table output should contain 'Alice'")
+		t.Errorf("table output should contain 'Alice', got: %q", output)
 	}
 	if !strings.Contains(output, "Bob") {
-		t.Error("table output should contain 'Bob'")
+		t.Errorf("table output should contain 'Bob', got: %q", output)
 	}
 }
 
