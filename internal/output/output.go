@@ -1,0 +1,65 @@
+package output
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+)
+
+// Format is the output format type.
+type Format string
+
+const (
+	FormatTable Format = "table"
+	FormatJSON  Format = "json"
+)
+
+// Print outputs data in the specified format.
+func Print(format Format, data any, tableRenderer func(t table.Writer)) {
+	switch format {
+	case FormatJSON:
+		printJSON(data)
+	default:
+		printTable(tableRenderer)
+	}
+}
+
+func printJSON(data any) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(data)
+}
+
+func printTable(renderer func(t table.Writer)) {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.SetStyle(table.StyleLight)
+	renderer(t)
+	t.Render()
+}
+
+// FormatTimestamp converts a millisecond epoch timestamp to a human-readable string.
+func FormatTimestamp(ms int64) string {
+	return time.UnixMilli(ms).Format("2006-01-02 15:04")
+}
+
+// Deref safely dereferences a string pointer, returning a fallback if nil.
+func Deref(s *string, fallback string) string {
+	if s == nil {
+		return fallback
+	}
+	return *s
+}
+
+// Success prints a success message to stderr (keeps stdout clean for piping).
+func Success(msg string, args ...any) {
+	fmt.Fprintf(os.Stderr, "  "+msg+"\n", args...)
+}
+
+// Warn prints a warning message to stderr.
+func Warn(msg string, args ...any) {
+	fmt.Fprintf(os.Stderr, "  Warning: "+msg+"\n", args...)
+}
