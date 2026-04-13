@@ -20,6 +20,7 @@ func NewProjectsCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 
 	root.AddCommand(newListCmd(outputFormat))
+	root.AddCommand(newCreateCmd(outputFormat))
 	root.AddCommand(newSetDefaultCmd())
 	return root
 }
@@ -48,16 +49,53 @@ func newListCmd(outputFormat *string) *cobra.Command {
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Name", "Created"})
 				for _, p := range resp.Items {
-					t.AppendRow(table.Row{
-						p.ID,
-						p.Name,
-						output.FormatTimestamp(p.CreatedAt),
-					})
+					t.AppendRow(table.Row{p.ID, p.Name, output.FormatTimestamp(p.CreatedAt)})
 				}
 			})
 			return nil
 		},
 	}
+}
+
+func newCreateCmd(outputFormat *string) *cobra.Command {
+	var name string
+
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a new project",
+		RunE: func(c *cobra.Command, args []string) error {
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			data, err := client.Post("/projects", map[string]any{"name": name})
+			if err != nil {
+				return err
+			}
+
+			var project api.Project
+			if err := json.Unmarshal(data, &project); err != nil {
+				return fmt.Errorf("failed to parse response: %w", err)
+			}
+
+			format := cmdutil.GetOutputFormat(outputFormat)
+			output.Print(format, project, func(t table.Writer) {
+				t.AppendHeader(table.Row{"Field", "Value"})
+				t.AppendRows([]table.Row{
+					{"ID", project.ID},
+					{"Name", project.Name},
+					{"Created", output.FormatTimestamp(project.CreatedAt)},
+				})
+			})
+			output.Success("Project created successfully")
+			return nil
+		},
+	}
+
+	createCmd.Flags().StringVar(&name, "name", "", "project name (required)")
+	createCmd.MarkFlagRequired("name")
+	return createCmd
 }
 
 func newSetDefaultCmd() *cobra.Command {
