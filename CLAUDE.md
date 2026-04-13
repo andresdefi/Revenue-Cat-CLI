@@ -6,7 +6,7 @@ Repo: `andresdefi/Revenue-Cat-CLI` on GitHub. Binary name: `rc`.
 100% API v2 coverage - 99 subcommands covering all 95 API endpoints across 16 command groups.
 
 ## Tech Stack
-- **Language:** Go 1.22+
+- **Language:** Go 1.23+ (go.mod directive: 1.23)
 - **CLI framework:** Cobra (github.com/spf13/cobra)
 - **Table output:** go-pretty/v6 (github.com/jedib0t/go-pretty/v6)
 - **Keychain:** go-keyring (github.com/zalando/go-keyring)
@@ -105,6 +105,12 @@ make help           # Show all targets
 - [x] Install script (curl | sh)
 - [x] Pre-commit hook
 
+## Release
+- **v0.1.0** released 2026-04-13
+- Homebrew: `brew install andresdefi/tap/rc`
+- Install script: `curl -fsSL https://raw.githubusercontent.com/andresdefi/Revenue-Cat-CLI/main/install.sh | sh`
+- Go: `go install github.com/andresdefi/rc@latest`
+
 ## Future Improvements
 - [ ] Pagination support (auto-fetch all pages with `--all` flag)
 - [ ] Interactive mode for create commands (prompt for required fields)
@@ -112,6 +118,7 @@ make help           # Show all targets
 - [ ] More tests (command integration tests with mock API server)
 - [ ] Documentation website
 - [ ] Apple code signing for macOS binaries
+- [ ] Set up HOMEBREW_TAP_TOKEN secret for auto formula updates on release
 
 ## Module Path
 `github.com/andresdefi/rc`
