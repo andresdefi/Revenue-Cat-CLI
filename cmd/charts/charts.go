@@ -30,6 +30,7 @@ Examples:
 
 	root.AddCommand(newOverviewCmd(projectID, outputFormat))
 	root.AddCommand(newShowCmd(projectID, outputFormat))
+	root.AddCommand(newOptionsCmd(projectID, outputFormat))
 	return root
 }
 
@@ -106,6 +107,48 @@ churn, conversion, installs, arpu, arppu, ltv`,
 					t.AppendRow(table.Row{v.Date, fmt.Sprintf("%.2f", v.Value)})
 				}
 			})
+			return nil
+		},
+	}
+}
+
+func newOptionsCmd(projectID, outputFormat *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "options <chart-name>",
+		Short: "Get available filter/segment options for a chart",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			data, err := client.Get(fmt.Sprintf("/projects/%s/charts/%s/options", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			if err != nil {
+				return err
+			}
+
+			format := cmdutil.GetOutputFormat(outputFormat)
+			if format == output.FormatJSON {
+				var raw json.RawMessage
+				json.Unmarshal(data, &raw)
+				output.Print(format, raw, nil)
+			} else {
+				var opts api.ChartOptions
+				if err := json.Unmarshal(data, &opts); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
+				output.Print(format, opts, func(t table.Writer) {
+					t.AppendHeader(table.Row{"Option", "Values"})
+					for _, o := range opts.Options {
+						t.AppendRow(table.Row{o.Name, fmt.Sprintf("%v", o.Values)})
+					}
+				})
+			}
 			return nil
 		},
 	}

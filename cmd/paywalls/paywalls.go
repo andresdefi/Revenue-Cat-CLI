@@ -27,6 +27,7 @@ Examples:
 
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	root.AddCommand(newGetCmd(projectID, outputFormat))
+	root.AddCommand(newCreateCmd(projectID, outputFormat))
 	root.AddCommand(newDeleteCmd(projectID))
 	return root
 }
@@ -100,6 +101,45 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 					{"Created", output.FormatTimestamp(pw.CreatedAt)},
 				})
 			})
+			return nil
+		},
+	}
+}
+
+func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "create",
+		Short: "Create a paywall",
+		Long:  "Create a new paywall in a project. The paywall configuration is passed as JSON via stdin or flags.",
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			data, err := client.Post(fmt.Sprintf("/projects/%s/paywalls", url.PathEscape(pid)), map[string]any{})
+			if err != nil {
+				return err
+			}
+
+			var pw api.Paywall
+			if err := json.Unmarshal(data, &pw); err != nil {
+				return fmt.Errorf("failed to parse response: %w", err)
+			}
+
+			format := cmdutil.GetOutputFormat(outputFormat)
+			output.Print(format, pw, func(t table.Writer) {
+				t.AppendHeader(table.Row{"Field", "Value"})
+				t.AppendRows([]table.Row{
+					{"ID", pw.ID},
+					{"Created", output.FormatTimestamp(pw.CreatedAt)},
+				})
+			})
+			output.Success("Paywall created")
 			return nil
 		},
 	}

@@ -26,6 +26,7 @@ func NewProductsCmd(projectID, outputFormat *string) *cobra.Command {
 	root.AddCommand(newDeleteCmd(projectID))
 	root.AddCommand(newArchiveCmd(projectID))
 	root.AddCommand(newUnarchiveCmd(projectID))
+	root.AddCommand(newPushToStoreCmd(projectID))
 	return root
 }
 
@@ -300,6 +301,34 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Product %s unarchived", args[0])
+			return nil
+		},
+	}
+}
+
+func newPushToStoreCmd(projectID *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "push-to-store <product-id>",
+		Short: "Push a product to the store (create in the connected store)",
+		Long: `Push a product configuration to the connected app store.
+
+This creates the product in the store (e.g., App Store Connect, Google Play)
+using the product configuration defined in RevenueCat.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+			_, err = client.Post(fmt.Sprintf("/projects/%s/products/%s/create_in_store", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			if err != nil {
+				return err
+			}
+			output.Success("Product %s pushed to store", args[0])
 			return nil
 		},
 	}

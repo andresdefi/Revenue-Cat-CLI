@@ -291,6 +291,24 @@ type ManagementURL struct {
 	URL    string `json:"url"`
 }
 
+// PublicAPIKey represents a public API key for an app.
+type PublicAPIKey struct {
+	Object string `json:"object"`
+	Key    string `json:"key"`
+	Name   string `json:"name"`
+}
+
+// ChartOptions represents available options/filters for a chart.
+type ChartOptions struct {
+	Object  string        `json:"object"`
+	Options []ChartOption `json:"options"`
+}
+
+type ChartOption struct {
+	Name   string   `json:"name"`
+	Values []string `json:"values"`
+}
+
 // DeleteResponse is returned when a resource is deleted.
 type DeleteResponse struct {
 	Object    string `json:"object"`

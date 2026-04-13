@@ -45,6 +45,9 @@ Examples:
 	root.AddCommand(newRevokeCmd(projectID))
 	root.AddCommand(newAssignOfferingCmd(projectID))
 	root.AddCommand(newTransferCmd(projectID))
+	root.AddCommand(newRestorePurchaseCmd(projectID))
+	root.AddCommand(newInvoicesCmd(projectID, outputFormat))
+	root.AddCommand(newInvoiceFileCmd(projectID))
 	return root
 }
 
@@ -653,6 +656,127 @@ func newTransferCmd(projectID *string) *cobra.Command {
 	cmd.Flags().StringVar(&targetCustomerID, "target-id", "", "target customer ID (required)")
 	cmd.MarkFlagRequired("customer-id")
 	cmd.MarkFlagRequired("target-id")
+	return cmd
+}
+
+func newRestorePurchaseCmd(projectID *string) *cobra.Command {
+	var (
+		customerID string
+		orderID    string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "restore-purchase",
+		Short: "Restore a Google Play purchase by order ID",
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			_, err = client.Post(
+				fmt.Sprintf("/projects/%s/customers/%s/actions/restore_purchase_by_order_id", url.PathEscape(pid), url.PathEscape(customerID)),
+				map[string]any{"order_id": orderID},
+			)
+			if err != nil {
+				return err
+			}
+			output.Success("Purchase restored for customer %s (order: %s)", customerID, orderID)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
+	cmd.Flags().StringVar(&orderID, "order-id", "", "Google Play order ID (required)")
+	cmd.MarkFlagRequired("customer-id")
+	cmd.MarkFlagRequired("order-id")
+	return cmd
+}
+
+func newInvoicesCmd(projectID, outputFormat *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "invoices <customer-id>",
+		Short: "List invoices for a customer",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			data, err := client.Get(
+				fmt.Sprintf("/projects/%s/customers/%s/invoices", url.PathEscape(pid), url.PathEscape(args[0])), nil,
+			)
+			if err != nil {
+				return err
+			}
+
+			var resp api.ListResponse[api.Invoice]
+			if err := json.Unmarshal(data, &resp); err != nil {
+				return fmt.Errorf("failed to parse response: %w", err)
+			}
+
+			format := cmdutil.GetOutputFormat(outputFormat)
+			output.Print(format, resp, func(t table.Writer) {
+				t.AppendHeader(table.Row{"ID", "Created"})
+				for _, inv := range resp.Items {
+					t.AppendRow(table.Row{inv.ID, output.FormatTimestamp(inv.CreatedAt)})
+				}
+			})
+			return nil
+		},
+	}
+}
+
+func newInvoiceFileCmd(projectID *string) *cobra.Command {
+	var (
+		customerID string
+		invoiceID  string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "invoice-file",
+		Short: "Download an invoice file",
+		Long: `Download an invoice file for a customer.
+
+The file content is written to stdout. Redirect to save:
+  rc customers invoice-file --customer-id user-123 --invoice-id inv1a2b3c > invoice.pdf`,
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			data, err := client.Get(
+				fmt.Sprintf("/projects/%s/customers/%s/invoices/%s/file",
+					url.PathEscape(pid), url.PathEscape(customerID), url.PathEscape(invoiceID)),
+				nil,
+			)
+			if err != nil {
+				return err
+			}
+
+			_, err = fmt.Fprint(c.OutOrStdout(), string(data))
+			return err
+		},
+	}
+
+	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
+	cmd.Flags().StringVar(&invoiceID, "invoice-id", "", "invoice ID (required)")
+	cmd.MarkFlagRequired("customer-id")
+	cmd.MarkFlagRequired("invoice-id")
 	return cmd
 }
 

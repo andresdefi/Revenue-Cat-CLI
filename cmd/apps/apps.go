@@ -34,6 +34,8 @@ Examples:
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
 	root.AddCommand(newUpdateCmd(projectID, outputFormat))
 	root.AddCommand(newDeleteCmd(projectID))
+	root.AddCommand(newPublicKeysCmd(projectID, outputFormat))
+	root.AddCommand(newStoreKitConfigCmd(projectID, outputFormat))
 	return root
 }
 
@@ -259,6 +261,82 @@ func newDeleteCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("App %s deleted", args[0])
+			return nil
+		},
+	}
+}
+
+func newPublicKeysCmd(projectID, outputFormat *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "public-keys <app-id>",
+		Short: "List public API keys for an app",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			data, err := client.Get(fmt.Sprintf("/projects/%s/apps/%s/public_api_keys", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			if err != nil {
+				return err
+			}
+
+			format := cmdutil.GetOutputFormat(outputFormat)
+			if format == output.FormatJSON {
+				var raw json.RawMessage
+				json.Unmarshal(data, &raw)
+				output.Print(format, raw, nil)
+			} else {
+				var resp api.ListResponse[api.PublicAPIKey]
+				if err := json.Unmarshal(data, &resp); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
+				output.Print(format, resp, func(t table.Writer) {
+					t.AppendHeader(table.Row{"Key", "Name"})
+					for _, k := range resp.Items {
+						t.AppendRow(table.Row{k.Key, k.Name})
+					}
+				})
+			}
+			return nil
+		},
+	}
+}
+
+func newStoreKitConfigCmd(projectID, outputFormat *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "storekit-config <app-id>",
+		Short: "Get StoreKit configuration for an app",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			data, err := client.Get(fmt.Sprintf("/projects/%s/apps/%s/store_kit_config", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			if err != nil {
+				return err
+			}
+
+			format := cmdutil.GetOutputFormat(outputFormat)
+			if format == output.FormatJSON {
+				var raw json.RawMessage
+				json.Unmarshal(data, &raw)
+				output.Print(format, raw, nil)
+			} else {
+				// StoreKit config is opaque - just print as JSON since it's a config blob
+				fmt.Println(string(data))
+			}
 			return nil
 		},
 	}
