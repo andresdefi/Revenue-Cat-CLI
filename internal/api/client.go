@@ -84,7 +84,7 @@ func (c *Client) Delete(path string) ([]byte, error) {
 
 func (c *Client) do(method, path string, query url.Values, body any) ([]byte, error) {
 	u := c.baseURL + path
-	if query != nil && len(query) > 0 {
+	if len(query) > 0 {
 		u += "?" + query.Encode()
 	}
 

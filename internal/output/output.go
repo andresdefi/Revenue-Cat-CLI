@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"golang.org/x/term"
 )
 
 // Format is the output format type.
@@ -17,13 +18,22 @@ const (
 	FormatJSON  Format = "json"
 )
 
+// IsTTY returns true if stdout is a terminal.
+func IsTTY() bool {
+	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
 // Print outputs data in the specified format.
 func Print(format Format, data any, tableRenderer func(t table.Writer)) {
 	switch format {
 	case FormatJSON:
 		printJSON(data)
 	default:
-		printTable(tableRenderer)
+		if tableRenderer != nil {
+			printTable(tableRenderer)
+		} else {
+			printJSON(data)
+		}
 	}
 }
 

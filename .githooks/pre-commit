@@ -1,0 +1,22 @@
+#!/bin/sh
+set -e
+
+echo "Running pre-commit checks..."
+
+# Format check
+UNFORMATTED=$(gofmt -l . 2>/dev/null | grep -v vendor || true)
+if [ -n "$UNFORMATTED" ]; then
+    echo "Files need formatting (run 'make fmt'):"
+    echo "$UNFORMATTED"
+    exit 1
+fi
+
+# Vet
+echo "Running go vet..."
+go vet ./...
+
+# Build
+echo "Running go build..."
+go build -o /dev/null .
+
+echo "Pre-commit checks passed."

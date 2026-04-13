@@ -52,7 +52,10 @@ audit logs, collaborators, and virtual currencies.`,
 	}
 
 	root.PersistentFlags().StringVarP(&projectID, "project", "p", "", "project ID (overrides default project)")
-	root.PersistentFlags().StringVarP(&outputFormat, "output", "o", "table", "output format: table, json")
+	root.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "output format: table, json (default: table for TTY, json for pipes)")
+
+	// Meta
+	root.AddCommand(newVersionCmd())
 
 	// Auth (no project needed)
 	root.AddCommand(auth.NewAuthCmd())

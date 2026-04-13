@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussion
+    url: https://github.com/andresdefi/Revenue-Cat-CLI/discussions
+    about: Ask questions and discuss ideas
+  - name: Troubleshooting
+    url: https://github.com/andresdefi/Revenue-Cat-CLI/blob/main/SUPPORT.md
+    about: Common issues and troubleshooting steps
+  - name: RevenueCat API Docs
+    url: https://www.revenuecat.com/docs/api-v2
+    about: Official RevenueCat API v2 documentation

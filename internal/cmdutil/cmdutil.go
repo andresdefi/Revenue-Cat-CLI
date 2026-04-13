@@ -22,9 +22,20 @@ func ResolveProject(flagValue *string) (string, error) {
 }
 
 // GetOutputFormat returns the resolved output format.
+// If the user explicitly set --output, use that. Otherwise, default to
+// table for TTY and JSON for pipes (so `rc products list | jq` just works).
 func GetOutputFormat(flag *string) output.Format {
-	if flag != nil && *flag == "json" {
-		return output.FormatJSON
+	if flag != nil {
+		switch *flag {
+		case "json":
+			return output.FormatJSON
+		case "table":
+			return output.FormatTable
+		}
 	}
-	return output.FormatTable
+	// Auto-detect: table for terminal, JSON for pipes
+	if output.IsTTY() {
+		return output.FormatTable
+	}
+	return output.FormatJSON
 }
