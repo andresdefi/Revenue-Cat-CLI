@@ -66,10 +66,11 @@ internal/
 
 ## Build & Run
 ```bash
-go build -o rc .
-./rc --help
-./rc auth login
-./rc projects list
+make build          # Build with version injection
+make test           # Run tests
+make lint           # Run linter
+make check          # Run all checks (fmt, vet, lint, test)
+make help           # Show all targets
 ```
 
 ## Full API Coverage (99 subcommands, 95 API endpoints)
@@ -89,18 +90,28 @@ go build -o rc .
 - [x] Audit Logs: list
 - [x] Collaborators: list
 - [x] Virtual Currencies: list, get, create, update, delete, archive, unarchive, balance, credit, set-balance
-- [x] JSON + table output
-- [x] README, LICENSE (MIT), CONTRIBUTING.md
-- [x] GitHub Actions CI (build, test, lint)
-- [x] GoReleaser config with Homebrew tap
+- [x] JSON + table output (TTY-aware: table for terminal, JSON for pipes)
+- [x] Version command with ldflags injection (rc version)
+- [x] "Did you mean?" fuzzy command suggestions
+- [x] Structured exit codes (1=general, 3=auth, 4=API)
+- [x] 107 tests across 7 test files
+- [x] Makefile with build/test/lint/fmt/check targets
+- [x] .golangci.yml config
+- [x] README with badges, TOC, workflows, troubleshooting
+- [x] Community files: SECURITY.md, CODE_OF_CONDUCT.md, SUPPORT.md
+- [x] GitHub: issue/PR templates, topics, Discussions enabled
+- [x] CI: build (Go 1.24 + stable), lint, CodeQL, govulncheck
+- [x] GoReleaser config with Homebrew tap + ldflags
+- [x] Install script (curl | sh)
+- [x] Pre-commit hook
 
 ## Future Improvements
 - [ ] Pagination support (auto-fetch all pages with `--all` flag)
-- [ ] Version command (`rc version` with ldflags injection)
 - [ ] Interactive mode for create commands (prompt for required fields)
 - [ ] `--watch` flag for polling commands
-- [ ] Unit tests for API client and output formatting
-- [ ] Integration test suite with mock server
+- [ ] More tests (command integration tests with mock API server)
+- [ ] Documentation website
+- [ ] Apple code signing for macOS binaries
 
 ## Module Path
 `github.com/andresdefi/rc`
