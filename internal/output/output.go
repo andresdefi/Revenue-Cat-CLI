@@ -40,7 +40,7 @@ func Print(format Format, data any, tableRenderer func(t table.Writer)) {
 func printJSON(data any) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	enc.Encode(data)
+	_ = enc.Encode(data)
 }
 
 func printTable(renderer func(t table.Writer)) {

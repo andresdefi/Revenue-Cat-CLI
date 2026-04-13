@@ -289,7 +289,9 @@ func newPublicKeysCmd(projectID, outputFormat *string) *cobra.Command {
 			format := cmdutil.GetOutputFormat(outputFormat)
 			if format == output.FormatJSON {
 				var raw json.RawMessage
-				json.Unmarshal(data, &raw)
+				if err := json.Unmarshal(data, &raw); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
 				output.Print(format, raw, nil)
 			} else {
 				var resp api.ListResponse[api.PublicAPIKey]
@@ -331,7 +333,9 @@ func newStoreKitConfigCmd(projectID, outputFormat *string) *cobra.Command {
 			format := cmdutil.GetOutputFormat(outputFormat)
 			if format == output.FormatJSON {
 				var raw json.RawMessage
-				json.Unmarshal(data, &raw)
+				if err := json.Unmarshal(data, &raw); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
 				output.Print(format, raw, nil)
 			} else {
 				// StoreKit config is opaque - just print as JSON since it's a config blob
