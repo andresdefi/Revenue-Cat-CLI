@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/andresdefi/rc/cmd/apps"
+	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/cmd/auditlogs"
 	"github.com/andresdefi/rc/cmd/auth"
 	"github.com/andresdefi/rc/cmd/charts"
@@ -47,8 +49,9 @@ Get started:
 Full API v2 coverage: projects, apps, products, entitlements, offerings,
 packages, customers, subscriptions, purchases, webhooks, charts, paywalls,
 audit logs, collaborators, and virtual currencies.`,
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		SilenceUsage:          true,
+		SilenceErrors:         true,
+		SuggestionsMinimumDistance: 2,
 	}
 
 	root.PersistentFlags().StringVarP(&projectID, "project", "p", "", "project ID (overrides default project)")
@@ -89,6 +92,15 @@ audit logs, collaborators, and virtual currencies.`,
 func Execute() {
 	if err := NewRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(1)
+
+		var apiErr *api.Error
+		switch {
+		case errors.As(err, &apiErr) && apiErr.Type == "authentication_error":
+			os.Exit(3) // auth error
+		case errors.As(err, &apiErr):
+			os.Exit(4) // API error
+		default:
+			os.Exit(1) // general error
+		}
 	}
 }
