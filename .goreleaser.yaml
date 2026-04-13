@@ -39,9 +39,11 @@ brews:
   - repository:
       owner: andresdefi
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: "https://github.com/andresdefi/Revenue-Cat-CLI"
     description: "Unofficial CLI for the RevenueCat REST API v2"
     license: "MIT"
+    skip_upload: auto
     install: |
       bin.install "rc"
     test: |
