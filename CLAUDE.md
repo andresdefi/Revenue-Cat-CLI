@@ -3,7 +3,7 @@
 ## Project Overview
 Unofficial open-source CLI for the RevenueCat REST API v2. Written in Go with Cobra.
 Repo: `andresdefi/Revenue-Cat-CLI` on GitHub. Binary name: `rc`.
-Full API v2 coverage - 91 subcommands across 16 command groups.
+100% API v2 coverage - 99 subcommands covering all 95 API endpoints across 16 command groups.
 
 ## Tech Stack
 - **Language:** Go 1.22+
@@ -72,20 +72,20 @@ go build -o rc .
 ./rc projects list
 ```
 
-## Full API Coverage (91 subcommands)
+## Full API Coverage (99 subcommands, 95 API endpoints)
 - [x] Auth: login, status, logout
 - [x] Projects: list, create, set-default
-- [x] Apps: list, get, create, update, delete
-- [x] Products: list, get, create, update, delete, archive, unarchive
+- [x] Apps: list, get, create, update, delete, public-keys, storekit-config
+- [x] Products: list, get, create, update, delete, archive, unarchive, push-to-store
 - [x] Entitlements: list, get, create, update, delete, archive, unarchive, products, attach, detach
 - [x] Offerings: list, get, create, update, delete, archive, unarchive
 - [x] Packages: list, get, create, update, delete, products, attach, detach
-- [x] Customers: list, lookup, create, delete, entitlements, subscriptions, purchases, aliases, attributes, set-attributes, grant, revoke, assign-offering, transfer
+- [x] Customers: list, lookup, create, delete, entitlements, subscriptions, purchases, aliases, attributes, set-attributes, grant, revoke, assign-offering, transfer, restore-purchase, invoices, invoice-file
 - [x] Subscriptions: list, get, transactions, entitlements, cancel, refund, refund-transaction, management-url
 - [x] Purchases: list, get, entitlements, refund
 - [x] Webhooks: list, get, create, update, delete
-- [x] Charts: overview, show
-- [x] Paywalls: list, get, delete
+- [x] Charts: overview, show, options
+- [x] Paywalls: list, get, create, delete
 - [x] Audit Logs: list
 - [x] Collaborators: list
 - [x] Virtual Currencies: list, get, create, update, delete, archive, unarchive, balance, credit, set-balance
