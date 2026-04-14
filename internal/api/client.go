@@ -113,10 +113,9 @@ func (c *Client) GetFullURL(fullPath string) ([]byte, error) {
 			continue
 		}
 
-		respBody, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		respBody, err := readResponseBody(resp)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response: %w", err)
+			return nil, err
 		}
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
@@ -177,10 +176,9 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 			continue
 		}
 
-		respBody, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		respBody, err := readResponseBody(resp)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read response: %w", err)
+			return nil, err
 		}
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
@@ -205,6 +203,18 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 	}
 
 	return nil, fmt.Errorf("request failed after %d attempts: %w", MaxRetries, lastErr)
+}
+
+func readResponseBody(resp *http.Response) ([]byte, error) {
+	respBody, readErr := io.ReadAll(resp.Body)
+	closeErr := resp.Body.Close()
+	if readErr != nil {
+		return nil, fmt.Errorf("failed to read response: %w", readErr)
+	}
+	if closeErr != nil {
+		return nil, fmt.Errorf("failed to close response body: %w", closeErr)
+	}
+	return respBody, nil
 }
 
 // Paginate fetches all pages from a list endpoint, calling fn for each page.

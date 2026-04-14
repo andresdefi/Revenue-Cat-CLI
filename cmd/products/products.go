@@ -275,7 +275,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&displayName, "display-name", "", "new display name (required)")
-	cmd.MarkFlagRequired("display-name")
+	cmdutil.MustMarkFlagRequired(cmd, "display-name")
 	return cmd
 }
 
@@ -444,8 +444,13 @@ Examples:
 				if err != nil {
 					return err
 				}
-				defer f.Close()
 				if err := csvio.ExportCSV(f, rows); err != nil {
+					if closeErr := f.Close(); closeErr != nil {
+						return closeErr
+					}
+					return err
+				}
+				if err := f.Close(); err != nil {
 					return err
 				}
 			default:
@@ -502,10 +507,15 @@ Examples:
 				if err != nil {
 					return err
 				}
-				defer f.Close()
 				rows, err = csvio.ImportCSV[ProductRow](f)
 				if err != nil {
+					if closeErr := f.Close(); closeErr != nil {
+						return closeErr
+					}
 					return fmt.Errorf("failed to parse CSV: %w", err)
+				}
+				if err := f.Close(); err != nil {
+					return err
 				}
 			default:
 				return fmt.Errorf("unsupported file extension %q (use .csv or .json)", ext)

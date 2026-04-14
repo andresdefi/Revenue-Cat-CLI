@@ -15,11 +15,11 @@ import (
 
 // ProjectConfig is the top-level export format for a full project configuration.
 type ProjectConfig struct {
-	Version      string             `json:"version"`
-	ExportedAt   string             `json:"exported_at"`
-	Products     []api.Product      `json:"products"`
-	Entitlements []api.Entitlement  `json:"entitlements"`
-	Offerings    []api.Offering     `json:"offerings"`
+	Version      string            `json:"version"`
+	ExportedAt   string            `json:"exported_at"`
+	Products     []api.Product     `json:"products"`
+	Entitlements []api.Entitlement `json:"entitlements"`
+	Offerings    []api.Offering    `json:"offerings"`
 }
 
 // NewExportCmd creates the `rc export` command.

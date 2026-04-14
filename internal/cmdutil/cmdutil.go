@@ -5,6 +5,7 @@ import (
 
 	"github.com/andresdefi/rc/internal/config"
 	"github.com/andresdefi/rc/internal/output"
+	"github.com/spf13/cobra"
 )
 
 // ActiveProfile is set by the root command's --profile flag.
@@ -61,4 +62,11 @@ func GetOutputFormat(flag *string) output.Format {
 		return output.FormatTable
 	}
 	return output.FormatJSON
+}
+
+// MustMarkFlagRequired marks a command flag as required during command setup.
+func MustMarkFlagRequired(cmd *cobra.Command, flagName string) {
+	if err := cmd.MarkFlagRequired(flagName); err != nil {
+		panic(fmt.Sprintf("failed to mark --%s required: %v", flagName, err))
+	}
 }

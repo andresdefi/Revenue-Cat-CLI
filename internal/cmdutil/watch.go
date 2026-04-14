@@ -25,7 +25,7 @@ func Watch(ctx context.Context, interval time.Duration, fn func(ctx context.Cont
 	for {
 		// Clear screen if TTY
 		if output.IsTTY() {
-			fmt.Fprint(os.Stdout, "\033[2J\033[H")
+			_, _ = fmt.Fprint(os.Stdout, "\033[2J\033[H")
 		}
 
 		if err := fn(ctx); err != nil {

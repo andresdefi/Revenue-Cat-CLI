@@ -149,7 +149,7 @@ func TestResolveProject_ErrorContainsGuidance(t *testing.T) {
 
 	msg := err.Error()
 	// Error should mention --project flag or set-default command
-	if !(contains(msg, "--project") || contains(msg, "set-default")) {
+	if !contains(msg, "--project") && !contains(msg, "set-default") {
 		t.Errorf("error message should contain guidance, got: %q", msg)
 	}
 }

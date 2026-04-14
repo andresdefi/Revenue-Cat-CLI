@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/andresdefi/rc/cmd/apps"
-	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/cmd/auditlogs"
 	"github.com/andresdefi/rc/cmd/auth"
 	"github.com/andresdefi/rc/cmd/charts"
@@ -24,6 +23,7 @@ import (
 	"github.com/andresdefi/rc/cmd/subscriptions"
 	"github.com/andresdefi/rc/cmd/transfer"
 	"github.com/andresdefi/rc/cmd/webhooks"
+	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
 	"github.com/andresdefi/rc/internal/version"
 	"github.com/spf13/cobra"
@@ -54,9 +54,9 @@ Get started:
 Full API v2 coverage: projects, apps, products, entitlements, offerings,
 packages, customers, subscriptions, purchases, webhooks, charts, paywalls,
 audit logs, collaborators, and virtual currencies.`,
-		Version:                   version.Version,
-		SilenceUsage:              true,
-		SilenceErrors:             true,
+		Version:                    version.Version,
+		SilenceUsage:               true,
+		SilenceErrors:              true,
 		SuggestionsMinimumDistance: 2,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			cmdutil.ActiveProfile = profileFlag

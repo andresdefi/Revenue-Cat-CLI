@@ -192,8 +192,13 @@ func Save(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	enc := toml.NewEncoder(f)
-	return enc.Encode(cfg)
+	if err := enc.Encode(cfg); err != nil {
+		if closeErr := f.Close(); closeErr != nil {
+			return closeErr
+		}
+		return err
+	}
+	return f.Close()
 }

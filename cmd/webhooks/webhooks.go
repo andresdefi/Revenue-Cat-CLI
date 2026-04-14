@@ -153,8 +153,8 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&name, "name", "", "webhook name (required)")
 	cmd.Flags().StringVar(&webhookURL, "url", "", "webhook endpoint URL (required)")
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("url")
+	cmdutil.MustMarkFlagRequired(cmd, "name")
+	cmdutil.MustMarkFlagRequired(cmd, "url")
 	return cmd
 }
 

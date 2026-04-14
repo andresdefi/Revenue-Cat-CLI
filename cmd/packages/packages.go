@@ -116,7 +116,7 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&offeringID, "offering-id", "", "offering ID (required)")
-	cmd.MarkFlagRequired("offering-id")
+	cmdutil.MustMarkFlagRequired(cmd, "offering-id")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
 	return cmd
@@ -213,9 +213,9 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&lookupKey, "lookup-key", "", "lookup key (required)")
 	cmd.Flags().StringVar(&displayName, "display-name", "", "display name (required)")
 	cmd.Flags().IntVar(&position, "position", 0, "display position (min 1)")
-	cmd.MarkFlagRequired("offering-id")
-	cmd.MarkFlagRequired("lookup-key")
-	cmd.MarkFlagRequired("display-name")
+	cmdutil.MustMarkFlagRequired(cmd, "offering-id")
+	cmdutil.MustMarkFlagRequired(cmd, "lookup-key")
+	cmdutil.MustMarkFlagRequired(cmd, "display-name")
 	return cmd
 }
 
@@ -392,8 +392,8 @@ Examples:
 	cmd.Flags().StringVar(&packageID, "package-id", "", "package ID (required)")
 	cmd.Flags().StringVar(&productID, "product-id", "", "product ID (required)")
 	cmd.Flags().StringVar(&eligibility, "eligibility", "all", "eligibility criteria: all, google_sdk_lt_6, google_sdk_ge_6")
-	cmd.MarkFlagRequired("package-id")
-	cmd.MarkFlagRequired("product-id")
+	cmdutil.MustMarkFlagRequired(cmd, "package-id")
+	cmdutil.MustMarkFlagRequired(cmd, "product-id")
 	return cmd
 }
 
@@ -426,7 +426,7 @@ func newDetachCmd(projectID *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&packageID, "package-id", "", "package ID (required)")
 	cmd.Flags().StringSliceVar(&productIDs, "product-id", nil, "product ID(s) to detach (required, comma-separated)")
-	cmd.MarkFlagRequired("package-id")
-	cmd.MarkFlagRequired("product-id")
+	cmdutil.MustMarkFlagRequired(cmd, "package-id")
+	cmdutil.MustMarkFlagRequired(cmd, "product-id")
 	return cmd
 }

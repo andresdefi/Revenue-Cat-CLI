@@ -126,7 +126,7 @@ func newCreateCmd(outputFormat *string) *cobra.Command {
 	}
 
 	createCmd.Flags().StringVar(&name, "name", "", "project name (required)")
-	createCmd.MarkFlagRequired("name")
+	cmdutil.MustMarkFlagRequired(createCmd, "name")
 	return createCmd
 }
 

@@ -158,8 +158,8 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&code, "code", "", "currency code, e.g. COINS (required)")
 	cmd.Flags().StringVar(&name, "name", "", "display name (required)")
-	cmd.MarkFlagRequired("code")
-	cmd.MarkFlagRequired("name")
+	cmdutil.MustMarkFlagRequired(cmd, "code")
+	cmdutil.MustMarkFlagRequired(cmd, "name")
 	return cmd
 }
 
@@ -194,7 +194,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "", "new display name (required)")
-	cmd.MarkFlagRequired("name")
+	cmdutil.MustMarkFlagRequired(cmd, "name")
 	return cmd
 }
 
@@ -296,7 +296,7 @@ func newBalanceCmd(projectID, outputFormat *string) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
-	cmd.MarkFlagRequired("customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
 	return cmd
 }
 
@@ -331,9 +331,9 @@ func newCreditCmd(projectID *string) *cobra.Command {
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&code, "code", "", "currency code (required)")
 	cmd.Flags().Int64Var(&amount, "amount", 0, "amount (positive=credit, negative=debit) (required)")
-	cmd.MarkFlagRequired("customer-id")
-	cmd.MarkFlagRequired("code")
-	cmd.MarkFlagRequired("amount")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "code")
+	cmdutil.MustMarkFlagRequired(cmd, "amount")
 	return cmd
 }
 
@@ -368,8 +368,8 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&code, "code", "", "currency code (required)")
 	cmd.Flags().Int64Var(&balance, "balance", 0, "new balance value (required)")
-	cmd.MarkFlagRequired("customer-id")
-	cmd.MarkFlagRequired("code")
-	cmd.MarkFlagRequired("balance")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "code")
+	cmdutil.MustMarkFlagRequired(cmd, "balance")
 	return cmd
 }

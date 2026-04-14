@@ -339,7 +339,7 @@ func newRefundTransactionCmd(projectID *string) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&transactionID, "transaction-id", "", "transaction ID to refund (required)")
-	cmd.MarkFlagRequired("transaction-id")
+	cmdutil.MustMarkFlagRequired(cmd, "transaction-id")
 	return cmd
 }
 

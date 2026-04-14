@@ -250,7 +250,7 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&customerID, "id", "", "customer ID (required)")
-	cmd.MarkFlagRequired("id")
+	cmdutil.MustMarkFlagRequired(cmd, "id")
 	return cmd
 }
 
@@ -566,8 +566,8 @@ Examples:
 	}
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringSliceVar(&attrs, "attr", nil, "attribute as key=value (required, repeatable)")
-	cmd.MarkFlagRequired("customer-id")
-	cmd.MarkFlagRequired("attr")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "attr")
 	return cmd
 }
 
@@ -602,9 +602,9 @@ func newGrantCmd(projectID *string) *cobra.Command {
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&entitlementID, "entitlement-id", "", "entitlement ID to grant (required)")
 	cmd.Flags().Int64Var(&expiresAt, "expires-at", 0, "expiration timestamp in ms since epoch (required)")
-	cmd.MarkFlagRequired("customer-id")
-	cmd.MarkFlagRequired("entitlement-id")
-	cmd.MarkFlagRequired("expires-at")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "entitlement-id")
+	cmdutil.MustMarkFlagRequired(cmd, "expires-at")
 	return cmd
 }
 
@@ -637,8 +637,8 @@ func newRevokeCmd(projectID *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&entitlementID, "entitlement-id", "", "entitlement ID to revoke (required)")
-	cmd.MarkFlagRequired("customer-id")
-	cmd.MarkFlagRequired("entitlement-id")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "entitlement-id")
 	return cmd
 }
 
@@ -683,7 +683,7 @@ func newAssignOfferingCmd(projectID *string) *cobra.Command {
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&offeringID, "offering-id", "", "offering ID to assign")
 	cmd.Flags().BoolVar(&clear, "clear", false, "clear the offering override")
-	cmd.MarkFlagRequired("customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
 	return cmd
 }
 
@@ -716,8 +716,8 @@ func newTransferCmd(projectID *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "source customer ID (required)")
 	cmd.Flags().StringVar(&targetCustomerID, "target-id", "", "target customer ID (required)")
-	cmd.MarkFlagRequired("customer-id")
-	cmd.MarkFlagRequired("target-id")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "target-id")
 	return cmd
 }
 
@@ -750,8 +750,8 @@ func newRestorePurchaseCmd(projectID *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&orderID, "order-id", "", "Google Play order ID (required)")
-	cmd.MarkFlagRequired("customer-id")
-	cmd.MarkFlagRequired("order-id")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "order-id")
 	return cmd
 }
 
@@ -822,8 +822,8 @@ The file content is written to stdout. Redirect to save:
 	}
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&invoiceID, "invoice-id", "", "invoice ID (required)")
-	cmd.MarkFlagRequired("customer-id")
-	cmd.MarkFlagRequired("invoice-id")
+	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
+	cmdutil.MustMarkFlagRequired(cmd, "invoice-id")
 	return cmd
 }
 

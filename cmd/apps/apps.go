@@ -221,8 +221,8 @@ Examples:
 	cmd.Flags().StringVar(&name, "name", "", "app name (required)")
 	cmd.Flags().StringVar(&appType, "type", "", "platform type: app_store, play_store, amazon, stripe, rc_billing, roku, mac_app_store, paddle (required)")
 	cmd.Flags().StringVar(&bundleID, "bundle-id", "", "bundle ID / package name (for app_store, play_store, amazon)")
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("type")
+	cmdutil.MustMarkFlagRequired(cmd, "name")
+	cmdutil.MustMarkFlagRequired(cmd, "type")
 	return cmd
 }
 

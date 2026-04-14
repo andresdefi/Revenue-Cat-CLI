@@ -24,7 +24,7 @@ type App struct {
 type Product struct {
 	Object          string               `json:"object"`
 	ID              string               `json:"id"`
-	StoreIdentifier string              `json:"store_identifier"`
+	StoreIdentifier string               `json:"store_identifier"`
 	Type            string               `json:"type"`
 	State           string               `json:"state"`
 	DisplayName     *string              `json:"display_name"`
@@ -157,11 +157,11 @@ type Subscription struct {
 
 // Transaction represents a subscription transaction.
 type Transaction struct {
-	Object      string              `json:"object"`
-	ID          string              `json:"id"`
+	Object       string              `json:"object"`
+	ID           string              `json:"id"`
 	RevenueInUSD *MoneyWithBreakdown `json:"revenue_in_usd,omitempty"`
-	PurchasedAt int64               `json:"purchased_at"`
-	Store       string              `json:"store"`
+	PurchasedAt  int64               `json:"purchased_at"`
+	Store        string              `json:"store"`
 }
 
 type MoneyWithBreakdown struct {
@@ -174,21 +174,21 @@ type MoneyWithBreakdown struct {
 
 // Purchase represents a RevenueCat one-time purchase.
 type Purchase struct {
-	Object               string              `json:"object"`
-	ID                   string              `json:"id"`
-	CustomerID           string              `json:"customer_id"`
-	OriginalCustomerID   string              `json:"original_customer_id"`
-	ProductID            string              `json:"product_id"`
-	PurchasedAt          int64               `json:"purchased_at"`
-	RevenueInUSD         *MoneyWithBreakdown `json:"revenue_in_usd,omitempty"`
-	Quantity             int                 `json:"quantity"`
-	Status               string              `json:"status"`
-	PresentedOfferingID  *string             `json:"presented_offering_id"`
-	Environment          string              `json:"environment"`
-	Store                string              `json:"store"`
-	StorePurchaseID      string              `json:"store_purchase_identifier"`
-	Ownership            string              `json:"ownership"`
-	Country              *string             `json:"country"`
+	Object              string              `json:"object"`
+	ID                  string              `json:"id"`
+	CustomerID          string              `json:"customer_id"`
+	OriginalCustomerID  string              `json:"original_customer_id"`
+	ProductID           string              `json:"product_id"`
+	PurchasedAt         int64               `json:"purchased_at"`
+	RevenueInUSD        *MoneyWithBreakdown `json:"revenue_in_usd,omitempty"`
+	Quantity            int                 `json:"quantity"`
+	Status              string              `json:"status"`
+	PresentedOfferingID *string             `json:"presented_offering_id"`
+	Environment         string              `json:"environment"`
+	Store               string              `json:"store"`
+	StorePurchaseID     string              `json:"store_purchase_identifier"`
+	Ownership           string              `json:"ownership"`
+	Country             *string             `json:"country"`
 }
 
 // Webhook represents a webhook integration.
@@ -217,10 +217,10 @@ type MetricSummary struct {
 
 // ChartData represents chart response.
 type ChartData struct {
-	Object          string         `json:"object"`
-	Name            string         `json:"name"`
-	DisplayName     string         `json:"display_name"`
-	Values          []ChartValue   `json:"values"`
+	Object      string       `json:"object"`
+	Name        string       `json:"name"`
+	DisplayName string       `json:"display_name"`
+	Values      []ChartValue `json:"values"`
 }
 
 type ChartValue struct {
