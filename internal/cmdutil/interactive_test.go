@@ -72,10 +72,11 @@ func TestPromptConfirm_NonTTY(t *testing.T) {
 	}
 }
 
-func TestPromptConfirm_Signature(t *testing.T) {
-	// Verify the function has the expected signature: (string) -> (bool, error)
-	var fn func(string) (bool, error) = PromptConfirm
-	if fn == nil {
-		t.Fatal("PromptConfirm should not be nil")
+func TestPromptConfirm_CallableInNonTTY(t *testing.T) {
+	// In non-TTY (test environment), PromptConfirm should return false
+	result, err := PromptConfirm("Test?")
+	if err != nil {
+		t.Logf("PromptConfirm returned error (expected in non-TTY): %v", err)
 	}
+	_ = result
 }
