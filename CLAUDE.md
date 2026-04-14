@@ -94,27 +94,39 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 107 tests across 7 test files
-- [x] Makefile with build/test/lint/fmt/check targets
-- [x] .golangci.yml config
+- [x] JSON + table output (TTY-aware: table for terminal, JSON for pipes)
+- [x] MCP server (rc mcp serve) - 16 tools via official Go MCP SDK
+- [x] Pagination: --all and --limit on all 14 list commands
+- [x] Multi-profile auth: --profile flag, RC_PROFILE env, TOML config with migration
+- [x] Watch mode: --watch on customers lookup/entitlements, subscriptions get, charts overview
+- [x] Bulk import/export: products and entitlements (CSV + JSON)
+- [x] Interactive mode: products/entitlements/offerings create prompt when TTY
+- [x] Project config transfer: rc export / rc import
+- [x] 178 tests across 7 test files
+- [x] Makefile, .golangci.yml, pre-commit hook
 - [x] README with badges, TOC, workflows, troubleshooting
 - [x] Community files: SECURITY.md, CODE_OF_CONDUCT.md, SUPPORT.md
 - [x] GitHub: issue/PR templates, topics, Discussions enabled
-- [x] CI: build (Go 1.24 + stable), lint, CodeQL, govulncheck
-- [x] GoReleaser config with Homebrew tap + ldflags
+- [x] CI: build (Go 1.25 + stable), lint (golangci-lint v2), CodeQL, govulncheck
+- [x] GoReleaser with Homebrew tap + ldflags
 - [x] Install script (curl | sh)
-- [x] Pre-commit hook
 
 ## Release
-- **v0.1.0** released 2026-04-13
+- **v0.1.0** released 2026-04-13 - initial release, 100% API coverage
+- **v0.2.0** - MCP server, pagination, multi-profile, watch, bulk ops, interactive mode
 - Homebrew: `brew install andresdefi/tap/rc`
 - Install script: `curl -fsSL https://raw.githubusercontent.com/andresdefi/Revenue-Cat-CLI/main/install.sh | sh`
 - Go: `go install github.com/andresdefi/rc@latest`
 
+## New Dependencies (v0.2.0)
+- `github.com/modelcontextprotocol/go-sdk` - MCP server
+- `github.com/charmbracelet/huh` - interactive prompts
+- `github.com/jszwec/csvutil` - CSV marshal/unmarshal
+- `github.com/BurntSushi/toml` - TOML config with profiles
+
 ## Future Improvements
-- [ ] Pagination support (auto-fetch all pages with `--all` flag)
-- [ ] Interactive mode for create commands (prompt for required fields)
-- [ ] `--watch` flag for polling commands
+- [ ] Example blocks in --help for all commands
+- [ ] Command grouping in help output (by category)
 - [ ] More tests (command integration tests with mock API server)
 - [ ] Documentation website
 - [ ] Apple code signing for macOS binaries
