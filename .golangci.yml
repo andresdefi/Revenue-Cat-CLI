@@ -10,17 +10,14 @@ linters:
     - unused
     - misspell
 
-linters-settings:
-  misspell:
-    locale: US
-  errcheck:
-    exclude-functions:
-      - (*github.com/spf13/cobra.Command).MarkFlagRequired
+formatters:
+  enable:
+    - gofmt
 
-issues:
-  exclude-dirs:
+exclusions:
+  paths:
     - vendor
-  exclude-rules:
+  rules:
     - path: _test\.go
       linters:
         - errcheck
