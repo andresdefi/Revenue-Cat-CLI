@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestNewRootCmd_NotNil(t *testing.T) {
@@ -48,6 +50,7 @@ func TestNewRootCmd_HasExpectedSubcommands(t *testing.T) {
 		"offerings", "packages", "customers", "subscriptions",
 		"purchases", "webhooks", "charts", "paywalls",
 		"audit-logs", "collaborators", "currencies", "version",
+		"mcp", "export", "import",
 	}
 
 	commands := make(map[string]bool)
@@ -67,8 +70,8 @@ func TestNewRootCmd_SubcommandCount(t *testing.T) {
 	commands := root.Commands()
 
 	// 1 meta (version) + 1 auth + 3 project mgmt + 4 product config +
-	// 3 customer data + 5 integrations = 17 total
-	expectedMin := 17
+	// 3 customer data + 5 integrations + 1 mcp + 2 transfer = 20 total
+	expectedMin := 20
 	if len(commands) < expectedMin {
 		t.Errorf("command count = %d, want >= %d", len(commands), expectedMin)
 	}
@@ -613,5 +616,154 @@ func TestNewRootCmd_NoArgsShowsHelp(t *testing.T) {
 	err := root.Execute()
 	if err != nil {
 		t.Fatalf("Execute with no args error: %v", err)
+	}
+}
+
+// --- v0.2.0 tests ---
+
+func TestNewRootCmd_MCPSubcommand(t *testing.T) {
+	root := NewRootCmd()
+
+	commands := make(map[string]bool)
+	for _, cmd := range root.Commands() {
+		commands[cmd.Name()] = true
+	}
+
+	if !commands["mcp"] {
+		t.Error("root command missing 'mcp' subcommand")
+	}
+}
+
+func TestNewRootCmd_MCPHasServe(t *testing.T) {
+	root := NewRootCmd()
+	mcpCmd, _, err := root.Find([]string{"mcp"})
+	if err != nil {
+		t.Fatalf("Find mcp: %v", err)
+	}
+
+	subNames := make(map[string]bool)
+	for _, c := range mcpCmd.Commands() {
+		subNames[c.Name()] = true
+	}
+
+	if !subNames["serve"] {
+		t.Error("mcp should have 'serve' subcommand")
+	}
+}
+
+func TestNewRootCmd_ExportSubcommand(t *testing.T) {
+	root := NewRootCmd()
+
+	commands := make(map[string]bool)
+	for _, cmd := range root.Commands() {
+		commands[cmd.Name()] = true
+	}
+
+	if !commands["export"] {
+		t.Error("root command missing 'export' subcommand")
+	}
+}
+
+func TestNewRootCmd_ImportSubcommand(t *testing.T) {
+	root := NewRootCmd()
+
+	commands := make(map[string]bool)
+	for _, cmd := range root.Commands() {
+		commands[cmd.Name()] = true
+	}
+
+	if !commands["import"] {
+		t.Error("root command missing 'import' subcommand")
+	}
+}
+
+func TestNewRootCmd_ProfileFlag(t *testing.T) {
+	root := NewRootCmd()
+
+	f := root.PersistentFlags().Lookup("profile")
+	if f == nil {
+		t.Fatal("root command missing --profile persistent flag")
+	}
+	if f.DefValue != "" {
+		t.Errorf("--profile default = %q, want empty string", f.DefValue)
+	}
+}
+
+func TestNewRootCmd_ExportHasFileFlag(t *testing.T) {
+	root := NewRootCmd()
+
+	var exportCmd *cobra.Command
+	for _, cmd := range root.Commands() {
+		if cmd.Name() == "export" {
+			exportCmd = cmd
+			break
+		}
+	}
+	if exportCmd == nil {
+		t.Fatal("export subcommand not found")
+	}
+
+	f := exportCmd.Flags().Lookup("file")
+	if f == nil {
+		t.Error("export command missing --file flag")
+	}
+}
+
+func TestNewRootCmd_ImportHasFileFlag(t *testing.T) {
+	root := NewRootCmd()
+
+	var importCmd *cobra.Command
+	for _, cmd := range root.Commands() {
+		if cmd.Name() == "import" {
+			importCmd = cmd
+			break
+		}
+	}
+	if importCmd == nil {
+		t.Fatal("import subcommand not found")
+	}
+
+	f := importCmd.Flags().Lookup("file")
+	if f == nil {
+		t.Error("import command missing --file flag")
+	}
+}
+
+func TestNewRootCmd_HelpContainsNewSubcommands(t *testing.T) {
+	root := NewRootCmd()
+
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetArgs([]string{"--help"})
+
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("Execute --help error: %v", err)
+	}
+
+	helpOutput := buf.String()
+
+	newSubs := []string{"mcp", "export", "import"}
+	for _, sub := range newSubs {
+		if !strings.Contains(helpOutput, sub) {
+			t.Errorf("help output should list %q subcommand", sub)
+		}
+	}
+}
+
+func TestNewRootCmd_HelpContainsProfileFlag(t *testing.T) {
+	root := NewRootCmd()
+
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetArgs([]string{"--help"})
+
+	err := root.Execute()
+	if err != nil {
+		t.Fatalf("Execute --help error: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "--profile") {
+		t.Error("help should mention --profile flag")
 	}
 }

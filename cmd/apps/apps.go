@@ -48,6 +48,14 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List apps in a project",
+		Example: `  # List all apps
+  rc apps list
+
+  # List with JSON output
+  rc apps list -o json
+
+  # Fetch all pages
+  rc apps list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -113,7 +121,12 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <app-id>",
 		Short: "Get an app by ID",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Get app details
+  rc apps get app1a2b3c4d5
+
+  # Get as JSON
+  rc apps get app1a2b3c4d5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -163,11 +176,15 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		Long: `Create a new platform app in a project.
 
 Supported types: app_store, play_store, amazon, stripe, rc_billing,
-roku, mac_app_store, paddle
-
-Examples:
+roku, mac_app_store, paddle`,
+		Example: `  # Create an iOS app
   rc apps create --name "iOS App" --type app_store --bundle-id com.example.app
-  rc apps create --name "Android App" --type play_store --bundle-id com.example.app`,
+
+  # Create an Android app
+  rc apps create --name "Android App" --type play_store --bundle-id com.example.app
+
+  # Create a Stripe app
+  rc apps create --name "Web Payments" --type stripe`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -232,7 +249,9 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <app-id>",
 		Short: "Update an app",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Rename an app
+  rc apps update app1a2b3c4d5 --name "My Renamed App"`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -280,7 +299,9 @@ func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <app-id>",
 		Short: "Delete an app",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Delete an app
+  rc apps delete app1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -304,7 +325,12 @@ func newPublicKeysCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "public-keys <app-id>",
 		Short: "List public API keys for an app",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # List public keys for an app
+  rc apps public-keys app1a2b3c4d5
+
+  # Get as JSON
+  rc apps public-keys app1a2b3c4d5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -348,7 +374,12 @@ func newStoreKitConfigCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "storekit-config <app-id>",
 		Short: "Get StoreKit configuration for an app",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Get StoreKit config for an iOS app
+  rc apps storekit-config app1a2b3c4d5
+
+  # Get as JSON
+  rc apps storekit-config app1a2b3c4d5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

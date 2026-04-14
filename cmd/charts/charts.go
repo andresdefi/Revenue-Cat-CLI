@@ -34,6 +34,14 @@ func newOverviewCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "overview",
 		Short: "Show metrics overview for a project",
+		Example: `  # Show metrics overview
+  rc charts overview
+
+  # Watch for changes
+  rc charts overview --watch
+
+  # Get as JSON
+  rc charts overview -o json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			run := func(_ context.Context) error {
 				pid, err := cmdutil.ResolveProject(projectID)
@@ -74,7 +82,13 @@ func newOverviewCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newShowCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "show <chart-name>", Short: "Show a specific chart's data", Args: cobra.ExactArgs(1),
+		Use: "show <chart-name>", Short: "Show a specific chart's data",
+		Example: `  # Show revenue chart
+  rc charts show revenue
+
+  # Show active subscribers chart as JSON
+  rc charts show active_subscribers -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -107,7 +121,13 @@ func newShowCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newOptionsCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "options <chart-name>", Short: "Get available filter/segment options for a chart", Args: cobra.ExactArgs(1),
+		Use: "options <chart-name>", Short: "Get available filter/segment options for a chart",
+		Example: `  # Get options for a chart
+  rc charts options revenue
+
+  # Get as JSON
+  rc charts options revenue -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

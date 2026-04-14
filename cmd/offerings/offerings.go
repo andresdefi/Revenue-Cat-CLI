@@ -49,6 +49,14 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List offerings in a project",
+		Example: `  # List all offerings
+  rc offerings list
+
+  # List with JSON output
+  rc offerings list -o json
+
+  # Fetch all pages
+  rc offerings list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -131,7 +139,12 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <offering-id>",
 		Short: "Get an offering by ID",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Get offering details with packages
+  rc offerings get ofrnge1a2b3c4d5
+
+  # Get as JSON
+  rc offerings get ofrnge1a2b3c4d5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -194,6 +207,11 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		Short: "Create a new offering",
 		Long: `Create a new offering. Required flags are prompted interactively when
 running in a terminal and not provided on the command line.`,
+		Example: `  # Create an offering
+  rc offerings create --lookup-key default --display-name "Standard Offering"
+
+  # Interactive mode (prompts for missing fields)
+  rc offerings create`,
 		RunE: func(c *cobra.Command, args []string) error {
 			// Interactive prompts for missing required fields
 			if err := cmdutil.PromptIfEmpty(&lookupKey, "Lookup key", "default"); err != nil {
@@ -254,7 +272,12 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <offering-id>",
 		Short: "Update an offering",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Update display name
+  rc offerings update ofrnge1a2b3c4d5 --display-name "Premium Offering"
+
+  # Set as current offering
+  rc offerings update ofrnge1a2b3c4d5 --is-current`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -307,7 +330,9 @@ func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <offering-id>",
 		Short: "Delete an offering and its packages",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Delete an offering
+  rc offerings delete ofrnge1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -331,7 +356,9 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "archive <offering-id>",
 		Short: "Archive an offering",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Archive an offering
+  rc offerings archive ofrnge1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -355,7 +382,9 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "unarchive <offering-id>",
 		Short: "Unarchive an offering",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Unarchive an offering
+  rc offerings unarchive ofrnge1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

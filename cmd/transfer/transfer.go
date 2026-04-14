@@ -30,10 +30,12 @@ func NewExportCmd(projectID, outputFormat *string) *cobra.Command {
 		Use:   "export",
 		Short: "Export full project configuration (products, entitlements, offerings)",
 		Long: `Export the complete project configuration as a single JSON file.
-This includes all products, entitlements, and offerings with their packages.
+This includes all products, entitlements, and offerings with their packages.`,
+		Example: `  # Export project config
+  rc export --file config.json
 
-Example:
-  rc export --file config.json`,
+  # Export from a specific project
+  rc export --file config.json --project proj1a2b3c4d5`,
 		RunE: func(c *cobra.Command, args []string) error {
 			if file == "" {
 				return fmt.Errorf("--file is required")
@@ -115,9 +117,11 @@ func NewImportCmd(projectID, outputFormat *string) *cobra.Command {
 		Use:   "import",
 		Short: "Import project configuration from a JSON file",
 		Long: `Import a project configuration exported with 'rc export'.
-Creates products, entitlements, and offerings in the target project.
+Creates products, entitlements, and offerings in the target project.`,
+		Example: `  # Import into the default project
+  rc import --file config.json
 
-Example:
+  # Import into a specific project
   rc import --file config.json --project proj_target123`,
 		RunE: func(c *cobra.Command, args []string) error {
 			if file == "" {
@@ -145,7 +149,9 @@ Example:
 
 			// Create products
 			prodCreated := 0
-			for _, p := range config.Products {
+			prodTotal := len(config.Products)
+			for i, p := range config.Products {
+				output.Progress(i+1, prodTotal, "Creating product %s", p.StoreIdentifier)
 				body := map[string]any{
 					"store_identifier": p.StoreIdentifier,
 					"app_id":           p.AppID,
@@ -164,7 +170,9 @@ Example:
 
 			// Create entitlements
 			entCreated := 0
-			for _, e := range config.Entitlements {
+			entTotal := len(config.Entitlements)
+			for i, e := range config.Entitlements {
+				output.Progress(i+1, entTotal, "Creating entitlement %s", e.LookupKey)
 				body := map[string]any{
 					"lookup_key":   e.LookupKey,
 					"display_name": e.DisplayName,
@@ -179,7 +187,9 @@ Example:
 
 			// Create offerings
 			offCreated := 0
-			for _, o := range config.Offerings {
+			offTotal := len(config.Offerings)
+			for i, o := range config.Offerings {
+				output.Progress(i+1, offTotal, "Creating offering %s", o.LookupKey)
 				body := map[string]any{
 					"lookup_key":   o.LookupKey,
 					"display_name": o.DisplayName,

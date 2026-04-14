@@ -64,12 +64,50 @@ func Deref(s *string, fallback string) string {
 	return *s
 }
 
+// ANSI color codes for terminal output.
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+)
+
+// ColorRed returns the red ANSI escape code if stdout is a TTY, empty string otherwise.
+func ColorRed() string {
+	if IsTTY() {
+		return colorRed
+	}
+	return ""
+}
+
+// ColorReset returns the reset ANSI escape code if stdout is a TTY, empty string otherwise.
+func ColorReset() string {
+	if IsTTY() {
+		return colorReset
+	}
+	return ""
+}
+
 // Success prints a success message to stderr (keeps stdout clean for piping).
 func Success(msg string, args ...any) {
-	fmt.Fprintf(os.Stderr, "  "+msg+"\n", args...)
+	if IsTTY() {
+		fmt.Fprintf(os.Stderr, colorGreen+"  "+msg+colorReset+"\n", args...)
+	} else {
+		fmt.Fprintf(os.Stderr, "  "+msg+"\n", args...)
+	}
 }
 
 // Warn prints a warning message to stderr.
 func Warn(msg string, args ...any) {
-	fmt.Fprintf(os.Stderr, "  Warning: "+msg+"\n", args...)
+	if IsTTY() {
+		fmt.Fprintf(os.Stderr, colorYellow+"  Warning: "+msg+colorReset+"\n", args...)
+	} else {
+		fmt.Fprintf(os.Stderr, "  Warning: "+msg+"\n", args...)
+	}
+}
+
+// Progress prints a progress indicator to stderr for bulk operations.
+func Progress(current, total int, msg string, args ...any) {
+	prefix := fmt.Sprintf("[%d/%d] ", current, total)
+	fmt.Fprintf(os.Stderr, "  "+prefix+msg+"\n", args...)
 }

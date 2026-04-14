@@ -32,6 +32,11 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "list", Short: "List paywalls",
+		Example: `  # List paywalls
+  rc paywalls list
+
+  # List with JSON output
+  rc paywalls list -o json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -89,7 +94,13 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "get <paywall-id>", Short: "Get a paywall by ID", Args: cobra.ExactArgs(1),
+		Use: "get <paywall-id>", Short: "Get a paywall by ID",
+		Example: `  # Get paywall details
+  rc paywalls get pw1a2b3c4d5
+
+  # Get as JSON
+  rc paywalls get pw1a2b3c4d5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -120,6 +131,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
 		Use: "create", Short: "Create a paywall",
+		Example: `  # Create a paywall
+  rc paywalls create`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -150,7 +163,10 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "delete <paywall-id>", Short: "Delete a paywall", Args: cobra.ExactArgs(1),
+		Use: "delete <paywall-id>", Short: "Delete a paywall",
+		Example: `  # Delete a paywall
+  rc paywalls delete pw1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

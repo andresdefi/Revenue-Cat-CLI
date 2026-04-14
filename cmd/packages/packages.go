@@ -51,6 +51,14 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List packages in an offering",
+		Example: `  # List packages in an offering
+  rc packages list --offering-id ofrnge1a2b3c
+
+  # List with JSON output
+  rc packages list --offering-id ofrnge1a2b3c -o json
+
+  # Fetch all pages
+  rc packages list --offering-id ofrnge1a2b3c --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -126,7 +134,12 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <package-id>",
 		Short: "Get a package by ID",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Get package details
+  rc packages get pkge1a2b3c4d5
+
+  # Get as JSON
+  rc packages get pkge1a2b3c4d5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -174,6 +187,11 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new package in an offering",
+		Example: `  # Create a package
+  rc packages create --offering-id ofrnge1a2b3c --lookup-key monthly --display-name "Monthly"
+
+  # Create with position
+  rc packages create --offering-id ofrnge1a2b3c --lookup-key annual --display-name "Annual" --position 1`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -227,7 +245,12 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <package-id>",
 		Short: "Update a package",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Update display name
+  rc packages update pkge1a2b3c4d5 --display-name "Annual Plan"
+
+  # Update position
+  rc packages update pkge1a2b3c4d5 --position 2`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -268,7 +291,10 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "delete <package-id>", Short: "Delete a package", Args: cobra.ExactArgs(1),
+		Use: "delete <package-id>", Short: "Delete a package",
+		Example: `  # Delete a package
+  rc packages delete pkge1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -296,7 +322,12 @@ func newListProductsCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "products <package-id>",
 		Short: "List products attached to a package",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # List products for a package
+  rc packages products pkge1a2b3c4d5
+
+  # Fetch all pages
+  rc packages products pkge1a2b3c4d5 --all`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -363,10 +394,11 @@ func newAttachCmd(projectID *string) *cobra.Command {
 		Short: "Attach a product to a package",
 		Long: `Attach a product to a package with eligibility criteria.
 
-Eligibility options: all (default), google_sdk_lt_6, google_sdk_ge_6
-
-Examples:
+Eligibility options: all (default), google_sdk_lt_6, google_sdk_ge_6`,
+		Example: `  # Attach a product to a package
   rc packages attach --package-id pkge1a2b3c --product-id prod1a2b3c
+
+  # Attach with eligibility criteria
   rc packages attach --package-id pkge1a2b3c --product-id prod1a2b3c --eligibility google_sdk_ge_6`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
@@ -404,6 +436,11 @@ func newDetachCmd(projectID *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "detach", Short: "Detach products from a package",
+		Example: `  # Detach a product
+  rc packages detach --package-id pkge1a2b3c --product-id prod1a2b3c
+
+  # Detach multiple products
+  rc packages detach --package-id pkge1a2b3c --product-id prod1,prod2`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

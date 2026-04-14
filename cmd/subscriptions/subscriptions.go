@@ -48,6 +48,14 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List subscriptions in a project",
+		Example: `  # List subscriptions
+  rc subscriptions list
+
+  # List with JSON output
+  rc subscriptions list -o json
+
+  # Fetch all pages
+  rc subscriptions list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -111,7 +119,15 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <subscription-id>",
 		Short: "Get a subscription by ID",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Get subscription details
+  rc subscriptions get sub1ab2c3d4e5
+
+  # Watch for changes
+  rc subscriptions get sub1ab2c3d4e5 --watch
+
+  # Get as JSON
+  rc subscriptions get sub1ab2c3d4e5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			run := func(_ context.Context) error {
 				pid, err := cmdutil.ResolveProject(projectID)
@@ -173,7 +189,13 @@ func newTransactionsCmd(projectID, outputFormat *string) *cobra.Command {
 		limit    int
 	)
 	cmd := &cobra.Command{
-		Use: "transactions <subscription-id>", Short: "List transactions for a subscription", Args: cobra.ExactArgs(1),
+		Use: "transactions <subscription-id>", Short: "List transactions for a subscription",
+		Example: `  # List transactions
+  rc subscriptions transactions sub1ab2c3d4e5
+
+  # Fetch all pages
+  rc subscriptions transactions sub1ab2c3d4e5 --all`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -239,7 +261,10 @@ func newTransactionsCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "entitlements <subscription-id>", Short: "List entitlements for a subscription", Args: cobra.ExactArgs(1),
+		Use: "entitlements <subscription-id>", Short: "List entitlements for a subscription",
+		Example: `  # List entitlements for a subscription
+  rc subscriptions entitlements sub1ab2c3d4e5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -271,7 +296,10 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newCancelCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "cancel <subscription-id>", Short: "Cancel a subscription", Args: cobra.ExactArgs(1),
+		Use: "cancel <subscription-id>", Short: "Cancel a subscription",
+		Example: `  # Cancel a subscription
+  rc subscriptions cancel sub1ab2c3d4e5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -293,7 +321,10 @@ func newCancelCmd(projectID *string) *cobra.Command {
 
 func newRefundCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "refund <subscription-id>", Short: "Refund a subscription", Args: cobra.ExactArgs(1),
+		Use: "refund <subscription-id>", Short: "Refund a subscription",
+		Example: `  # Refund a subscription
+  rc subscriptions refund sub1ab2c3d4e5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -316,7 +347,10 @@ func newRefundCmd(projectID *string) *cobra.Command {
 func newRefundTransactionCmd(projectID *string) *cobra.Command {
 	var transactionID string
 	cmd := &cobra.Command{
-		Use: "refund-transaction <subscription-id>", Short: "Refund a specific transaction within a subscription", Args: cobra.ExactArgs(1),
+		Use: "refund-transaction <subscription-id>", Short: "Refund a specific transaction within a subscription",
+		Example: `  # Refund a specific transaction
+  rc subscriptions refund-transaction sub1ab2c3d4e5 --transaction-id txn1a2b3c`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -345,7 +379,10 @@ func newRefundTransactionCmd(projectID *string) *cobra.Command {
 
 func newManagementURLCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "management-url <subscription-id>", Short: "Get authenticated management URL for a subscription", Args: cobra.ExactArgs(1),
+		Use: "management-url <subscription-id>", Short: "Get authenticated management URL for a subscription",
+		Example: `  # Get management URL
+  rc subscriptions management-url sub1ab2c3d4e5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

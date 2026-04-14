@@ -29,6 +29,11 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "list", Short: "List project collaborators",
+		Example: `  # List collaborators
+  rc collaborators list
+
+  # List with JSON output
+  rc collaborators list -o json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

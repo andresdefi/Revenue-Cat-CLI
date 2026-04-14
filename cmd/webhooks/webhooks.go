@@ -33,6 +33,11 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "list", Short: "List webhook integrations",
+		Example: `  # List webhooks
+  rc webhooks list
+
+  # List with JSON output
+  rc webhooks list -o json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -90,7 +95,10 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "get <webhook-id>", Short: "Get a webhook by ID", Args: cobra.ExactArgs(1),
+		Use: "get <webhook-id>", Short: "Get a webhook by ID",
+		Example: `  # Get webhook details
+  rc webhooks get wh1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -125,6 +133,8 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "create", Short: "Create a new webhook integration",
+		Example: `  # Create a webhook
+  rc webhooks create --name "My Webhook" --url https://example.com/webhook`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -164,7 +174,13 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 		webhookURL string
 	)
 	cmd := &cobra.Command{
-		Use: "update <webhook-id>", Short: "Update a webhook integration", Args: cobra.ExactArgs(1),
+		Use: "update <webhook-id>", Short: "Update a webhook integration",
+		Example: `  # Update webhook name
+  rc webhooks update wh1a2b3c4d5 --name "Updated Webhook"
+
+  # Update webhook URL
+  rc webhooks update wh1a2b3c4d5 --url https://example.com/new-webhook`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -205,7 +221,10 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "delete <webhook-id>", Short: "Delete a webhook integration", Args: cobra.ExactArgs(1),
+		Use: "delete <webhook-id>", Short: "Delete a webhook integration",
+		Example: `  # Delete a webhook
+  rc webhooks delete wh1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

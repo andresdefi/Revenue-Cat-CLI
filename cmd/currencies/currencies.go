@@ -38,6 +38,11 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "list", Short: "List virtual currencies",
+		Example: `  # List virtual currencies
+  rc currencies list
+
+  # List with JSON output
+  rc currencies list -o json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -95,7 +100,13 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "get <currency-code>", Short: "Get a virtual currency by code", Args: cobra.ExactArgs(1),
+		Use: "get <currency-code>", Short: "Get a virtual currency by code",
+		Example: `  # Get currency details
+  rc currencies get COINS
+
+  # Get as JSON
+  rc currencies get COINS -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -130,6 +141,8 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "create", Short: "Create a virtual currency",
+		Example: `  # Create a virtual currency
+  rc currencies create --code COINS --name "Gold Coins"`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -166,7 +179,10 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	var name string
 	cmd := &cobra.Command{
-		Use: "update <currency-code>", Short: "Update a virtual currency", Args: cobra.ExactArgs(1),
+		Use: "update <currency-code>", Short: "Update a virtual currency",
+		Example: `  # Update currency name
+  rc currencies update COINS --name "Premium Coins"`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -200,7 +216,10 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "delete <currency-code>", Short: "Delete a virtual currency", Args: cobra.ExactArgs(1),
+		Use: "delete <currency-code>", Short: "Delete a virtual currency",
+		Example: `  # Delete a virtual currency
+  rc currencies delete COINS`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -222,7 +241,10 @@ func newDeleteCmd(projectID *string) *cobra.Command {
 
 func newArchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "archive <currency-code>", Short: "Archive a virtual currency", Args: cobra.ExactArgs(1),
+		Use: "archive <currency-code>", Short: "Archive a virtual currency",
+		Example: `  # Archive a virtual currency
+  rc currencies archive COINS`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -244,7 +266,10 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 
 func newUnarchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "unarchive <currency-code>", Short: "Unarchive a virtual currency", Args: cobra.ExactArgs(1),
+		Use: "unarchive <currency-code>", Short: "Unarchive a virtual currency",
+		Example: `  # Unarchive a virtual currency
+  rc currencies unarchive COINS`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -268,6 +293,8 @@ func newBalanceCmd(projectID, outputFormat *string) *cobra.Command {
 	var customerID string
 	cmd := &cobra.Command{
 		Use: "balance", Short: "Show a customer's virtual currency balances",
+		Example: `  # Check balances for a customer
+  rc currencies balance --customer-id user-123`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -308,6 +335,11 @@ func newCreditCmd(projectID *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "credit", Short: "Create a virtual currency transaction (credit/debit)",
+		Example: `  # Credit 100 coins
+  rc currencies credit --customer-id user-123 --code COINS --amount 100
+
+  # Debit 50 coins
+  rc currencies credit --customer-id user-123 --code COINS --amount -50`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -345,6 +377,8 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "set-balance", Short: "Set a customer's virtual currency balance directly",
+		Example: `  # Set balance to 500
+  rc currencies set-balance --customer-id user-123 --code COINS --balance 500`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

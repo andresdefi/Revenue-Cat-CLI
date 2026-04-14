@@ -33,6 +33,14 @@ func newListCmd(outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all projects",
+		Example: `  # List all projects
+  rc projects list
+
+  # List with JSON output
+  rc projects list -o json
+
+  # Fetch all pages
+  rc projects list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			client, err := api.NewClient()
 			if err != nil {
@@ -95,6 +103,11 @@ func newCreateCmd(outputFormat *string) *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new project",
+		Example: `  # Create a new project
+  rc projects create --name "My App"
+
+  # Create and output as JSON
+  rc projects create --name "My App" -o json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			client, err := api.NewClient()
 			if err != nil {
@@ -134,7 +147,12 @@ func newSetDefaultCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "set-default <project-id>",
 		Short: "Set the default project for all commands",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Set the default project
+  rc projects set-default proj1a2b3c4d5
+
+  # Set default for a specific profile
+  rc projects set-default proj1a2b3c4d5 --profile staging`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			profile := cmdutil.ResolveProfile()
 			cfg, err := config.Load()

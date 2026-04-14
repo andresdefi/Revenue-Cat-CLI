@@ -25,6 +25,7 @@ import (
 	"github.com/andresdefi/rc/cmd/webhooks"
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
+	"github.com/andresdefi/rc/internal/output"
 	"github.com/andresdefi/rc/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -110,7 +111,7 @@ audit logs, collaborators, and virtual currencies.`,
 
 func Execute() {
 	if err := NewRootCmd().Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
+		fmt.Fprintf(os.Stderr, "%sError:%s %s\n", output.ColorRed(), output.ColorReset(), err)
 
 		var apiErr *api.Error
 		switch {

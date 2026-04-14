@@ -46,6 +46,17 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List products in a project",
+		Example: `  # List all products
+  rc products list
+
+  # List with JSON output
+  rc products list -o json
+
+  # Filter by app
+  rc products list --app-id app1a2b3c4
+
+  # Fetch all pages
+  rc products list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -115,7 +126,12 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <product-id>",
 		Short: "Get a product by ID",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Get product details
+  rc products get prod1a2b3c4d5
+
+  # Get as JSON
+  rc products get prod1a2b3c4d5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -167,6 +183,14 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		Short: "Create a new product",
 		Long: `Create a new product. Required flags are prompted interactively when
 running in a terminal and not provided on the command line.`,
+		Example: `  # Create a subscription product
+  rc products create --store-id com.app.monthly --app-id app1a2b3c4 --type subscription
+
+  # Create with a display name
+  rc products create --store-id com.app.yearly --app-id app1a2b3c4 --type subscription --display-name "Annual Plan"
+
+  # Interactive mode (prompts for missing fields)
+  rc products create`,
 		RunE: func(c *cobra.Command, args []string) error {
 			// Interactive prompts for missing required fields
 			if err := cmdutil.PromptIfEmpty(&storeIdentifier, "Store identifier", "com.app.product_id"); err != nil {
@@ -238,7 +262,9 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <product-id>",
 		Short: "Update a product",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Update display name
+  rc products update prod1a2b3c4d5 --display-name "Premium Monthly"`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -283,7 +309,9 @@ func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <product-id>",
 		Short: "Delete a product",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Delete a product
+  rc products delete prod1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -307,7 +335,9 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "archive <product-id>",
 		Short: "Archive a product",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Archive a product
+  rc products archive prod1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -331,7 +361,9 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "unarchive <product-id>",
 		Short: "Unarchive a product",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Unarchive a product
+  rc products unarchive prod1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -359,6 +391,8 @@ func newPushToStoreCmd(projectID *string) *cobra.Command {
 
 This creates the product in the store (e.g., App Store Connect, Google Play)
 using the product configuration defined in RevenueCat.`,
+		Example: `  # Push a product to App Store Connect / Google Play
+  rc products push-to-store prod1a2b3c4d5`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
@@ -393,10 +427,11 @@ func newExportCmd(projectID *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export products to a file (CSV or JSON)",
-		Long: `Export products to a CSV or JSON file. Format is detected from the file extension.
-
-Examples:
+		Long:  `Export products to a CSV or JSON file. Format is detected from the file extension.`,
+		Example: `  # Export to CSV
   rc products export --file products.csv
+
+  # Export to JSON
   rc products export --file products.json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			if file == "" {
@@ -473,10 +508,11 @@ func newImportCmd(projectID *string) *cobra.Command {
 		Use:   "import",
 		Short: "Import products from a file (CSV or JSON)",
 		Long: `Import products from a CSV or JSON file. Format is detected from the file extension.
-Each row/entry creates a new product in the project.
-
-Examples:
+Each row/entry creates a new product in the project.`,
+		Example: `  # Import from CSV
   rc products import --file products.csv
+
+  # Import from JSON
   rc products import --file products.json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			if file == "" {
@@ -522,7 +558,9 @@ Examples:
 			}
 
 			created := 0
-			for _, row := range rows {
+			total := len(rows)
+			for i, row := range rows {
+				output.Progress(i+1, total, "Creating product %s", row.StoreIdentifier)
 				body := map[string]any{
 					"store_identifier": row.StoreIdentifier,
 					"app_id":           row.AppID,

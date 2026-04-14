@@ -63,6 +63,14 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List customers in a project",
+		Example: `  # List customers
+  rc customers list
+
+  # Search by email
+  rc customers list --search user@example.com
+
+  # Fetch all pages
+  rc customers list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -149,7 +157,15 @@ func newLookupCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "lookup <customer-id>",
 		Short: "Look up a customer by ID",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Look up a customer
+  rc customers lookup user-123
+
+  # Watch for changes
+  rc customers lookup user-123 --watch
+
+  # Get as JSON
+  rc customers lookup user-123 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			run := func(_ context.Context) error {
 				pid, err := cmdutil.ResolveProject(projectID)
@@ -217,6 +233,11 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a customer",
+		Example: `  # Create a customer
+  rc customers create --id user-456
+
+  # Create and output as JSON
+  rc customers create --id user-456 -o json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -256,7 +277,10 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "delete <customer-id>", Short: "Delete a customer", Args: cobra.ExactArgs(1),
+		Use: "delete <customer-id>", Short: "Delete a customer",
+		Example: `  # Delete a customer
+  rc customers delete user-123`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -285,7 +309,12 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "entitlements <customer-id>",
 		Short: "List active entitlements for a customer",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # List active entitlements
+  rc customers entitlements user-123
+
+  # Watch for changes
+  rc customers entitlements user-123 --watch`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			run := func(_ context.Context) error {
 				pid, err := cmdutil.ResolveProject(projectID)
@@ -341,7 +370,13 @@ func newSubscriptionsCmd(projectID, outputFormat *string) *cobra.Command {
 		limit    int
 	)
 	cmd := &cobra.Command{
-		Use: "subscriptions <customer-id>", Short: "List subscriptions for a customer", Args: cobra.ExactArgs(1),
+		Use: "subscriptions <customer-id>", Short: "List subscriptions for a customer",
+		Example: `  # List customer subscriptions
+  rc customers subscriptions user-123
+
+  # Fetch all pages
+  rc customers subscriptions user-123 --all`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -403,7 +438,13 @@ func newPurchasesCmd(projectID, outputFormat *string) *cobra.Command {
 		limit    int
 	)
 	cmd := &cobra.Command{
-		Use: "purchases <customer-id>", Short: "List purchases for a customer", Args: cobra.ExactArgs(1),
+		Use: "purchases <customer-id>", Short: "List purchases for a customer",
+		Example: `  # List customer purchases
+  rc customers purchases user-123
+
+  # Fetch all pages
+  rc customers purchases user-123 --all`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -461,7 +502,10 @@ func newPurchasesCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newAliasesCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "aliases <customer-id>", Short: "List aliases for a customer", Args: cobra.ExactArgs(1),
+		Use: "aliases <customer-id>", Short: "List aliases for a customer",
+		Example: `  # List aliases
+  rc customers aliases user-123`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -493,7 +537,10 @@ func newAliasesCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newAttributesCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "attributes <customer-id>", Short: "List attributes for a customer", Args: cobra.ExactArgs(1),
+		Use: "attributes <customer-id>", Short: "List attributes for a customer",
+		Example: `  # List customer attributes
+  rc customers attributes user-123`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -531,9 +578,11 @@ func newSetAttributesCmd(projectID *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-attributes",
 		Short: "Set attributes on a customer",
-		Long: `Set key=value attributes on a customer.
+		Long:  `Set key=value attributes on a customer.`,
+		Example: `  # Set a single attribute
+  rc customers set-attributes --customer-id user-123 --attr 'plan=pro'
 
-Examples:
+  # Set multiple attributes
   rc customers set-attributes --customer-id user-123 --attr '$email=user@example.com' --attr 'plan=pro'`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
@@ -579,6 +628,8 @@ func newGrantCmd(projectID *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "grant", Short: "Grant an entitlement to a customer",
+		Example: `  # Grant an entitlement with expiration
+  rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --expires-at 1735689600000`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -615,6 +666,8 @@ func newRevokeCmd(projectID *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "revoke", Short: "Revoke a granted entitlement from a customer",
+		Example: `  # Revoke an entitlement
+  rc customers revoke --customer-id user-123 --entitlement-id entla1b2c3`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -650,6 +703,11 @@ func newAssignOfferingCmd(projectID *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "assign-offering", Short: "Assign or clear an offering override for a customer",
+		Example: `  # Assign an offering override
+  rc customers assign-offering --customer-id user-123 --offering-id ofrnge1a2b3c
+
+  # Clear the offering override
+  rc customers assign-offering --customer-id user-123 --clear`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -694,6 +752,8 @@ func newTransferCmd(projectID *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "transfer", Short: "Transfer subscriptions/purchases to another customer",
+		Example: `  # Transfer purchases between customers
+  rc customers transfer --customer-id user-123 --target-id user-456`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -728,6 +788,8 @@ func newRestorePurchaseCmd(projectID *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "restore-purchase", Short: "Restore a Google Play purchase by order ID",
+		Example: `  # Restore a Google Play purchase
+  rc customers restore-purchase --customer-id user-123 --order-id GPA.1234-5678-9012`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -757,7 +819,10 @@ func newRestorePurchaseCmd(projectID *string) *cobra.Command {
 
 func newInvoicesCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "invoices <customer-id>", Short: "List invoices for a customer", Args: cobra.ExactArgs(1),
+		Use: "invoices <customer-id>", Short: "List invoices for a customer",
+		Example: `  # List invoices
+  rc customers invoices user-123`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -797,7 +862,8 @@ func newInvoiceFileCmd(projectID *string) *cobra.Command {
 		Short: "Download an invoice file",
 		Long: `Download an invoice file for a customer.
 
-The file content is written to stdout. Redirect to save:
+The file content is written to stdout. Redirect to save.`,
+		Example: `  # Download an invoice to a file
   rc customers invoice-file --customer-id user-123 --invoice-id inv1a2b3c > invoice.pdf`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)

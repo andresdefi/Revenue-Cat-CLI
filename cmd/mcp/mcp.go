@@ -33,6 +33,11 @@ operations as MCP tools. The server communicates over stdin/stdout.
 The API key is resolved in this order:
   1. RC_API_KEY environment variable
   2. Stored keychain / config token (same as normal CLI auth)`,
+		Example: `  # Start the MCP server
+  rc mcp serve
+
+  # Start with an explicit API key
+  RC_API_KEY=sk_test_xxx rc mcp serve`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := resolveClient()
 			if err != nil {

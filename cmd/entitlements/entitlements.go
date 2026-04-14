@@ -58,6 +58,14 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List entitlements in a project",
+		Example: `  # List all entitlements
+  rc entitlements list
+
+  # List with JSON output
+  rc entitlements list -o json
+
+  # Fetch all pages
+  rc entitlements list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -123,7 +131,12 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <entitlement-id>",
 		Short: "Get an entitlement by ID",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Get entitlement details
+  rc entitlements get entla1b2c3d4e5
+
+  # Get as JSON
+  rc entitlements get entla1b2c3d4e5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -171,6 +184,11 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		Short: "Create a new entitlement",
 		Long: `Create a new entitlement. Required flags are prompted interactively when
 running in a terminal and not provided on the command line.`,
+		Example: `  # Create an entitlement
+  rc entitlements create --lookup-key premium --display-name "Premium Access"
+
+  # Interactive mode (prompts for missing fields)
+  rc entitlements create`,
 		RunE: func(c *cobra.Command, args []string) error {
 			// Interactive prompts for missing required fields
 			if err := cmdutil.PromptIfEmpty(&lookupKey, "Lookup key", "premium"); err != nil {
@@ -227,7 +245,9 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <entitlement-id>",
 		Short: "Update an entitlement",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Update display name
+  rc entitlements update entla1b2c3d4e5 --display-name "Premium Plus"`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -272,7 +292,9 @@ func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete <entitlement-id>",
 		Short: "Delete an entitlement",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Delete an entitlement
+  rc entitlements delete entla1b2c3d4e5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -296,7 +318,9 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "archive <entitlement-id>",
 		Short: "Archive an entitlement",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Archive an entitlement
+  rc entitlements archive entla1b2c3d4e5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -320,7 +344,9 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "unarchive <entitlement-id>",
 		Short: "Unarchive an entitlement",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Unarchive an entitlement
+  rc entitlements unarchive entla1b2c3d4e5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -349,7 +375,12 @@ func newListProductsCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "products <entitlement-id>",
 		Short: "List products attached to an entitlement",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # List products for an entitlement
+  rc entitlements products entla1b2c3d4e5
+
+  # Fetch all pages
+  rc entitlements products entla1b2c3d4e5 --all`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -420,10 +451,11 @@ func newAttachCmd(projectID *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "attach",
 		Short: "Attach products to an entitlement",
-		Long: `Attach one or more products to an entitlement.
-
-Examples:
+		Long:  `Attach one or more products to an entitlement.`,
+		Example: `  # Attach a single product
   rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1a2b3c
+
+  # Attach multiple products
   rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1,prod2`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
@@ -463,6 +495,11 @@ func newDetachCmd(projectID *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "detach",
 		Short: "Detach products from an entitlement",
+		Example: `  # Detach a product
+  rc entitlements detach --entitlement-id entla1b2c3 --product-id prod1a2b3c
+
+  # Detach multiple products
+  rc entitlements detach --entitlement-id entla1b2c3 --product-id prod1,prod2`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -504,10 +541,11 @@ func newExportCmd(projectID *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export entitlements to a file (CSV or JSON)",
-		Long: `Export entitlements to a CSV or JSON file. Format is detected from the file extension.
-
-Examples:
+		Long:  `Export entitlements to a CSV or JSON file. Format is detected from the file extension.`,
+		Example: `  # Export to CSV
   rc entitlements export --file entitlements.csv
+
+  # Export to JSON
   rc entitlements export --file entitlements.json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			if file == "" {
@@ -582,10 +620,11 @@ func newImportCmd(projectID *string) *cobra.Command {
 		Use:   "import",
 		Short: "Import entitlements from a file (CSV or JSON)",
 		Long: `Import entitlements from a CSV or JSON file. Format is detected from the file extension.
-Each row/entry creates a new entitlement in the project.
-
-Examples:
+Each row/entry creates a new entitlement in the project.`,
+		Example: `  # Import from CSV
   rc entitlements import --file entitlements.csv
+
+  # Import from JSON
   rc entitlements import --file entitlements.json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			if file == "" {
@@ -631,7 +670,9 @@ Examples:
 			}
 
 			created := 0
-			for _, row := range rows {
+			total := len(rows)
+			for i, row := range rows {
+				output.Progress(i+1, total, "Creating entitlement %s", row.LookupKey)
 				body := map[string]any{
 					"lookup_key":   row.LookupKey,
 					"display_name": row.DisplayName,

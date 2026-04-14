@@ -31,6 +31,14 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "list", Short: "List audit log entries",
+		Example: `  # List recent audit logs
+  rc audit-logs list
+
+  # Filter by date range
+  rc audit-logs list --start-date 2024-01-01 --end-date 2024-01-31
+
+  # Fetch all pages
+  rc audit-logs list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

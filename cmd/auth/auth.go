@@ -2,10 +2,12 @@ package auth
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/andresdefi/rc/internal/api"
 	internalAuth "github.com/andresdefi/rc/internal/auth"
 	"github.com/andresdefi/rc/internal/cmdutil"
 	"github.com/andresdefi/rc/internal/output"
@@ -22,6 +24,7 @@ func NewAuthCmd() *cobra.Command {
 	cmd.AddCommand(newLoginCmd())
 	cmd.AddCommand(newStatusCmd())
 	cmd.AddCommand(newLogoutCmd())
+	cmd.AddCommand(newDoctorCmd())
 	return cmd
 }
 
@@ -36,6 +39,11 @@ You can create a v2 secret key in the RevenueCat dashboard:
 
 The key will be stored in your system keychain (with config file fallback).
 Keys are prefixed with sk_ and must have v2 API permissions.`,
+		Example: `  # Log in with the default profile
+  rc auth login
+
+  # Log in with a specific profile
+  rc auth login --profile staging`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			profile := cmdutil.ResolveProfile()
 
@@ -69,6 +77,11 @@ func newStatusCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Show current authentication status",
+		Example: `  # Check auth status for the default profile
+  rc auth status
+
+  # Check auth status for a specific profile
+  rc auth status --profile production`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			profile := cmdutil.ResolveProfile()
 
@@ -91,6 +104,11 @@ func newLogoutCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "logout",
 		Short: "Remove stored API key",
+		Example: `  # Log out of the default profile
+  rc auth logout
+
+  # Log out of a specific profile
+  rc auth logout --profile staging`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			profile := cmdutil.ResolveProfile()
 
@@ -98,6 +116,48 @@ func newLogoutCmd() *cobra.Command {
 				return fmt.Errorf("failed to remove API key: %w", err)
 			}
 			output.Success("Logged out successfully [profile: %s]", profile)
+			return nil
+		},
+	}
+}
+
+func newDoctorCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "doctor",
+		Short: "Check authentication health and API connectivity",
+		Example: `  # Run auth diagnostics
+  rc auth doctor
+
+  # Check a specific profile
+  rc auth doctor --profile production`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			profile := cmdutil.ResolveProfile()
+			fmt.Fprintf(os.Stderr, "Profile:     %s\n", profile)
+
+			token, err := internalAuth.GetToken(profile)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Token:       not found\n")
+				fmt.Fprintf(os.Stderr, "API access:  failed - run `rc auth login` to authenticate\n")
+				return nil
+			}
+
+			source := internalAuth.TokenSource(profile)
+			fmt.Fprintf(os.Stderr, "Token:       %s (stored in %s)\n", internalAuth.MaskToken(token), source)
+
+			client := api.NewClientWithToken(token)
+			data, err := client.Get("/projects", nil)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "API access:  failed - %v\n", err)
+				return nil
+			}
+
+			var resp api.ListResponse[api.Project]
+			if err := json.Unmarshal(data, &resp); err != nil {
+				fmt.Fprintf(os.Stderr, "API access:  failed - could not parse response\n")
+				return nil
+			}
+
+			fmt.Fprintf(os.Stderr, "API access:  OK (found %d projects)\n", len(resp.Items))
 			return nil
 		},
 	}

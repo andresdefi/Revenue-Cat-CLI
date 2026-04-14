@@ -32,6 +32,14 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "list", Short: "List purchases in a project",
+		Example: `  # List purchases
+  rc purchases list
+
+  # List with JSON output
+  rc purchases list -o json
+
+  # Fetch all pages
+  rc purchases list --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -89,7 +97,13 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "get <purchase-id>", Short: "Get a purchase by ID", Args: cobra.ExactArgs(1),
+		Use: "get <purchase-id>", Short: "Get a purchase by ID",
+		Example: `  # Get purchase details
+  rc purchases get purch1a2b3c4d5
+
+  # Get as JSON
+  rc purchases get purch1a2b3c4d5 -o json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -128,7 +142,10 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "entitlements <purchase-id>", Short: "List entitlements for a purchase", Args: cobra.ExactArgs(1),
+		Use: "entitlements <purchase-id>", Short: "List entitlements for a purchase",
+		Example: `  # List entitlements for a purchase
+  rc purchases entitlements purch1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -160,7 +177,10 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newRefundCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use: "refund <purchase-id>", Short: "Refund a purchase", Args: cobra.ExactArgs(1),
+		Use: "refund <purchase-id>", Short: "Refund a purchase",
+		Example: `  # Refund a purchase
+  rc purchases refund purch1a2b3c4d5`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
