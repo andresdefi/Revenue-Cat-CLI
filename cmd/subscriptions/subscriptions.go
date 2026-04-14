@@ -1,9 +1,11 @@
 package subscriptions
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
@@ -39,7 +41,11 @@ Examples:
 }
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		fetchAll bool
+		limit    int
+	)
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List subscriptions in a project",
 		RunE: func(c *cobra.Command, args []string) error {
@@ -51,17 +57,34 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/subscriptions", url.PathEscape(pid)), nil)
+			path := fmt.Sprintf("/projects/%s/subscriptions", url.PathEscape(pid))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+			if fetchAll {
+				items, err := api.PaginateAll[api.Subscription](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Customer", "Product", "Status", "Renewal", "Store", "Env"})
+					for _, s := range items {
+						t.AppendRow(table.Row{s.ID, s.CustomerID, output.Deref(s.ProductID, "promo"), s.Status, s.AutoRenewalStatus, s.Store, s.Environment})
+					}
+					t.AppendFooter(table.Row{"", "", "", "", "", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.Subscription]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Customer", "Product", "Status", "Renewal", "Store", "Env"})
@@ -69,70 +92,88 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{s.ID, s.CustomerID, output.Deref(s.ProductID, "promo"), s.Status, s.AutoRenewalStatus, s.Store, s.Environment})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		watch    bool
+		interval time.Duration
+	)
+	cmd := &cobra.Command{
 		Use:   "get <subscription-id>",
 		Short: "Get a subscription by ID",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/subscriptions/%s", url.PathEscape(pid), url.PathEscape(args[0])), nil)
-			if err != nil {
-				return err
-			}
-
-			var sub api.Subscription
-			if err := json.Unmarshal(data, &sub); err != nil {
-				return fmt.Errorf("failed to parse response: %w", err)
-			}
-
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, sub, func(t table.Writer) {
-				t.AppendHeader(table.Row{"Field", "Value"})
-				t.AppendRows([]table.Row{
-					{"ID", sub.ID},
-					{"Customer", sub.CustomerID},
-					{"Product", output.Deref(sub.ProductID, "promotional")},
-					{"Status", sub.Status},
-					{"Auto Renewal", sub.AutoRenewalStatus},
-					{"Gives Access", sub.GivesAccess},
-					{"Store", sub.Store},
-					{"Environment", sub.Environment},
-					{"Ownership", sub.Ownership},
-					{"Country", output.Deref(sub.Country, "-")},
-					{"Starts At", output.FormatTimestamp(sub.StartsAt)},
-					{"Period Start", output.FormatTimestamp(sub.CurrentPeriodStartsAt)},
-					{"Period End", formatOptionalTimestamp(sub.CurrentPeriodEndsAt)},
-					{"Ends At", formatOptionalTimestamp(sub.EndsAt)},
-				})
-				if sub.TotalRevenueInUSD != nil {
-					t.AppendSeparator()
-					t.AppendRow(table.Row{"Revenue (USD)", fmt.Sprintf("$%.2f gross, $%.2f proceeds", sub.TotalRevenueInUSD.Gross, sub.TotalRevenueInUSD.Proceeds)})
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
+				if err != nil {
+					return err
 				}
-			})
-			return nil
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				data, err := client.Get(fmt.Sprintf("/projects/%s/subscriptions/%s", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+				if err != nil {
+					return err
+				}
+				var sub api.Subscription
+				if err := json.Unmarshal(data, &sub); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, sub, func(t table.Writer) {
+					t.AppendHeader(table.Row{"Field", "Value"})
+					t.AppendRows([]table.Row{
+						{"ID", sub.ID},
+						{"Customer", sub.CustomerID},
+						{"Product", output.Deref(sub.ProductID, "promotional")},
+						{"Status", sub.Status},
+						{"Auto Renewal", sub.AutoRenewalStatus},
+						{"Gives Access", sub.GivesAccess},
+						{"Store", sub.Store},
+						{"Environment", sub.Environment},
+						{"Ownership", sub.Ownership},
+						{"Country", output.Deref(sub.Country, "-")},
+						{"Starts At", output.FormatTimestamp(sub.StartsAt)},
+						{"Period Start", output.FormatTimestamp(sub.CurrentPeriodStartsAt)},
+						{"Period End", formatOptionalTimestamp(sub.CurrentPeriodEndsAt)},
+						{"Ends At", formatOptionalTimestamp(sub.EndsAt)},
+					})
+					if sub.TotalRevenueInUSD != nil {
+						t.AppendSeparator()
+						t.AppendRow(table.Row{"Revenue (USD)", fmt.Sprintf("$%.2f gross, $%.2f proceeds", sub.TotalRevenueInUSD.Gross, sub.TotalRevenueInUSD.Proceeds)})
+					}
+				})
+				return nil
+			}
+			if watch {
+				return cmdutil.Watch(c.Context(), interval, run)
+			}
+			return run(c.Context())
 		},
 	}
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	return cmd
 }
 
 func newTransactionsCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
-		Use:   "transactions <subscription-id>",
-		Short: "List transactions for a subscription",
-		Args:  cobra.ExactArgs(1),
+	var (
+		fetchAll bool
+		limit    int
+	)
+	cmd := &cobra.Command{
+		Use: "transactions <subscription-id>", Short: "List transactions for a subscription", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -142,17 +183,38 @@ func newTransactionsCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/subscriptions/%s/transactions", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			path := fmt.Sprintf("/projects/%s/subscriptions/%s/transactions", url.PathEscape(pid), url.PathEscape(args[0]))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+			if fetchAll {
+				items, err := api.PaginateAll[api.Transaction](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Store", "Purchased", "Revenue (USD)"})
+					for _, tx := range items {
+						rev := "-"
+						if tx.RevenueInUSD != nil {
+							rev = fmt.Sprintf("$%.2f", tx.RevenueInUSD.Gross)
+						}
+						t.AppendRow(table.Row{tx.ID, tx.Store, output.FormatTimestamp(tx.PurchasedAt), rev})
+					}
+					t.AppendFooter(table.Row{"", "", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.Transaction]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Store", "Purchased", "Revenue (USD)"})
@@ -164,16 +226,20 @@ func newTransactionsCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{tx.ID, tx.Store, output.FormatTimestamp(tx.PurchasedAt), rev})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "entitlements <subscription-id>",
-		Short: "List entitlements for a subscription",
-		Args:  cobra.ExactArgs(1),
+		Use: "entitlements <subscription-id>", Short: "List entitlements for a subscription", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -183,17 +249,14 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(fmt.Sprintf("/projects/%s/subscriptions/%s/entitlements", url.PathEscape(pid), url.PathEscape(args[0])), nil)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.Entitlement]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Lookup Key", "Display Name"})
@@ -208,9 +271,7 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newCancelCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "cancel <subscription-id>",
-		Short: "Cancel a subscription",
-		Args:  cobra.ExactArgs(1),
+		Use: "cancel <subscription-id>", Short: "Cancel a subscription", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -232,9 +293,7 @@ func newCancelCmd(projectID *string) *cobra.Command {
 
 func newRefundCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "refund <subscription-id>",
-		Short: "Refund a subscription",
-		Args:  cobra.ExactArgs(1),
+		Use: "refund <subscription-id>", Short: "Refund a subscription", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -256,11 +315,8 @@ func newRefundCmd(projectID *string) *cobra.Command {
 
 func newRefundTransactionCmd(projectID *string) *cobra.Command {
 	var transactionID string
-
 	cmd := &cobra.Command{
-		Use:   "refund-transaction <subscription-id>",
-		Short: "Refund a specific transaction within a subscription",
-		Args:  cobra.ExactArgs(1),
+		Use: "refund-transaction <subscription-id>", Short: "Refund a specific transaction within a subscription", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -282,7 +338,6 @@ func newRefundTransactionCmd(projectID *string) *cobra.Command {
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&transactionID, "transaction-id", "", "transaction ID to refund (required)")
 	cmd.MarkFlagRequired("transaction-id")
 	return cmd
@@ -290,9 +345,7 @@ func newRefundTransactionCmd(projectID *string) *cobra.Command {
 
 func newManagementURLCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "management-url <subscription-id>",
-		Short: "Get authenticated management URL for a subscription",
-		Args:  cobra.ExactArgs(1),
+		Use: "management-url <subscription-id>", Short: "Get authenticated management URL for a subscription", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -302,19 +355,16 @@ func newManagementURLCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(
 				fmt.Sprintf("/projects/%s/subscriptions/%s/authenticated_management_url", url.PathEscape(pid), url.PathEscape(args[0])), nil,
 			)
 			if err != nil {
 				return err
 			}
-
 			var mgmt api.ManagementURL
 			if err := json.Unmarshal(data, &mgmt); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, mgmt, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Management URL"})

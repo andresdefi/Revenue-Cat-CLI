@@ -42,7 +42,11 @@ Examples:
 }
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
-	var offeringID string
+	var (
+		offeringID string
+		fetchAll   bool
+		limit      int
+	)
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -57,9 +61,33 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 				return err
 			}
 
-			data, err := client.Get(
-				fmt.Sprintf("/projects/%s/offerings/%s/packages", url.PathEscape(pid), url.PathEscape(offeringID)), nil,
-			)
+			path := fmt.Sprintf("/projects/%s/offerings/%s/packages", url.PathEscape(pid), url.PathEscape(offeringID))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+
+			if fetchAll {
+				items, err := api.PaginateAll[api.Package](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Lookup Key", "Display Name", "Position", "Created"})
+					for _, p := range items {
+						pos := "-"
+						if p.Position != nil {
+							pos = fmt.Sprintf("%d", *p.Position)
+						}
+						t.AppendRow(table.Row{p.ID, p.LookupKey, p.DisplayName, pos, output.FormatTimestamp(p.CreatedAt)})
+					}
+					t.AppendFooter(table.Row{"", "", "", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
@@ -80,12 +108,17 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{p.ID, p.LookupKey, p.DisplayName, pos, output.FormatTimestamp(p.CreatedAt)})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&offeringID, "offering-id", "", "offering ID (required)")
 	cmd.MarkFlagRequired("offering-id")
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
 	return cmd
 }
 
@@ -103,17 +136,14 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(fmt.Sprintf("/projects/%s/packages/%s", url.PathEscape(pid), url.PathEscape(args[0])), nil)
 			if err != nil {
 				return err
 			}
-
 			var pkg api.Package
 			if err := json.Unmarshal(data, &pkg); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, pkg, func(t table.Writer) {
 				pos := "-"
@@ -141,7 +171,6 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		displayName string
 		position    int
 	)
-
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new package in an offering",
@@ -154,27 +183,18 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			body := map[string]any{
-				"lookup_key":   lookupKey,
-				"display_name": displayName,
-			}
+			body := map[string]any{"lookup_key": lookupKey, "display_name": displayName}
 			if c.Flags().Changed("position") {
 				body["position"] = position
 			}
-
-			data, err := client.Post(
-				fmt.Sprintf("/projects/%s/offerings/%s/packages", url.PathEscape(pid), url.PathEscape(offeringID)), body,
-			)
+			data, err := client.Post(fmt.Sprintf("/projects/%s/offerings/%s/packages", url.PathEscape(pid), url.PathEscape(offeringID)), body)
 			if err != nil {
 				return err
 			}
-
 			var pkg api.Package
 			if err := json.Unmarshal(data, &pkg); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, pkg, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
@@ -189,7 +209,6 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&offeringID, "offering-id", "", "offering ID (required)")
 	cmd.Flags().StringVar(&lookupKey, "lookup-key", "", "lookup key (required)")
 	cmd.Flags().StringVar(&displayName, "display-name", "", "display name (required)")
@@ -205,7 +224,6 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 		displayName string
 		position    int
 	)
-
 	cmd := &cobra.Command{
 		Use:   "update <package-id>",
 		Short: "Update a package",
@@ -219,7 +237,6 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			body := map[string]any{}
 			if c.Flags().Changed("display-name") {
 				body["display_name"] = displayName
@@ -227,30 +244,23 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 			if c.Flags().Changed("position") {
 				body["position"] = position
 			}
-
 			data, err := client.Post(fmt.Sprintf("/projects/%s/packages/%s", url.PathEscape(pid), url.PathEscape(args[0])), body)
 			if err != nil {
 				return err
 			}
-
 			var pkg api.Package
 			if err := json.Unmarshal(data, &pkg); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, pkg, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
-				t.AppendRows([]table.Row{
-					{"ID", pkg.ID},
-					{"Display Name", pkg.DisplayName},
-				})
+				t.AppendRows([]table.Row{{"ID", pkg.ID}, {"Display Name", pkg.DisplayName}})
 			})
 			output.Success("Package updated")
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&displayName, "display-name", "", "new display name")
 	cmd.Flags().IntVar(&position, "position", 0, "new position")
 	return cmd
@@ -258,9 +268,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "delete <package-id>",
-		Short: "Delete a package",
-		Args:  cobra.ExactArgs(1),
+		Use: "delete <package-id>", Short: "Delete a package", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -281,7 +289,11 @@ func newDeleteCmd(projectID *string) *cobra.Command {
 }
 
 func newListProductsCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		fetchAll bool
+		limit    int
+	)
+	cmd := &cobra.Command{
 		Use:   "products <package-id>",
 		Short: "List products attached to a package",
 		Args:  cobra.ExactArgs(1),
@@ -294,17 +306,34 @@ func newListProductsCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/packages/%s/products", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			path := fmt.Sprintf("/projects/%s/packages/%s/products", url.PathEscape(pid), url.PathEscape(args[0]))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+			if fetchAll {
+				items, err := api.PaginateAll[api.PackageProduct](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"Product ID", "Eligibility"})
+					for _, p := range items {
+						t.AppendRow(table.Row{p.ProductID, p.EligibilityCriteria})
+					}
+					t.AppendFooter(table.Row{"", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.PackageProduct]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Product ID", "Eligibility"})
@@ -312,9 +341,15 @@ func newListProductsCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{p.ProductID, p.EligibilityCriteria})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newAttachCmd(projectID *string) *cobra.Command {
@@ -323,7 +358,6 @@ func newAttachCmd(projectID *string) *cobra.Command {
 		productID   string
 		eligibility string
 	)
-
 	cmd := &cobra.Command{
 		Use:   "attach",
 		Short: "Attach a product to a package",
@@ -343,11 +377,7 @@ Examples:
 			if err != nil {
 				return err
 			}
-
-			products := []map[string]any{
-				{"product_id": productID, "eligibility_criteria": eligibility},
-			}
-
+			products := []map[string]any{{"product_id": productID, "eligibility_criteria": eligibility}}
 			_, err = client.Post(
 				fmt.Sprintf("/projects/%s/packages/%s/actions/attach_products", url.PathEscape(pid), url.PathEscape(packageID)),
 				map[string]any{"products": products},
@@ -359,7 +389,6 @@ Examples:
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&packageID, "package-id", "", "package ID (required)")
 	cmd.Flags().StringVar(&productID, "product-id", "", "product ID (required)")
 	cmd.Flags().StringVar(&eligibility, "eligibility", "all", "eligibility criteria: all, google_sdk_lt_6, google_sdk_ge_6")
@@ -373,10 +402,8 @@ func newDetachCmd(projectID *string) *cobra.Command {
 		packageID  string
 		productIDs []string
 	)
-
 	cmd := &cobra.Command{
-		Use:   "detach",
-		Short: "Detach products from a package",
+		Use: "detach", Short: "Detach products from a package",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -386,7 +413,6 @@ func newDetachCmd(projectID *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			_, err = client.Post(
 				fmt.Sprintf("/projects/%s/packages/%s/actions/detach_products", url.PathEscape(pid), url.PathEscape(packageID)),
 				map[string]any{"product_ids": productIDs},
@@ -398,7 +424,6 @@ func newDetachCmd(projectID *string) *cobra.Command {
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&packageID, "package-id", "", "package ID (required)")
 	cmd.Flags().StringSliceVar(&productIDs, "product-id", nil, "product ID(s) to detach (required, comma-separated)")
 	cmd.MarkFlagRequired("package-id")

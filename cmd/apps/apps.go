@@ -40,7 +40,12 @@ Examples:
 }
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		fetchAll bool
+		limit    int
+	)
+
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List apps in a project",
 		RunE: func(c *cobra.Command, args []string) error {
@@ -53,7 +58,29 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 				return err
 			}
 
-			data, err := client.Get(fmt.Sprintf("/projects/%s/apps", url.PathEscape(pid)), nil)
+			path := fmt.Sprintf("/projects/%s/apps", url.PathEscape(pid))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+
+			if fetchAll {
+				items, err := api.PaginateAll[api.App](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Name", "Type", "Created"})
+					for _, a := range items {
+						t.AppendRow(table.Row{a.ID, a.Name, a.Type, output.FormatTimestamp(a.CreatedAt)})
+					}
+					t.AppendFooter(table.Row{"", "", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
@@ -70,9 +97,16 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{a.ID, a.Name, a.Type, output.FormatTimestamp(a.CreatedAt)})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {

@@ -17,15 +17,7 @@ func NewPurchasesCmd(projectID, outputFormat *string) *cobra.Command {
 		Use:     "purchases",
 		Aliases: []string{"purchase"},
 		Short:   "Manage one-time purchases",
-		Long: `View and manage RevenueCat one-time purchases.
-
-Examples:
-  rc purchases list
-  rc purchases get purch1a2b3c4d5
-  rc purchases entitlements purch1a2b3c4d5
-  rc purchases refund purch1a2b3c4d5`,
 	}
-
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	root.AddCommand(newGetCmd(projectID, outputFormat))
 	root.AddCommand(newEntitlementsCmd(projectID, outputFormat))
@@ -34,9 +26,12 @@ Examples:
 }
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "List purchases in a project",
+	var (
+		fetchAll bool
+		limit    int
+	)
+	cmd := &cobra.Command{
+		Use: "list", Short: "List purchases in a project",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -46,17 +41,34 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/purchases", url.PathEscape(pid)), nil)
+			path := fmt.Sprintf("/projects/%s/purchases", url.PathEscape(pid))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+			if fetchAll {
+				items, err := api.PaginateAll[api.Purchase](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Customer", "Product", "Status", "Qty", "Store", "Purchased"})
+					for _, p := range items {
+						t.AppendRow(table.Row{p.ID, p.CustomerID, p.ProductID, p.Status, p.Quantity, p.Store, output.FormatTimestamp(p.PurchasedAt)})
+					}
+					t.AppendFooter(table.Row{"", "", "", "", "", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.Purchase]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Customer", "Product", "Status", "Qty", "Store", "Purchased"})
@@ -64,16 +76,20 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{p.ID, p.CustomerID, p.ProductID, p.Status, p.Quantity, p.Store, output.FormatTimestamp(p.PurchasedAt)})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "get <purchase-id>",
-		Short: "Get a purchase by ID",
-		Args:  cobra.ExactArgs(1),
+		Use: "get <purchase-id>", Short: "Get a purchase by ID", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -83,31 +99,22 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(fmt.Sprintf("/projects/%s/purchases/%s", url.PathEscape(pid), url.PathEscape(args[0])), nil)
 			if err != nil {
 				return err
 			}
-
 			var purchase api.Purchase
 			if err := json.Unmarshal(data, &purchase); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, purchase, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
 				t.AppendRows([]table.Row{
-					{"ID", purchase.ID},
-					{"Customer", purchase.CustomerID},
-					{"Product", purchase.ProductID},
-					{"Status", purchase.Status},
-					{"Quantity", purchase.Quantity},
-					{"Store", purchase.Store},
-					{"Environment", purchase.Environment},
-					{"Ownership", purchase.Ownership},
-					{"Country", output.Deref(purchase.Country, "-")},
-					{"Purchased", output.FormatTimestamp(purchase.PurchasedAt)},
+					{"ID", purchase.ID}, {"Customer", purchase.CustomerID}, {"Product", purchase.ProductID},
+					{"Status", purchase.Status}, {"Quantity", purchase.Quantity}, {"Store", purchase.Store},
+					{"Environment", purchase.Environment}, {"Ownership", purchase.Ownership},
+					{"Country", output.Deref(purchase.Country, "-")}, {"Purchased", output.FormatTimestamp(purchase.PurchasedAt)},
 				})
 				if purchase.RevenueInUSD != nil {
 					t.AppendSeparator()
@@ -121,9 +128,7 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "entitlements <purchase-id>",
-		Short: "List entitlements for a purchase",
-		Args:  cobra.ExactArgs(1),
+		Use: "entitlements <purchase-id>", Short: "List entitlements for a purchase", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -133,17 +138,14 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(fmt.Sprintf("/projects/%s/purchases/%s/entitlements", url.PathEscape(pid), url.PathEscape(args[0])), nil)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.Entitlement]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Lookup Key", "Display Name"})
@@ -158,9 +160,7 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newRefundCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "refund <purchase-id>",
-		Short: "Refund a purchase",
-		Args:  cobra.ExactArgs(1),
+		Use: "refund <purchase-id>", Short: "Refund a purchase", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

@@ -17,20 +17,18 @@ func NewCollaboratorsCmd(projectID, outputFormat *string) *cobra.Command {
 		Use:     "collaborators",
 		Aliases: []string{"collaborator", "collab"},
 		Short:   "View project collaborators",
-		Long: `View collaborators who have access to a RevenueCat project.
-
-Examples:
-  rc collaborators list`,
 	}
-
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	return root
 }
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "List project collaborators",
+	var (
+		fetchAll bool
+		limit    int
+	)
+	cmd := &cobra.Command{
+		Use: "list", Short: "List project collaborators",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -40,25 +38,48 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/collaborators", url.PathEscape(pid)), nil)
+			path := fmt.Sprintf("/projects/%s/collaborators", url.PathEscape(pid))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+			if fetchAll {
+				items, err := api.PaginateAll[api.Collaborator](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Email", "Role"})
+					for _, co := range items {
+						t.AppendRow(table.Row{co.ID, co.Email, co.Role})
+					}
+					t.AppendFooter(table.Row{"", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.Collaborator]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Email", "Role"})
-				for _, c := range resp.Items {
-					t.AppendRow(table.Row{c.ID, c.Email, c.Role})
+				for _, co := range resp.Items {
+					t.AppendRow(table.Row{co.ID, co.Email, co.Role})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }

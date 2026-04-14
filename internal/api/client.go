@@ -25,19 +25,29 @@ type Client struct {
 	token   string
 }
 
-// NewClient creates a new API client using the stored auth token.
+// NewClient creates a new API client using the stored auth token for the active profile.
 func NewClient() (*Client, error) {
-	token, err := auth.GetToken()
+	return NewClientForProfile("")
+}
+
+// NewClientForProfile creates a new API client using the stored auth token for the given profile.
+func NewClientForProfile(profile string) (*Client, error) {
+	token, err := auth.GetToken(profile)
 	if err != nil {
 		return nil, err
 	}
+	return NewClientWithToken(token), nil
+}
+
+// NewClientWithToken creates a new API client using the provided token directly.
+func NewClientWithToken(token string) *Client {
 	return &Client{
 		http: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 		baseURL: BaseURL,
 		token:   token,
-	}, nil
+	}
 }
 
 // Error represents a RevenueCat API error response.
@@ -80,6 +90,57 @@ func (c *Client) Post(path string, body any) ([]byte, error) {
 // Delete performs a DELETE request.
 func (c *Client) Delete(path string) ([]byte, error) {
 	return c.do("DELETE", path, nil, nil)
+}
+
+// GetFullURL performs a GET using a full URL path (e.g. from next_page).
+// The path should already include any query parameters.
+func (c *Client) GetFullURL(fullPath string) ([]byte, error) {
+	u := c.baseURL + fullPath
+
+	var lastErr error
+	for attempt := range MaxRetries {
+		req, err := http.NewRequest("GET", u, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		req.Header.Set("Authorization", "Bearer "+c.token)
+		req.Header.Set("User-Agent", UserAgent)
+
+		resp, err := c.http.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("request failed: %w", err)
+			continue
+		}
+
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return respBody, nil
+		}
+
+		var apiErr Error
+		if err := json.Unmarshal(respBody, &apiErr); err == nil && apiErr.Message != "" {
+			if apiErr.Retryable && attempt < MaxRetries-1 {
+				backoff := time.Duration(100*(attempt+1)) * time.Millisecond
+				if apiErr.BackoffMs != nil {
+					backoff = time.Duration(*apiErr.BackoffMs) * time.Millisecond
+				}
+				time.Sleep(backoff)
+				lastErr = &apiErr
+				continue
+			}
+			return nil, &apiErr
+		}
+
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil, fmt.Errorf("request failed after %d attempts: %w", MaxRetries, lastErr)
 }
 
 func (c *Client) do(method, path string, query url.Values, body any) ([]byte, error) {
@@ -144,4 +205,61 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 	}
 
 	return nil, fmt.Errorf("request failed after %d attempts: %w", MaxRetries, lastErr)
+}
+
+// Paginate fetches all pages from a list endpoint, calling fn for each page.
+// fn receives the items from each page and returns (keepGoing, error).
+// If fn returns false, pagination stops.
+func Paginate[T any](c *Client, path string, query url.Values, fn func(items []T) (bool, error)) error {
+	// Build the initial URL with query params.
+	initialPath := path
+	if len(query) > 0 {
+		initialPath += "?" + query.Encode()
+	}
+
+	currentPath := initialPath
+	isFirst := true
+
+	for {
+		var data []byte
+		var err error
+		if isFirst {
+			data, err = c.Get(path, query)
+			isFirst = false
+		} else {
+			// currentPath is a full path from next_page (includes query params)
+			data, err = c.GetFullURL(currentPath)
+		}
+		if err != nil {
+			return err
+		}
+
+		var resp ListResponse[T]
+		if err := json.Unmarshal(data, &resp); err != nil {
+			return fmt.Errorf("failed to parse paginated response: %w", err)
+		}
+
+		keepGoing, err := fn(resp.Items)
+		if err != nil {
+			return err
+		}
+		if !keepGoing {
+			return nil
+		}
+
+		if resp.NextPage == nil {
+			return nil
+		}
+		currentPath = *resp.NextPage
+	}
+}
+
+// PaginateAll collects all items across all pages.
+func PaginateAll[T any](c *Client, path string, query url.Values) ([]T, error) {
+	var all []T
+	err := Paginate(c, path, query, func(items []T) (bool, error) {
+		all = append(all, items...)
+		return true, nil
+	})
+	return all, err
 }

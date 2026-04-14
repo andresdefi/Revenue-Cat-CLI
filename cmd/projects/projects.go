@@ -3,6 +3,7 @@ package projects
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
@@ -26,7 +27,10 @@ func NewProjectsCmd(projectID, outputFormat *string) *cobra.Command {
 }
 
 func newListCmd(outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var fetchAll bool
+	var limit int
+
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all projects",
 		RunE: func(c *cobra.Command, args []string) error {
@@ -35,7 +39,28 @@ func newListCmd(outputFormat *string) *cobra.Command {
 				return err
 			}
 
-			data, err := client.Get("/projects", nil)
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+
+			if fetchAll {
+				items, err := api.PaginateAll[api.Project](client, "/projects", query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Name", "Created"})
+					for _, p := range items {
+						t.AppendRow(table.Row{p.ID, p.Name, output.FormatTimestamp(p.CreatedAt)})
+					}
+					t.AppendFooter(table.Row{"", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+
+			data, err := client.Get("/projects", query)
 			if err != nil {
 				return err
 			}
@@ -52,9 +77,16 @@ func newListCmd(outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{p.ID, p.Name, output.FormatTimestamp(p.CreatedAt)})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newCreateCmd(outputFormat *string) *cobra.Command {
@@ -104,15 +136,21 @@ func newSetDefaultCmd() *cobra.Command {
 		Short: "Set the default project for all commands",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			profile := cmdutil.ResolveProfile()
 			cfg, err := config.Load()
 			if err != nil {
 				return err
 			}
-			cfg.ProjectID = args[0]
+			p := cfg.GetProfile(profile)
+			if p == nil {
+				p = &config.Profile{}
+			}
+			p.ProjectID = args[0]
+			cfg.SetProfile(profile, p)
 			if err := config.Save(cfg); err != nil {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
-			output.Success("Default project set to %s", args[0])
+			output.Success("Default project set to %s [profile: %s]", args[0], profile)
 			return nil
 		},
 	}

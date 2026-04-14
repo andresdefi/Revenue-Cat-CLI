@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	internalAuth "github.com/andresdefi/rc/internal/auth"
+	"github.com/andresdefi/rc/internal/cmdutil"
 	"github.com/andresdefi/rc/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +37,8 @@ You can create a v2 secret key in the RevenueCat dashboard:
 The key will be stored in your system keychain (with config file fallback).
 Keys are prefixed with sk_ and must have v2 API permissions.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			profile := cmdutil.ResolveProfile()
+
 			fmt.Print("Enter your RevenueCat API v2 secret key: ")
 			reader := bufio.NewReader(os.Stdin)
 			token, err := reader.ReadString('\n')
@@ -52,11 +55,11 @@ Keys are prefixed with sk_ and must have v2 API permissions.`,
 				output.Warn("Key does not start with 'sk_' - make sure you're using a v2 secret API key")
 			}
 
-			if err := internalAuth.SaveToken(token); err != nil {
+			if err := internalAuth.SaveToken(profile, token); err != nil {
 				return fmt.Errorf("failed to save API key: %w", err)
 			}
 
-			output.Success("Logged in successfully (stored in %s)", internalAuth.TokenSource())
+			output.Success("Logged in successfully [profile: %s] (stored in %s)", profile, internalAuth.TokenSource(profile))
 			return nil
 		},
 	}
@@ -67,16 +70,18 @@ func newStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Show current authentication status",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := internalAuth.GetToken()
+			profile := cmdutil.ResolveProfile()
+
+			token, err := internalAuth.GetToken(profile)
 			if err != nil {
-				fmt.Println("Not logged in")
+				fmt.Printf("Not logged in [profile: %s]\n", profile)
 				fmt.Println("Run `rc auth login` to authenticate")
 				return nil
 			}
 
-			fmt.Printf("Logged in\n")
+			fmt.Printf("Logged in [profile: %s]\n", profile)
 			fmt.Printf("  Key:     %s\n", internalAuth.MaskToken(token))
-			fmt.Printf("  Stored:  %s\n", internalAuth.TokenSource())
+			fmt.Printf("  Stored:  %s\n", internalAuth.TokenSource(profile))
 			return nil
 		},
 	}
@@ -87,10 +92,12 @@ func newLogoutCmd() *cobra.Command {
 		Use:   "logout",
 		Short: "Remove stored API key",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := internalAuth.DeleteToken(); err != nil {
+			profile := cmdutil.ResolveProfile()
+
+			if err := internalAuth.DeleteToken(profile); err != nil {
 				return fmt.Errorf("failed to remove API key: %w", err)
 			}
-			output.Success("Logged out successfully")
+			output.Success("Logged out successfully [profile: %s]", profile)
 			return nil
 		},
 	}

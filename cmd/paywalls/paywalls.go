@@ -17,14 +17,7 @@ func NewPaywallsCmd(projectID, outputFormat *string) *cobra.Command {
 		Use:     "paywalls",
 		Aliases: []string{"paywall"},
 		Short:   "Manage paywalls",
-		Long: `Manage RevenueCat paywalls for a project.
-
-Examples:
-  rc paywalls list
-  rc paywalls get pw1a2b3c4d5
-  rc paywalls delete pw1a2b3c4d5`,
 	}
-
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	root.AddCommand(newGetCmd(projectID, outputFormat))
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
@@ -33,9 +26,12 @@ Examples:
 }
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "List paywalls",
+	var (
+		fetchAll bool
+		limit    int
+	)
+	cmd := &cobra.Command{
+		Use: "list", Short: "List paywalls",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -45,17 +41,34 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/paywalls", url.PathEscape(pid)), nil)
+			path := fmt.Sprintf("/projects/%s/paywalls", url.PathEscape(pid))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+			if fetchAll {
+				items, err := api.PaginateAll[api.Paywall](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Created"})
+					for _, p := range items {
+						t.AppendRow(table.Row{p.ID, output.FormatTimestamp(p.CreatedAt)})
+					}
+					t.AppendFooter(table.Row{"", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.Paywall]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Created"})
@@ -63,16 +76,20 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{p.ID, output.FormatTimestamp(p.CreatedAt)})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "get <paywall-id>",
-		Short: "Get a paywall by ID",
-		Args:  cobra.ExactArgs(1),
+		Use: "get <paywall-id>", Short: "Get a paywall by ID", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -82,24 +99,18 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(fmt.Sprintf("/projects/%s/paywalls/%s", url.PathEscape(pid), url.PathEscape(args[0])), nil)
 			if err != nil {
 				return err
 			}
-
 			var pw api.Paywall
 			if err := json.Unmarshal(data, &pw); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, pw, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
-				t.AppendRows([]table.Row{
-					{"ID", pw.ID},
-					{"Created", output.FormatTimestamp(pw.CreatedAt)},
-				})
+				t.AppendRows([]table.Row{{"ID", pw.ID}, {"Created", output.FormatTimestamp(pw.CreatedAt)}})
 			})
 			return nil
 		},
@@ -108,9 +119,7 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "create",
-		Short: "Create a paywall",
-		Long:  "Create a new paywall in a project. The paywall configuration is passed as JSON via stdin or flags.",
+		Use: "create", Short: "Create a paywall",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -120,24 +129,18 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Post(fmt.Sprintf("/projects/%s/paywalls", url.PathEscape(pid)), map[string]any{})
 			if err != nil {
 				return err
 			}
-
 			var pw api.Paywall
 			if err := json.Unmarshal(data, &pw); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, pw, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
-				t.AppendRows([]table.Row{
-					{"ID", pw.ID},
-					{"Created", output.FormatTimestamp(pw.CreatedAt)},
-				})
+				t.AppendRows([]table.Row{{"ID", pw.ID}, {"Created", output.FormatTimestamp(pw.CreatedAt)}})
 			})
 			output.Success("Paywall created")
 			return nil
@@ -147,9 +150,7 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "delete <paywall-id>",
-		Short: "Delete a paywall",
-		Args:  cobra.ExactArgs(1),
+		Use: "delete <paywall-id>", Short: "Delete a paywall", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

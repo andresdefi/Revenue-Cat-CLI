@@ -17,19 +17,7 @@ func NewCurrenciesCmd(projectID, outputFormat *string) *cobra.Command {
 		Use:     "currencies",
 		Aliases: []string{"currency", "vc"},
 		Short:   "Manage virtual currencies",
-		Long: `Manage virtual currencies in a RevenueCat project.
-
-Virtual currencies let you define in-app currency systems (coins, gems, etc.)
-that can be granted to customers.
-
-Examples:
-  rc currencies list
-  rc currencies get COINS
-  rc currencies create --code COINS --name "Gold Coins"
-  rc currencies balance --customer-id user-123
-  rc currencies credit --customer-id user-123 --code COINS --amount 100`,
 	}
-
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	root.AddCommand(newGetCmd(projectID, outputFormat))
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
@@ -44,9 +32,12 @@ Examples:
 }
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "List virtual currencies",
+	var (
+		fetchAll bool
+		limit    int
+	)
+	cmd := &cobra.Command{
+		Use: "list", Short: "List virtual currencies",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -56,17 +47,34 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/virtual_currencies", url.PathEscape(pid)), nil)
+			path := fmt.Sprintf("/projects/%s/virtual_currencies", url.PathEscape(pid))
+			query := url.Values{}
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+			if fetchAll {
+				items, err := api.PaginateAll[api.VirtualCurrency](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"Code", "Name", "State", "Created"})
+					for _, vc := range items {
+						t.AppendRow(table.Row{vc.Code, vc.Name, vc.State, output.FormatTimestamp(vc.CreatedAt)})
+					}
+					t.AppendFooter(table.Row{"", "", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.VirtualCurrency]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Code", "Name", "State", "Created"})
@@ -74,16 +82,20 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{vc.Code, vc.Name, vc.State, output.FormatTimestamp(vc.CreatedAt)})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "get <currency-code>",
-		Short: "Get a virtual currency by code",
-		Args:  cobra.ExactArgs(1),
+		Use: "get <currency-code>", Short: "Get a virtual currency by code", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -93,26 +105,18 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(fmt.Sprintf("/projects/%s/virtual_currencies/%s", url.PathEscape(pid), url.PathEscape(args[0])), nil)
 			if err != nil {
 				return err
 			}
-
 			var vc api.VirtualCurrency
 			if err := json.Unmarshal(data, &vc); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, vc, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
-				t.AppendRows([]table.Row{
-					{"Code", vc.Code},
-					{"Name", vc.Name},
-					{"State", vc.State},
-					{"Created", output.FormatTimestamp(vc.CreatedAt)},
-				})
+				t.AppendRows([]table.Row{{"Code", vc.Code}, {"Name", vc.Name}, {"State", vc.State}, {"Created", output.FormatTimestamp(vc.CreatedAt)}})
 			})
 			return nil
 		},
@@ -124,10 +128,8 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		code string
 		name string
 	)
-
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create a virtual currency",
+		Use: "create", Short: "Create a virtual currency",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -137,34 +139,23 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Post(
-				fmt.Sprintf("/projects/%s/virtual_currencies", url.PathEscape(pid)),
-				map[string]any{"code": code, "name": name},
-			)
+			data, err := client.Post(fmt.Sprintf("/projects/%s/virtual_currencies", url.PathEscape(pid)), map[string]any{"code": code, "name": name})
 			if err != nil {
 				return err
 			}
-
 			var vc api.VirtualCurrency
 			if err := json.Unmarshal(data, &vc); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, vc, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
-				t.AppendRows([]table.Row{
-					{"Code", vc.Code},
-					{"Name", vc.Name},
-					{"State", vc.State},
-				})
+				t.AppendRows([]table.Row{{"Code", vc.Code}, {"Name", vc.Name}, {"State", vc.State}})
 			})
 			output.Success("Virtual currency created")
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&code, "code", "", "currency code, e.g. COINS (required)")
 	cmd.Flags().StringVar(&name, "name", "", "display name (required)")
 	cmd.MarkFlagRequired("code")
@@ -174,11 +165,8 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	var name string
-
 	cmd := &cobra.Command{
-		Use:   "update <currency-code>",
-		Short: "Update a virtual currency",
-		Args:  cobra.ExactArgs(1),
+		Use: "update <currency-code>", Short: "Update a virtual currency", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -188,33 +176,23 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Post(
-				fmt.Sprintf("/projects/%s/virtual_currencies/%s", url.PathEscape(pid), url.PathEscape(args[0])),
-				map[string]any{"name": name},
-			)
+			data, err := client.Post(fmt.Sprintf("/projects/%s/virtual_currencies/%s", url.PathEscape(pid), url.PathEscape(args[0])), map[string]any{"name": name})
 			if err != nil {
 				return err
 			}
-
 			var vc api.VirtualCurrency
 			if err := json.Unmarshal(data, &vc); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, vc, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
-				t.AppendRows([]table.Row{
-					{"Code", vc.Code},
-					{"Name", vc.Name},
-				})
+				t.AppendRows([]table.Row{{"Code", vc.Code}, {"Name", vc.Name}})
 			})
 			output.Success("Virtual currency updated")
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&name, "name", "", "new display name (required)")
 	cmd.MarkFlagRequired("name")
 	return cmd
@@ -222,9 +200,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newDeleteCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "delete <currency-code>",
-		Short: "Delete a virtual currency",
-		Args:  cobra.ExactArgs(1),
+		Use: "delete <currency-code>", Short: "Delete a virtual currency", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -246,9 +222,7 @@ func newDeleteCmd(projectID *string) *cobra.Command {
 
 func newArchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "archive <currency-code>",
-		Short: "Archive a virtual currency",
-		Args:  cobra.ExactArgs(1),
+		Use: "archive <currency-code>", Short: "Archive a virtual currency", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -270,9 +244,7 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 
 func newUnarchiveCmd(projectID *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "unarchive <currency-code>",
-		Short: "Unarchive a virtual currency",
-		Args:  cobra.ExactArgs(1),
+		Use: "unarchive <currency-code>", Short: "Unarchive a virtual currency", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -294,10 +266,8 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 
 func newBalanceCmd(projectID, outputFormat *string) *cobra.Command {
 	var customerID string
-
 	cmd := &cobra.Command{
-		Use:   "balance",
-		Short: "Show a customer's virtual currency balances",
+		Use: "balance", Short: "Show a customer's virtual currency balances",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -307,19 +277,14 @@ func newBalanceCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			data, err := client.Get(
-				fmt.Sprintf("/projects/%s/customers/%s/virtual_currencies", url.PathEscape(pid), url.PathEscape(customerID)), nil,
-			)
+			data, err := client.Get(fmt.Sprintf("/projects/%s/customers/%s/virtual_currencies", url.PathEscape(pid), url.PathEscape(customerID)), nil)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.VCBalance]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Currency", "Balance"})
@@ -330,7 +295,6 @@ func newBalanceCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.MarkFlagRequired("customer-id")
 	return cmd
@@ -342,16 +306,8 @@ func newCreditCmd(projectID *string) *cobra.Command {
 		code       string
 		amount     int64
 	)
-
 	cmd := &cobra.Command{
-		Use:   "credit",
-		Short: "Create a virtual currency transaction (credit/debit)",
-		Long: `Create a virtual currency transaction for a customer.
-Use positive amounts for credits and negative for debits.
-
-Examples:
-  rc currencies credit --customer-id user-123 --code COINS --amount 100
-  rc currencies credit --customer-id user-123 --code COINS --amount -50`,
+		Use: "credit", Short: "Create a virtual currency transaction (credit/debit)",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -361,7 +317,6 @@ Examples:
 			if err != nil {
 				return err
 			}
-
 			_, err = client.Post(
 				fmt.Sprintf("/projects/%s/customers/%s/virtual_currencies/transactions", url.PathEscape(pid), url.PathEscape(customerID)),
 				map[string]any{"currency_code": code, "amount": amount},
@@ -373,7 +328,6 @@ Examples:
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&code, "code", "", "currency code (required)")
 	cmd.Flags().Int64Var(&amount, "amount", 0, "amount (positive=credit, negative=debit) (required)")
@@ -389,10 +343,8 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 		code       string
 		balance    int64
 	)
-
 	cmd := &cobra.Command{
-		Use:   "set-balance",
-		Short: "Set a customer's virtual currency balance directly",
+		Use: "set-balance", Short: "Set a customer's virtual currency balance directly",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -402,7 +354,6 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			_, err = client.Post(
 				fmt.Sprintf("/projects/%s/customers/%s/virtual_currencies/update_balance", url.PathEscape(pid), url.PathEscape(customerID)),
 				map[string]any{"currency_code": code, "balance": balance},
@@ -414,7 +365,6 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&code, "code", "", "currency code (required)")
 	cmd.Flags().Int64Var(&balance, "balance", 0, "new balance value (required)")

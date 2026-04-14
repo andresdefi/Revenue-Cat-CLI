@@ -17,15 +17,7 @@ func NewAuditLogsCmd(projectID, outputFormat *string) *cobra.Command {
 		Use:     "audit-logs",
 		Aliases: []string{"audit", "logs"},
 		Short:   "View audit logs",
-		Long: `View audit logs for a RevenueCat project.
-
-Audit logs track changes made to your project configuration.
-
-Examples:
-  rc audit-logs list
-  rc audit-logs list --start-date 2024-01-01 --end-date 2024-01-31`,
 	}
-
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	return root
 }
@@ -34,11 +26,11 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	var (
 		startDate string
 		endDate   string
+		fetchAll  bool
+		limit     int
 	)
-
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List audit log entries",
+		Use: "list", Short: "List audit log entries",
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -48,7 +40,7 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			path := fmt.Sprintf("/projects/%s/audit_logs", url.PathEscape(pid))
 			query := url.Values{}
 			if startDate != "" {
 				query.Set("start_date", startDate)
@@ -56,17 +48,36 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			if endDate != "" {
 				query.Set("end_date", endDate)
 			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/audit_logs", url.PathEscape(pid)), query)
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
+			if fetchAll {
+				items, err := api.PaginateAll[api.AuditLogEntry](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Action", "Actor", "Details", "Created"})
+					for _, e := range items {
+						details := e.Details
+						if len(details) > 60 {
+							details = details[:57] + "..."
+						}
+						t.AppendRow(table.Row{e.ID, e.Action, e.Actor, details, output.FormatTimestamp(e.CreatedAt)})
+					}
+					t.AppendFooter(table.Row{"", "", "", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
-
 			var resp api.ListResponse[api.AuditLogEntry]
 			if err := json.Unmarshal(data, &resp); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, resp, func(t table.Writer) {
 				t.AppendHeader(table.Row{"ID", "Action", "Actor", "Details", "Created"})
@@ -78,11 +89,15 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{e.ID, e.Action, e.Actor, details, output.FormatTimestamp(e.CreatedAt)})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&startDate, "start-date", "", "filter from date (YYYY-MM-DD)")
 	cmd.Flags().StringVar(&endDate, "end-date", "", "filter to date (YYYY-MM-DD)")
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
 	return cmd
 }

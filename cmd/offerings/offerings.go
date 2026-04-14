@@ -41,7 +41,12 @@ Examples:
 }
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		fetchAll bool
+		limit    int
+	)
+
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List offerings in a project",
 		RunE: func(c *cobra.Command, args []string) error {
@@ -54,10 +59,38 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 				return err
 			}
 
+			path := fmt.Sprintf("/projects/%s/offerings", url.PathEscape(pid))
 			query := url.Values{}
 			query.Set("expand", "items.package")
+			if limit > 0 {
+				query.Set("limit", fmt.Sprintf("%d", limit))
+			}
 
-			data, err := client.Get(fmt.Sprintf("/projects/%s/offerings", url.PathEscape(pid)), query)
+			if fetchAll {
+				items, err := api.PaginateAll[api.Offering](client, path, query)
+				if err != nil {
+					return err
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, items, func(t table.Writer) {
+					t.AppendHeader(table.Row{"ID", "Lookup Key", "Display Name", "Current", "State", "Packages", "Created"})
+					for _, o := range items {
+						pkgCount := 0
+						if o.Packages != nil {
+							pkgCount = len(o.Packages.Items)
+						}
+						current := ""
+						if o.IsCurrent {
+							current = "yes"
+						}
+						t.AppendRow(table.Row{o.ID, o.LookupKey, o.DisplayName, current, o.State, pkgCount, output.FormatTimestamp(o.CreatedAt)})
+					}
+					t.AppendFooter(table.Row{"", "", "", "", "", "", fmt.Sprintf("%d total", len(items))})
+				})
+				return nil
+			}
+
+			data, err := client.Get(path, query)
 			if err != nil {
 				return err
 			}
@@ -82,9 +115,16 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 					t.AppendRow(table.Row{o.ID, o.LookupKey, o.DisplayName, current, o.State, pkgCount, output.FormatTimestamp(o.CreatedAt)})
 				}
 			})
+			if resp.NextPage != nil {
+				output.Warn("More results available (use --all for more)")
+			}
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
+	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
@@ -152,7 +192,17 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new offering",
+		Long: `Create a new offering. Required flags are prompted interactively when
+running in a terminal and not provided on the command line.`,
 		RunE: func(c *cobra.Command, args []string) error {
+			// Interactive prompts for missing required fields
+			if err := cmdutil.PromptIfEmpty(&lookupKey, "Lookup key", "default"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptIfEmpty(&displayName, "Display name", "Standard Offering"); err != nil {
+				return err
+			}
+
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -190,10 +240,8 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&lookupKey, "lookup-key", "", "lookup key identifier (required)")
-	cmd.Flags().StringVar(&displayName, "display-name", "", "display name (required)")
-	cmd.MarkFlagRequired("lookup-key")
-	cmd.MarkFlagRequired("display-name")
+	cmd.Flags().StringVar(&lookupKey, "lookup-key", "", "lookup key identifier")
+	cmd.Flags().StringVar(&displayName, "display-name", "", "display name")
 	return cmd
 }
 

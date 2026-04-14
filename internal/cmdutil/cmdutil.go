@@ -7,15 +7,38 @@ import (
 	"github.com/andresdefi/rc/internal/output"
 )
 
-// ResolveProject returns the project ID from the flag or config.
+// ActiveProfile is set by the root command's --profile flag.
+// Empty string means use the config's current_profile.
+var ActiveProfile string
+
+// ResolveProfile returns the effective profile name.
+func ResolveProfile() string {
+	if ActiveProfile != "" {
+		return ActiveProfile
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return config.DefaultProfileName
+	}
+	if cfg.CurrentProfile != "" {
+		return cfg.CurrentProfile
+	}
+	return config.DefaultProfileName
+}
+
+// ResolveProject returns the project ID from the flag, the active profile, or an error.
 func ResolveProject(flagValue *string) (string, error) {
 	if flagValue != nil && *flagValue != "" {
 		return *flagValue, nil
 	}
 
 	cfg, err := config.Load()
-	if err == nil && cfg.ProjectID != "" {
-		return cfg.ProjectID, nil
+	if err == nil {
+		profile := ResolveProfile()
+		p := cfg.GetProfile(profile)
+		if p != nil && p.ProjectID != "" {
+			return p.ProjectID, nil
+		}
 	}
 
 	return "", fmt.Errorf("no project specified - use --project flag or run `rc projects set-default <project-id>`")

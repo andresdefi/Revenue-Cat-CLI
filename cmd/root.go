@@ -14,6 +14,7 @@ import (
 	"github.com/andresdefi/rc/cmd/currencies"
 	"github.com/andresdefi/rc/cmd/customers"
 	"github.com/andresdefi/rc/cmd/entitlements"
+	mcpcmd "github.com/andresdefi/rc/cmd/mcp"
 	"github.com/andresdefi/rc/cmd/offerings"
 	"github.com/andresdefi/rc/cmd/packages"
 	"github.com/andresdefi/rc/cmd/paywalls"
@@ -21,13 +22,17 @@ import (
 	"github.com/andresdefi/rc/cmd/projects"
 	"github.com/andresdefi/rc/cmd/purchases"
 	"github.com/andresdefi/rc/cmd/subscriptions"
+	"github.com/andresdefi/rc/cmd/transfer"
 	"github.com/andresdefi/rc/cmd/webhooks"
+	"github.com/andresdefi/rc/internal/cmdutil"
+	"github.com/andresdefi/rc/internal/version"
 	"github.com/spf13/cobra"
 )
 
 var (
 	projectID    string
 	outputFormat string
+	profileFlag  string
 )
 
 func NewRootCmd() *cobra.Command {
@@ -49,13 +54,20 @@ Get started:
 Full API v2 coverage: projects, apps, products, entitlements, offerings,
 packages, customers, subscriptions, purchases, webhooks, charts, paywalls,
 audit logs, collaborators, and virtual currencies.`,
-		SilenceUsage:          true,
-		SilenceErrors:         true,
+		Version:                   version.Version,
+		SilenceUsage:              true,
+		SilenceErrors:             true,
 		SuggestionsMinimumDistance: 2,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			cmdutil.ActiveProfile = profileFlag
+		},
 	}
+
+	root.SetVersionTemplate("rc {{.Version}}\n")
 
 	root.PersistentFlags().StringVarP(&projectID, "project", "p", "", "project ID (overrides default project)")
 	root.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "output format: table, json (default: table for TTY, json for pipes)")
+	root.PersistentFlags().StringVar(&profileFlag, "profile", "", "config profile to use (overrides current_profile)")
 
 	// Meta
 	root.AddCommand(newVersionCmd())
@@ -85,6 +97,13 @@ audit logs, collaborators, and virtual currencies.`,
 	root.AddCommand(paywalls.NewPaywallsCmd(&projectID, &outputFormat))
 	root.AddCommand(auditlogs.NewAuditLogsCmd(&projectID, &outputFormat))
 	root.AddCommand(currencies.NewCurrenciesCmd(&projectID, &outputFormat))
+
+	// MCP server
+	root.AddCommand(mcpcmd.NewMCPCmd())
+
+	// Project config transfer
+	root.AddCommand(transfer.NewExportCmd(&projectID, &outputFormat))
+	root.AddCommand(transfer.NewImportCmd(&projectID, &outputFormat))
 
 	return root
 }

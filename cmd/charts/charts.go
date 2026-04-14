@@ -1,9 +1,11 @@
 package charts
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
@@ -17,17 +19,7 @@ func NewChartsCmd(projectID, outputFormat *string) *cobra.Command {
 		Use:     "charts",
 		Aliases: []string{"chart", "metrics"},
 		Short:   "View charts and metrics",
-		Long: `View RevenueCat analytics charts and metrics overview.
-
-Note: Charts endpoints are rate-limited to 5 requests/minute.
-
-Examples:
-  rc charts overview
-  rc charts show revenue
-  rc charts show mrr
-  rc charts show active_subscriptions`,
 	}
-
 	root.AddCommand(newOverviewCmd(projectID, outputFormat))
 	root.AddCommand(newShowCmd(projectID, outputFormat))
 	root.AddCommand(newOptionsCmd(projectID, outputFormat))
@@ -35,50 +27,54 @@ Examples:
 }
 
 func newOverviewCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		watch    bool
+		interval time.Duration
+	)
+	cmd := &cobra.Command{
 		Use:   "overview",
 		Short: "Show metrics overview for a project",
 		RunE: func(c *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-
-			data, err := client.Get(fmt.Sprintf("/projects/%s/metrics/overview", url.PathEscape(pid)), nil)
-			if err != nil {
-				return err
-			}
-
-			var metrics api.OverviewMetrics
-			if err := json.Unmarshal(data, &metrics); err != nil {
-				return fmt.Errorf("failed to parse response: %w", err)
-			}
-
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, metrics, func(t table.Writer) {
-				t.AppendHeader(table.Row{"Metric", "Value", "Period", "Description"})
-				for _, m := range metrics.Metrics {
-					t.AppendRow(table.Row{m.Name, fmt.Sprintf("%.2f", m.Value), m.Period, m.Description})
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
+				if err != nil {
+					return err
 				}
-			})
-			return nil
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				data, err := client.Get(fmt.Sprintf("/projects/%s/metrics/overview", url.PathEscape(pid)), nil)
+				if err != nil {
+					return err
+				}
+				var metrics api.OverviewMetrics
+				if err := json.Unmarshal(data, &metrics); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, metrics, func(t table.Writer) {
+					t.AppendHeader(table.Row{"Metric", "Value", "Period", "Description"})
+					for _, m := range metrics.Metrics {
+						t.AppendRow(table.Row{m.Name, fmt.Sprintf("%.2f", m.Value), m.Period, m.Description})
+					}
+				})
+				return nil
+			}
+			if watch {
+				return cmdutil.Watch(c.Context(), interval, run)
+			}
+			return run(c.Context())
 		},
 	}
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	return cmd
 }
 
 func newShowCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "show <chart-name>",
-		Short: "Show a specific chart's data",
-		Long: `Show data for a specific chart.
-
-Common chart names: revenue, mrr, active_subscriptions, active_trials,
-churn, conversion, installs, arpu, arppu, ltv`,
-		Args: cobra.ExactArgs(1),
+		Use: "show <chart-name>", Short: "Show a specific chart's data", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -88,17 +84,14 @@ churn, conversion, installs, arpu, arppu, ltv`,
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(fmt.Sprintf("/projects/%s/charts/%s", url.PathEscape(pid), url.PathEscape(args[0])), nil)
 			if err != nil {
 				return err
 			}
-
 			var chart api.ChartData
 			if err := json.Unmarshal(data, &chart); err != nil {
 				return fmt.Errorf("failed to parse response: %w", err)
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, chart, func(t table.Writer) {
 				t.SetTitle(chart.DisplayName)
@@ -114,9 +107,7 @@ churn, conversion, installs, arpu, arppu, ltv`,
 
 func newOptionsCmd(projectID, outputFormat *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "options <chart-name>",
-		Short: "Get available filter/segment options for a chart",
-		Args:  cobra.ExactArgs(1),
+		Use: "options <chart-name>", Short: "Get available filter/segment options for a chart", Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -126,12 +117,10 @@ func newOptionsCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
 			data, err := client.Get(fmt.Sprintf("/projects/%s/charts/%s/options", url.PathEscape(pid), url.PathEscape(args[0])), nil)
 			if err != nil {
 				return err
 			}
-
 			format := cmdutil.GetOutputFormat(outputFormat)
 			if format == output.FormatJSON {
 				var raw json.RawMessage
