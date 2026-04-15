@@ -187,6 +187,10 @@ func TestPrint_JSONFormat(t *testing.T) {
 func TestPrint_JSONFormat_IndentedOutput(t *testing.T) {
 	data := map[string]int{"count": 42}
 
+	oldPretty := PrettyJSON
+	PrettyJSON = true
+	defer func() { PrettyJSON = oldPretty }()
+
 	output := captureStdout(t, func() {
 		Print(FormatJSON, data, nil)
 	})

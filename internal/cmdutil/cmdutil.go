@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/andresdefi/rc/internal/config"
 	"github.com/andresdefi/rc/internal/output"
@@ -13,9 +14,13 @@ import (
 var ActiveProfile string
 
 // ResolveProfile returns the effective profile name.
+// Priority: --profile flag > RC_PROFILE env var > config current_profile > default.
 func ResolveProfile() string {
 	if ActiveProfile != "" {
 		return ActiveProfile
+	}
+	if envProfile := os.Getenv("RC_PROFILE"); envProfile != "" {
+		return envProfile
 	}
 	cfg, err := config.Load()
 	if err != nil {

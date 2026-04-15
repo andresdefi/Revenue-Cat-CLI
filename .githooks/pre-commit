@@ -3,8 +3,12 @@ set -e
 
 echo "Running pre-commit checks..."
 
-# Format check
-UNFORMATTED=$(gofmt -l . 2>/dev/null | grep -v vendor || true)
+# Format check (gofumpt is a strict superset of gofmt)
+FORMATTER="gofumpt"
+if ! command -v gofumpt >/dev/null 2>&1; then
+    FORMATTER="gofmt"
+fi
+UNFORMATTED=$($FORMATTER -l . 2>/dev/null | grep -v vendor || true)
 if [ -n "$UNFORMATTED" ]; then
     echo "Files need formatting (run 'make fmt'):"
     echo "$UNFORMATTED"

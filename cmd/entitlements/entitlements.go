@@ -61,11 +61,21 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 		Example: `  # List all entitlements
   rc entitlements list
 
-  # List with JSON output
-  rc entitlements list -o json
+  # List entitlements for a specific project as JSON
+  rc entitlements list --project proj1a2b3c4d5 --output json
 
-  # Fetch all pages
-  rc entitlements list --all`,
+  # Use a production profile
+  rc entitlements list --profile production
+
+  # Extract lookup keys for documentation
+  rc entitlements list --output json | jq -r '.items[].lookup_key'
+
+  # Find an entitlement, then list attached products
+  rc entitlements list --output json | jq -r '.items[0].id'
+  rc entitlements products entla1b2c3d4e5
+
+  # Fetch every page
+  rc entitlements list --all --limit 100`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -186,6 +196,19 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 running in a terminal and not provided on the command line.`,
 		Example: `  # Create an entitlement
   rc entitlements create --lookup-key premium --display-name "Premium Access"
+
+  # Create and print JSON
+  rc entitlements create --lookup-key pro --display-name "Pro Access" --output json
+
+  # Use a staging profile
+  rc entitlements create --lookup-key beta --display-name "Beta Access" --profile staging
+
+  # Capture the entitlement ID for a workflow
+  rc entitlements create --lookup-key premium --display-name "Premium Access" --output json | jq -r '.id'
+
+  # Create, then attach a product
+  rc entitlements create --lookup-key premium --display-name "Premium Access"
+  rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1a2b3c
 
   # Interactive mode (prompts for missing fields)
   rc entitlements create`,
@@ -456,7 +479,18 @@ func newAttachCmd(projectID *string) *cobra.Command {
   rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1a2b3c
 
   # Attach multiple products
-  rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1,prod2`,
+  rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1,prod2
+
+  # Use a production profile
+  rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1a2b3c --profile production
+
+  # Attach the first product returned from a query
+  rc products list --output json | jq -r '.items[0].id'
+  rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1a2b3c
+
+  # Verify attached products
+  rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1a2b3c
+  rc entitlements products entla1b2c3 --output json`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {

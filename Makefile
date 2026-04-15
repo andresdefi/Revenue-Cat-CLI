@@ -5,7 +5,7 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X $(MODULE)/internal/version.Version=$(VERSION) -X $(MODULE)/internal/version.Commit=$(COMMIT) -X $(MODULE)/internal/version.Date=$(DATE)
 
-.PHONY: build test lint vet fmt clean install check help
+.PHONY: build test lint vet fmt clean install check tools security help
 
 ## build: Build the rc binary
 build:
@@ -19,6 +19,10 @@ install:
 test:
 	go test -race -coverprofile=coverage.out ./...
 
+## test-integration: Run integration tests (requires RC_INTEGRATION_KEY)
+test-integration:
+	go test -race -tags integration ./...
+
 ## lint: Run golangci-lint
 lint:
 	golangci-lint run
@@ -27,12 +31,23 @@ lint:
 vet:
 	go vet ./...
 
-## fmt: Format code
+## fmt: Format code with gofumpt
 fmt:
-	gofmt -s -w .
+	gofumpt -w .
+
+## security: Run gosec security scanner
+security:
+	gosec ./...
 
 ## check: Run all checks (fmt, vet, lint, test)
 check: fmt vet lint test
+
+## tools: Install dev dependencies
+tools:
+	go install mvdan.cc/gofumpt@latest
+	go install github.com/securego/gosec/v2/cmd/gosec@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install golang.org/x/vuln/cmd/govulncheck@latest
 
 ## clean: Remove build artifacts
 clean:

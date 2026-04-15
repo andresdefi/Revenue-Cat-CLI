@@ -160,11 +160,21 @@ func newLookupCmd(projectID, outputFormat *string) *cobra.Command {
 		Example: `  # Look up a customer
   rc customers lookup user-123
 
-  # Watch for changes
-  rc customers lookup user-123 --watch
+  # Look up a customer as JSON
+  rc customers lookup user-123 --output json
 
-  # Get as JSON
-  rc customers lookup user-123 -o json`,
+  # Use a production profile
+  rc customers lookup user-123 --profile production
+
+  # Extract active entitlement IDs
+  rc customers lookup user-123 --output json | jq -r '.active_entitlements.items[].entitlement_id'
+
+  # Look up a customer, then inspect their subscriptions
+  rc customers lookup user-123
+  rc customers subscriptions user-123 --output json
+
+  # Watch for changes
+  rc customers lookup user-123 --watch --interval 10s`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			run := func(_ context.Context) error {
@@ -312,8 +322,21 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 		Example: `  # List active entitlements
   rc customers entitlements user-123
 
-  # Watch for changes
-  rc customers entitlements user-123 --watch`,
+  # List active entitlements as JSON
+  rc customers entitlements user-123 --output json
+
+  # Use a production profile
+  rc customers entitlements user-123 --profile production
+
+  # Extract entitlement IDs for scripting
+  rc customers entitlements user-123 --output json | jq -r '.items[].entitlement_id'
+
+  # Look up a customer, then list active entitlements
+  rc customers lookup user-123
+  rc customers entitlements user-123
+
+  # Watch for entitlement changes
+  rc customers entitlements user-123 --watch --interval 10s`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			run := func(_ context.Context) error {

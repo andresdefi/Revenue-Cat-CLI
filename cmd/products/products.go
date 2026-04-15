@@ -49,14 +49,21 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 		Example: `  # List all products
   rc products list
 
-  # List with JSON output
-  rc products list -o json
+  # List products from a specific project as JSON
+  rc products list --project proj1a2b3c4d5 --output json
 
-  # Filter by app
+  # Use a production profile
+  rc products list --profile production
+
+  # Extract store identifiers for a release script
+  rc products list --output json | jq -r '.items[].store_identifier'
+
+  # Review products for an app, then inspect one
   rc products list --app-id app1a2b3c4
+  rc products get prod1a2b3c4d5
 
-  # Fetch all pages
-  rc products list --all`,
+  # Fetch every page
+  rc products list --all --limit 100`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -129,8 +136,18 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 		Example: `  # Get product details
   rc products get prod1a2b3c4d5
 
-  # Get as JSON
-  rc products get prod1a2b3c4d5 -o json`,
+  # Get as JSON for scripting
+  rc products get prod1a2b3c4d5 --output json
+
+  # Use a production profile
+  rc products get prod1a2b3c4d5 --profile production
+
+  # Read the store identifier only
+  rc products get prod1a2b3c4d5 --output json | jq -r '.store_identifier'
+
+  # Find a product from the list, then inspect it
+  rc products list --output json | jq -r '.items[0].id'
+  rc products get prod1a2b3c4d5`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
@@ -186,8 +203,18 @@ running in a terminal and not provided on the command line.`,
 		Example: `  # Create a subscription product
   rc products create --store-id com.app.monthly --app-id app1a2b3c4 --type subscription
 
-  # Create with a display name
+  # Create with a display name and JSON output
+  rc products create --store-id com.app.yearly --app-id app1a2b3c4 --type subscription --display-name "Annual Plan" --output json
+
+  # Use a staging profile
+  rc products create --store-id com.app.monthly --app-id app1a2b3c4 --type subscription --profile staging
+
+  # Capture the new product ID
+  rc products create --store-id com.app.lifetime --app-id app1a2b3c4 --type non_consumable --output json | jq -r '.id'
+
+  # Create, then attach to an entitlement
   rc products create --store-id com.app.yearly --app-id app1a2b3c4 --type subscription --display-name "Annual Plan"
+  rc entitlements attach --entitlement-id entla1b2c3 --product-id prod1a2b3c4
 
   # Interactive mode (prompts for missing fields)
   rc products create`,

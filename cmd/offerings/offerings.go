@@ -52,11 +52,21 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 		Example: `  # List all offerings
   rc offerings list
 
-  # List with JSON output
-  rc offerings list -o json
+  # List offerings for a specific project as JSON
+  rc offerings list --project proj1a2b3c4d5 --output json
 
-  # Fetch all pages
-  rc offerings list --all`,
+  # Use a production profile
+  rc offerings list --profile production
+
+  # Find the current offering
+  rc offerings list --output json | jq -r '.items[] | select(.is_current) | .id'
+
+  # List offerings, then inspect packages on one offering
+  rc offerings list
+  rc offerings get ofrnge1a2b3c4d5 --output json | jq '.packages.items'
+
+  # Fetch every page
+  rc offerings list --all --limit 100`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -209,6 +219,19 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 running in a terminal and not provided on the command line.`,
 		Example: `  # Create an offering
   rc offerings create --lookup-key default --display-name "Standard Offering"
+
+  # Create and print JSON
+  rc offerings create --lookup-key winback --display-name "Winback Offer" --output json
+
+  # Use a staging profile
+  rc offerings create --lookup-key beta --display-name "Beta Offer" --profile staging
+
+  # Capture the offering ID
+  rc offerings create --lookup-key default --display-name "Standard Offering" --output json | jq -r '.id'
+
+  # Create an offering, then add a package
+  rc offerings create --lookup-key default --display-name "Standard Offering"
+  rc packages create --offering-id ofrnge1a2b3c --lookup-key monthly --display-name "Monthly"
 
   # Interactive mode (prompts for missing fields)
   rc offerings create`,

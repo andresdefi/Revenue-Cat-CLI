@@ -25,6 +25,7 @@ import (
 	"github.com/andresdefi/rc/cmd/webhooks"
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
+	"github.com/andresdefi/rc/internal/exitcode"
 	"github.com/andresdefi/rc/internal/output"
 	"github.com/andresdefi/rc/internal/version"
 	"github.com/spf13/cobra"
@@ -34,6 +35,8 @@ var (
 	projectID    string
 	outputFormat string
 	profileFlag  string
+	noColorFlag  bool
+	prettyFlag   bool
 )
 
 func NewRootCmd() *cobra.Command {
@@ -59,8 +62,18 @@ audit logs, collaborators, and virtual currencies.`,
 		SilenceUsage:               true,
 		SilenceErrors:              true,
 		SuggestionsMinimumDistance: 2,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if outputFormat != "" && outputFormat != "table" && outputFormat != "json" {
+				return fmt.Errorf("invalid output format %q (must be table or json)", outputFormat)
+			}
+			if noColorFlag {
+				output.ColorDisabled = true
+			}
+			if prettyFlag {
+				output.PrettyJSON = true
+			}
 			cmdutil.ActiveProfile = profileFlag
+			return nil
 		},
 	}
 
@@ -68,7 +81,9 @@ audit logs, collaborators, and virtual currencies.`,
 
 	root.PersistentFlags().StringVarP(&projectID, "project", "p", "", "project ID (overrides default project)")
 	root.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "output format: table, json (default: table for TTY, json for pipes)")
-	root.PersistentFlags().StringVar(&profileFlag, "profile", "", "config profile to use (overrides current_profile)")
+	root.PersistentFlags().StringVar(&profileFlag, "profile", "", "config profile to use (overrides RC_PROFILE and current_profile)")
+	root.PersistentFlags().BoolVar(&noColorFlag, "no-color", false, "disable color output (also respects NO_COLOR env var)")
+	root.PersistentFlags().BoolVar(&prettyFlag, "pretty", false, "pretty-print JSON output (default for TTY, compact for pipes)")
 
 	// Meta
 	root.AddCommand(newVersionCmd())
@@ -115,12 +130,18 @@ func Execute() {
 
 		var apiErr *api.Error
 		switch {
-		case errors.As(err, &apiErr) && apiErr.Type == "authentication_error":
-			os.Exit(3) // auth error
+		case errors.As(err, &apiErr) && apiErr.StatusCode == 401:
+			os.Exit(exitcode.AuthError)
+		case errors.As(err, &apiErr) && apiErr.StatusCode == 404:
+			os.Exit(exitcode.NotFoundError)
+		case errors.As(err, &apiErr) && apiErr.StatusCode == 429:
+			os.Exit(exitcode.RateLimitError)
+		case errors.As(err, &apiErr) && apiErr.StatusCode >= 500:
+			os.Exit(exitcode.ServerError)
 		case errors.As(err, &apiErr):
-			os.Exit(4) // API error
+			os.Exit(exitcode.APIError)
 		default:
-			os.Exit(1) // general error
+			os.Exit(exitcode.GeneralError)
 		}
 	}
 }

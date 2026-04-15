@@ -51,11 +51,21 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 		Example: `  # List subscriptions
   rc subscriptions list
 
-  # List with JSON output
-  rc subscriptions list -o json
+  # List subscriptions for a specific project as JSON
+  rc subscriptions list --project proj1a2b3c4d5 --output json
 
-  # Fetch all pages
-  rc subscriptions list --all`,
+  # Use a production profile
+  rc subscriptions list --profile production
+
+  # Extract active subscription IDs
+  rc subscriptions list --output json | jq -r '.items[] | select(.status == "active") | .id'
+
+  # Find a subscription, then inspect transactions
+  rc subscriptions list --output json | jq -r '.items[0].id'
+  rc subscriptions transactions sub1ab2c3d4e5
+
+  # Fetch every page
+  rc subscriptions list --all --limit 100`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -122,11 +132,21 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 		Example: `  # Get subscription details
   rc subscriptions get sub1ab2c3d4e5
 
-  # Watch for changes
-  rc subscriptions get sub1ab2c3d4e5 --watch
-
   # Get as JSON
-  rc subscriptions get sub1ab2c3d4e5 -o json`,
+  rc subscriptions get sub1ab2c3d4e5 --output json
+
+  # Use a production profile
+  rc subscriptions get sub1ab2c3d4e5 --profile production
+
+  # Extract the authenticated management URL
+  rc subscriptions management-url sub1ab2c3d4e5 --output json | jq -r '.url'
+
+  # Inspect a subscription, then list transactions
+  rc subscriptions get sub1ab2c3d4e5
+  rc subscriptions transactions sub1ab2c3d4e5 --output json
+
+  # Watch for changes
+  rc subscriptions get sub1ab2c3d4e5 --watch --interval 10s`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			run := func(_ context.Context) error {

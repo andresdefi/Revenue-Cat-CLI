@@ -18,9 +18,28 @@ const (
 	FormatJSON  Format = "json"
 )
 
+// ColorDisabled is set to true when --no-color is passed or NO_COLOR env var is set.
+var ColorDisabled bool
+
+// PrettyJSON controls whether JSON output is indented.
+// Defaults to true for TTY, false for pipes. --pretty overrides to true.
+var PrettyJSON bool
+
+func init() {
+	if os.Getenv("NO_COLOR") != "" {
+		ColorDisabled = true
+	}
+	PrettyJSON = IsTTY()
+}
+
 // IsTTY returns true if stdout is a terminal.
 func IsTTY() bool {
 	return term.IsTerminal(int(os.Stdout.Fd()))
+}
+
+// colorEnabled returns true if color output should be used.
+func colorEnabled() bool {
+	return IsTTY() && !ColorDisabled
 }
 
 // Print outputs data in the specified format.
@@ -39,7 +58,9 @@ func Print(format Format, data any, tableRenderer func(t table.Writer)) {
 
 func printJSON(data any) {
 	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
+	if PrettyJSON {
+		enc.SetIndent("", "  ")
+	}
 	_ = enc.Encode(data)
 }
 
@@ -72,17 +93,17 @@ const (
 	colorYellow = "\033[33m"
 )
 
-// ColorRed returns the red ANSI escape code if stdout is a TTY, empty string otherwise.
+// ColorRed returns the red ANSI escape code if color is enabled, empty string otherwise.
 func ColorRed() string {
-	if IsTTY() {
+	if colorEnabled() {
 		return colorRed
 	}
 	return ""
 }
 
-// ColorReset returns the reset ANSI escape code if stdout is a TTY, empty string otherwise.
+// ColorReset returns the reset ANSI escape code if color is enabled, empty string otherwise.
 func ColorReset() string {
-	if IsTTY() {
+	if colorEnabled() {
 		return colorReset
 	}
 	return ""
@@ -90,7 +111,7 @@ func ColorReset() string {
 
 // Success prints a success message to stderr (keeps stdout clean for piping).
 func Success(msg string, args ...any) {
-	if IsTTY() {
+	if colorEnabled() {
 		fmt.Fprintf(os.Stderr, colorGreen+"  "+msg+colorReset+"\n", args...)
 	} else {
 		fmt.Fprintf(os.Stderr, "  "+msg+"\n", args...)
@@ -99,7 +120,7 @@ func Success(msg string, args ...any) {
 
 // Warn prints a warning message to stderr.
 func Warn(msg string, args ...any) {
-	if IsTTY() {
+	if colorEnabled() {
 		fmt.Fprintf(os.Stderr, colorYellow+"  Warning: "+msg+colorReset+"\n", args...)
 	} else {
 		fmt.Fprintf(os.Stderr, "  Warning: "+msg+"\n", args...)

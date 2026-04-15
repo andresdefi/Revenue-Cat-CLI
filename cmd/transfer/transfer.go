@@ -106,6 +106,7 @@ This includes all products, entitlements, and offerings with their packages.`,
 	}
 
 	cmd.Flags().StringVar(&file, "file", "", "output file path (required)")
+	cmdutil.MarkBeta(cmd)
 	return cmd
 }
 
@@ -211,5 +212,6 @@ Creates products, entitlements, and offerings in the target project.`,
 	}
 
 	cmd.Flags().StringVar(&file, "file", "", "input file path (required)")
+	cmdutil.MarkBeta(cmd)
 	return cmd
 }

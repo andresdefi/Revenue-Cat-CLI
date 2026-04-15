@@ -18,4 +18,4 @@ linters:
 
 formatters:
   enable:
-    - gofmt
+    - gofumpt

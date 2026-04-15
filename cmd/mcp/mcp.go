@@ -9,6 +9,7 @@ import (
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/auth"
+	"github.com/andresdefi/rc/internal/cmdutil"
 	gomcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
 )
@@ -19,6 +20,7 @@ func NewMCPCmd() *cobra.Command {
 		Use:   "mcp",
 		Short: "MCP server for RevenueCat operations",
 	}
+	cmdutil.MarkExperimental(root)
 	root.AddCommand(newServeCmd())
 	return root
 }

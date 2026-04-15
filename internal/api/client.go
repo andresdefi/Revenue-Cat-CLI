@@ -7,16 +7,18 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/andresdefi/rc/internal/auth"
 )
 
 const (
-	BaseURL    = "https://api.revenuecat.com/v2"
 	UserAgent  = "rc-cli/0.1.0"
 	MaxRetries = 3
 )
+
+var BaseURL = "https://api.revenuecat.com/v2"
 
 // Client is the RevenueCat API v2 HTTP client.
 type Client struct {
@@ -52,13 +54,14 @@ func NewClientWithToken(token string) *Client {
 
 // Error represents a RevenueCat API error response.
 type Error struct {
-	Object    string `json:"object"`
-	Type      string `json:"type"`
-	Param     string `json:"param,omitempty"`
-	DocURL    string `json:"doc_url,omitempty"`
-	Message   string `json:"message"`
-	Retryable bool   `json:"retryable"`
-	BackoffMs *int   `json:"backoff_ms,omitempty"`
+	Object     string `json:"object"`
+	Type       string `json:"type"`
+	Param      string `json:"param,omitempty"`
+	DocURL     string `json:"doc_url,omitempty"`
+	Message    string `json:"message"`
+	Retryable  bool   `json:"retryable"`
+	BackoffMs  *int   `json:"backoff_ms,omitempty"`
+	StatusCode int    `json:"-"`
 }
 
 func (e *Error) Error() string {
@@ -124,11 +127,9 @@ func (c *Client) GetFullURL(fullPath string) ([]byte, error) {
 
 		var apiErr Error
 		if err := json.Unmarshal(respBody, &apiErr); err == nil && apiErr.Message != "" {
+			apiErr.StatusCode = resp.StatusCode
 			if apiErr.Retryable && attempt < MaxRetries-1 {
-				backoff := time.Duration(100*(attempt+1)) * time.Millisecond
-				if apiErr.BackoffMs != nil {
-					backoff = time.Duration(*apiErr.BackoffMs) * time.Millisecond
-				}
+				backoff := retryBackoff(resp, &apiErr, attempt)
 				time.Sleep(backoff)
 				lastErr = &apiErr
 				continue
@@ -187,11 +188,9 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 
 		var apiErr Error
 		if err := json.Unmarshal(respBody, &apiErr); err == nil && apiErr.Message != "" {
+			apiErr.StatusCode = resp.StatusCode
 			if apiErr.Retryable && attempt < MaxRetries-1 {
-				backoff := time.Duration(100*(attempt+1)) * time.Millisecond
-				if apiErr.BackoffMs != nil {
-					backoff = time.Duration(*apiErr.BackoffMs) * time.Millisecond
-				}
+				backoff := retryBackoff(resp, &apiErr, attempt)
 				time.Sleep(backoff)
 				lastErr = &apiErr
 				continue
@@ -203,6 +202,20 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 	}
 
 	return nil, fmt.Errorf("request failed after %d attempts: %w", MaxRetries, lastErr)
+}
+
+// retryBackoff determines the backoff duration from the Retry-After header,
+// the backoff_ms JSON field, or a default exponential backoff.
+func retryBackoff(resp *http.Response, apiErr *Error, attempt int) time.Duration {
+	if ra := resp.Header.Get("Retry-After"); ra != "" {
+		if seconds, err := strconv.Atoi(ra); err == nil && seconds > 0 {
+			return time.Duration(seconds) * time.Second
+		}
+	}
+	if apiErr.BackoffMs != nil {
+		return time.Duration(*apiErr.BackoffMs) * time.Millisecond
+	}
+	return time.Duration(100*(attempt+1)) * time.Millisecond
 }
 
 func readResponseBody(resp *http.Response) ([]byte, error) {

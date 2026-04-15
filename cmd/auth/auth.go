@@ -43,7 +43,19 @@ Keys are prefixed with sk_ and must have v2 API permissions.`,
   rc auth login
 
   # Log in with a specific profile
-  rc auth login --profile staging`,
+  rc auth login --profile staging
+
+  # Check the profile after login
+  rc auth login --profile production
+  rc auth status --profile production
+
+  # Verify API access after saving a key
+  rc auth login
+  rc auth doctor
+
+  # Switch between profiles for project work
+  rc auth login --profile staging
+  rc projects list --profile staging`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			profile := cmdutil.ResolveProfile()
 
@@ -59,8 +71,12 @@ Keys are prefixed with sk_ and must have v2 API permissions.`,
 				return fmt.Errorf("API key cannot be empty")
 			}
 
-			if !strings.HasPrefix(token, "sk_") {
-				output.Warn("Key does not start with 'sk_' - make sure you're using a v2 secret API key")
+			if !strings.HasPrefix(token, "sk_") && !strings.HasPrefix(token, "atk_") {
+				return fmt.Errorf("invalid API key prefix: keys must start with 'sk_' (secret key) or 'atk_' (OAuth token)")
+			}
+
+			if len(token) < 10 {
+				return fmt.Errorf("API key is too short - check that you copied the full key")
 			}
 
 			if err := internalAuth.SaveToken(profile, token); err != nil {
@@ -81,7 +97,18 @@ func newStatusCmd() *cobra.Command {
   rc auth status
 
   # Check auth status for a specific profile
-  rc auth status --profile production`,
+  rc auth status --profile production
+
+  # Run diagnostics after checking status
+  rc auth status
+  rc auth doctor
+
+  # Confirm a profile before listing projects
+  rc auth status --profile staging
+  rc projects list --profile staging
+
+  # Use in scripts before a workflow
+  rc auth status --profile production >/dev/null && rc products list --profile production --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			profile := cmdutil.ResolveProfile()
 
@@ -129,7 +156,18 @@ func newDoctorCmd() *cobra.Command {
   rc auth doctor
 
   # Check a specific profile
-  rc auth doctor --profile production`,
+  rc auth doctor --profile production
+
+  # Validate auth before listing projects
+  rc auth doctor
+  rc projects list
+
+  # Diagnose a staging profile
+  rc auth status --profile staging
+  rc auth doctor --profile staging
+
+  # Use in scripts before a release check
+  rc auth doctor --profile production >/dev/null && rc products list --profile production --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			profile := cmdutil.ResolveProfile()
 			fmt.Fprintf(os.Stderr, "Profile:     %s\n", profile)

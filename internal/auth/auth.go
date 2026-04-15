@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"os"
 	"strings"
 
 	"github.com/andresdefi/rc/internal/cmdutil"
@@ -28,22 +29,28 @@ func keychainUser(profile string) string {
 	return "rc-cli:" + resolveProfile(profile)
 }
 
+func bypassKeychain() bool {
+	return os.Getenv("RC_BYPASS_KEYCHAIN") == "1"
+}
+
 // SaveToken stores the API key in the system keychain, falling back to config file.
 func SaveToken(profile, token string) error {
 	profile = resolveProfile(profile)
-	err := keyring.Set(keychainService, keychainUser(profile), token)
-	if err == nil {
-		// Clear any config file token since keychain is preferred
-		cfg, _ := config.Load()
-		if cfg != nil {
-			p := cfg.GetProfile(profile)
-			if p != nil && p.APIKey != "" {
-				p.APIKey = ""
-				cfg.SetProfile(profile, p)
-				_ = config.Save(cfg)
+	if !bypassKeychain() {
+		err := keyring.Set(keychainService, keychainUser(profile), token)
+		if err == nil {
+			// Clear any config file token since keychain is preferred
+			cfg, _ := config.Load()
+			if cfg != nil {
+				p := cfg.GetProfile(profile)
+				if p != nil && p.APIKey != "" {
+					p.APIKey = ""
+					cfg.SetProfile(profile, p)
+					_ = config.Save(cfg)
+				}
 			}
+			return nil
 		}
-		return nil
 	}
 
 	// Fallback to config file
@@ -63,10 +70,12 @@ func SaveToken(profile, token string) error {
 // GetToken retrieves the API key from keychain or config file for the given profile.
 func GetToken(profile string) (string, error) {
 	profile = resolveProfile(profile)
-	// Try keychain first
-	token, err := keyring.Get(keychainService, keychainUser(profile))
-	if err == nil && token != "" {
-		return token, nil
+	if !bypassKeychain() {
+		// Try keychain first
+		token, err := keyring.Get(keychainService, keychainUser(profile))
+		if err == nil && token != "" {
+			return token, nil
+		}
 	}
 
 	// Fallback to config file
@@ -85,7 +94,9 @@ func GetToken(profile string) (string, error) {
 // DeleteToken removes the API key from both keychain and config file.
 func DeleteToken(profile string) error {
 	profile = resolveProfile(profile)
-	_ = keyring.Delete(keychainService, keychainUser(profile))
+	if !bypassKeychain() {
+		_ = keyring.Delete(keychainService, keychainUser(profile))
+	}
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -103,9 +114,11 @@ func DeleteToken(profile string) error {
 // TokenSource returns where the token is stored ("keychain" or "config file").
 func TokenSource(profile string) string {
 	profile = resolveProfile(profile)
-	token, err := keyring.Get(keychainService, keychainUser(profile))
-	if err == nil && token != "" {
-		return "keychain"
+	if !bypassKeychain() {
+		token, err := keyring.Get(keychainService, keychainUser(profile))
+		if err == nil && token != "" {
+			return "keychain"
+		}
 	}
 	return "config file"
 }

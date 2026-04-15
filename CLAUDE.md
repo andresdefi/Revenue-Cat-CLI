@@ -102,7 +102,7 @@ make help           # Show all targets
 - [x] Bulk import/export: products and entitlements (CSV + JSON)
 - [x] Interactive mode: products/entitlements/offerings create prompt when TTY
 - [x] Project config transfer: rc export / rc import
-- [x] 178 tests across 7 test files
+- [x] 522 tests, including command-level Cobra integration tests with httptest-backed RevenueCat API fixtures
 - [x] Makefile, .golangci.yml, pre-commit hook
 - [x] README with badges, TOC, workflows, troubleshooting
 - [x] Community files: SECURITY.md, CODE_OF_CONDUCT.md, SUPPORT.md
@@ -125,11 +125,11 @@ make help           # Show all targets
 - `github.com/BurntSushi/toml` - TOML config with profiles
 
 ## Future Improvements
-- [ ] Example blocks in --help for all commands
+- [x] Rich workflow-oriented --help examples for high-traffic auth, products, entitlements, offerings, customers, and subscriptions commands
 - [ ] Command grouping in help output (by category)
-- [ ] More tests (command integration tests with mock API server)
+- [x] More tests (command integration tests with mock API server)
 - [ ] Documentation website
-- [ ] Apple code signing for macOS binaries
+- [x] Apple Developer ID signing and notarization hooks for macOS binaries (skips gracefully without secrets)
 - [ ] Set up HOMEBREW_TAP_TOKEN secret for auto formula updates on release
 
 ## Module Path
