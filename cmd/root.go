@@ -131,6 +131,7 @@ audit logs, collaborators, and virtual currencies.`,
 	root.AddCommand(newDoctorCmd(&projectID))
 	root.AddCommand(newWhoamiCmd(&outputFormat))
 	root.AddCommand(configcmd.NewConfigCmd(&outputFormat))
+	root.AddCommand(newLaunchCheckCmd(&projectID, &outputFormat))
 
 	// Auth (no project needed)
 	root.AddCommand(auth.NewAuthCmd())

@@ -53,6 +53,49 @@ func TestBuildReportFailsWithoutCurrentOffering(t *testing.T) {
 	}
 }
 
+func TestAssessLaunchPass(t *testing.T) {
+	report := buildReport("proj_test", healthySnapshot())
+
+	launch := AssessLaunch(report)
+
+	if !launch.Ready {
+		t.Fatalf("ready = false, want true; checks = %#v", launch.Checks)
+	}
+	if launch.Status != StatusPass {
+		t.Fatalf("status = %q, want %q; checks = %#v", launch.Status, StatusPass, launch.Checks)
+	}
+}
+
+func TestAssessLaunchWarnsButCanBeReady(t *testing.T) {
+	report := buildReport("proj_test", healthySnapshot())
+	report.add(Check{Status: StatusWarn, Area: "metadata", Message: "Optional warning"})
+
+	launch := AssessLaunch(report)
+
+	if !launch.Ready {
+		t.Fatalf("ready = false, want true; checks = %#v", launch.Checks)
+	}
+	if launch.Status != StatusWarn {
+		t.Fatalf("status = %q, want %q; checks = %#v", launch.Status, StatusWarn, launch.Checks)
+	}
+}
+
+func TestAssessLaunchFailsWithoutRequiredPaths(t *testing.T) {
+	report := buildReport("proj_test", &snapshot{})
+
+	launch := AssessLaunch(report)
+
+	if launch.Ready {
+		t.Fatalf("ready = true, want false; checks = %#v", launch.Checks)
+	}
+	if launch.Status != StatusFail {
+		t.Fatalf("status = %q, want %q; checks = %#v", launch.Status, StatusFail, launch.Checks)
+	}
+	if !launchContains(launch, "At least one app is required") {
+		t.Fatalf("launch report missing app failure: %#v", launch.Checks)
+	}
+}
+
 func healthySnapshot() *snapshot {
 	product := api.Product{
 		ID:              "prod_monthly",
@@ -97,6 +140,20 @@ func healthySnapshot() *snapshot {
 }
 
 func reportContains(report *Report, want string) bool {
+	for _, check := range report.Checks {
+		if strings.Contains(check.Message, want) {
+			return true
+		}
+		for _, detail := range check.Details {
+			if strings.Contains(detail, want) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func launchContains(report *LaunchReport, want string) bool {
 	for _, check := range report.Checks {
 		if strings.Contains(check.Message, want) {
 			return true

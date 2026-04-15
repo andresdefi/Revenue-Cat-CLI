@@ -64,6 +64,9 @@ rc doctor
 # Check RevenueCat project setup before launch
 rc project doctor
 
+# Run a stricter launch readiness preflight
+rc launch-check
+
 # Confirm the active profile context
 rc whoami
 
@@ -95,6 +98,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 | `rc doctor` | Check config, auth, project, and API connectivity |
 | `rc whoami` | Show active profile, auth source, and default project |
 | `rc config profiles` | List configured profiles |
+| `rc launch-check` | Check whether project setup has the required launch paths |
 
 ### Authentication
 

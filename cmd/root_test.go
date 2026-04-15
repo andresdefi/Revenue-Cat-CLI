@@ -50,7 +50,7 @@ func TestNewRootCmd_HasExpectedSubcommands(t *testing.T) {
 		"offerings", "packages", "customers", "subscriptions",
 		"purchases", "webhooks", "charts", "paywalls",
 		"audit-logs", "collaborators", "currencies", "version",
-		"completion", "init", "doctor", "whoami", "config",
+		"completion", "init", "doctor", "whoami", "config", "launch-check",
 		"mcp", "export", "import",
 	}
 
@@ -743,7 +743,7 @@ func TestNewRootCmd_HelpContainsNewSubcommands(t *testing.T) {
 
 	helpOutput := buf.String()
 
-	newSubs := []string{"mcp", "export", "import"}
+	newSubs := []string{"mcp", "export", "import", "launch-check"}
 	for _, sub := range newSubs {
 		if !strings.Contains(helpOutput, sub) {
 			t.Errorf("help output should list %q subcommand", sub)
