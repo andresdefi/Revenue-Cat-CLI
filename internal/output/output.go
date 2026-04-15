@@ -15,9 +15,13 @@ import (
 type Format string
 
 const (
-	FormatTable Format = "table"
-	FormatJSON  Format = "json"
+	FormatTable    Format = "table"
+	FormatJSON     Format = "json"
+	FormatMarkdown Format = "markdown"
 )
+
+// ValidFormats lists all accepted --output values.
+var ValidFormats = []string{"table", "json", "markdown", "md"}
 
 // ColorDisabled is set to true when --no-color is passed or NO_COLOR env var is set.
 var ColorDisabled bool
@@ -57,6 +61,12 @@ func Print(format Format, data any, tableRenderer func(t table.Writer)) {
 	switch format {
 	case FormatJSON:
 		printJSON(filterFields(data))
+	case FormatMarkdown:
+		if tableRenderer != nil {
+			printMarkdown(tableRenderer)
+		} else {
+			printJSON(filterFields(data))
+		}
 	default:
 		if tableRenderer != nil {
 			printTable(tableRenderer)
@@ -80,6 +90,13 @@ func printTable(renderer func(t table.Writer)) {
 	t.SetStyle(table.StyleLight)
 	renderer(t)
 	t.Render()
+}
+
+func printMarkdown(renderer func(t table.Writer)) {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	renderer(t)
+	fmt.Fprintln(os.Stdout, t.RenderMarkdown())
 }
 
 // filterFields reduces JSON data to only the requested fields.
@@ -201,11 +218,46 @@ func Progress(current, total int, msg string, args ...any) {
 	fmt.Fprintf(os.Stderr, "  "+prefix+msg+"\n", args...)
 }
 
-// Verbose prints a debug message to stderr when verbose mode is enabled.
+// Log level constants.
+const (
+	LogLevelError = 0
+	LogLevelWarn  = 1
+	LogLevelInfo  = 2
+	LogLevelDebug = 3
+)
+
+// LogLevel controls the verbosity of log output. Default is LogLevelWarn.
+var LogLevel = LogLevelWarn
+
+// Verbose is true when LogLevel >= LogLevelDebug. Kept for backward compatibility.
 var Verbose bool
 
+// ParseLogLevel converts a string to a log level constant.
+func ParseLogLevel(s string) (int, bool) {
+	switch strings.ToLower(s) {
+	case "error":
+		return LogLevelError, true
+	case "warn":
+		return LogLevelWarn, true
+	case "info":
+		return LogLevelInfo, true
+	case "debug":
+		return LogLevelDebug, true
+	}
+	return 0, false
+}
+
+// Info prints an informational message to stderr when log level >= info.
+func Info(msg string, args ...any) {
+	if LogLevel < LogLevelInfo || Quiet {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "  "+msg+"\n", args...)
+}
+
+// Debug prints a debug message to stderr when log level >= debug.
 func Debug(msg string, args ...any) {
-	if !Verbose {
+	if LogLevel < LogLevelDebug {
 		return
 	}
 	if colorEnabled() {

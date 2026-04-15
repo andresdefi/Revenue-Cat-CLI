@@ -66,6 +66,8 @@ func GetOutputFormat(flag *string) output.Format {
 			return output.FormatJSON
 		case "table":
 			return output.FormatTable
+		case "markdown", "md":
+			return output.FormatMarkdown
 		}
 	}
 	// Auto-detect: table for terminal, JSON for pipes

@@ -10,6 +10,7 @@ import (
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
+	"github.com/andresdefi/rc/internal/completions"
 	"github.com/andresdefi/rc/internal/csvio"
 	"github.com/andresdefi/rc/internal/output"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -23,13 +24,14 @@ func NewProductsCmd(projectID, outputFormat *string) *cobra.Command {
 		Short:   "Manage products",
 	}
 
+	c := completions.ProductIDs(projectID)
 	root.AddCommand(newListCmd(projectID, outputFormat))
-	root.AddCommand(newGetCmd(projectID, outputFormat))
+	root.AddCommand(completions.WithCompletion(newGetCmd(projectID, outputFormat), c))
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
-	root.AddCommand(newUpdateCmd(projectID, outputFormat))
-	root.AddCommand(newDeleteCmd(projectID))
-	root.AddCommand(newArchiveCmd(projectID))
-	root.AddCommand(newUnarchiveCmd(projectID))
+	root.AddCommand(completions.WithCompletion(newUpdateCmd(projectID, outputFormat), c))
+	root.AddCommand(completions.WithCompletion(newDeleteCmd(projectID), c))
+	root.AddCommand(completions.WithCompletion(newArchiveCmd(projectID), c))
+	root.AddCommand(completions.WithCompletion(newUnarchiveCmd(projectID), c))
 	root.AddCommand(newPushToStoreCmd(projectID))
 	root.AddCommand(newExportCmd(projectID))
 	root.AddCommand(newImportCmd(projectID))

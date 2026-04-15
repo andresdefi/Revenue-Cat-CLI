@@ -7,6 +7,7 @@ import (
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
+	"github.com/andresdefi/rc/internal/completions"
 	"github.com/andresdefi/rc/internal/config"
 	"github.com/andresdefi/rc/internal/output"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -22,7 +23,7 @@ func NewProjectsCmd(projectID, outputFormat *string) *cobra.Command {
 
 	root.AddCommand(newListCmd(outputFormat))
 	root.AddCommand(newCreateCmd(outputFormat))
-	root.AddCommand(newSetDefaultCmd())
+	root.AddCommand(completions.WithCompletion(newSetDefaultCmd(), completions.ProjectIDs()))
 	return root
 }
 

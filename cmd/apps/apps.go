@@ -7,6 +7,7 @@ import (
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
+	"github.com/andresdefi/rc/internal/completions"
 	"github.com/andresdefi/rc/internal/output"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
@@ -29,11 +30,12 @@ Examples:
   rc apps delete app1a2b3c4`,
 	}
 
+	c := completions.AppIDs(projectID)
 	root.AddCommand(newListCmd(projectID, outputFormat))
-	root.AddCommand(newGetCmd(projectID, outputFormat))
+	root.AddCommand(completions.WithCompletion(newGetCmd(projectID, outputFormat), c))
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
-	root.AddCommand(newUpdateCmd(projectID, outputFormat))
-	root.AddCommand(newDeleteCmd(projectID))
+	root.AddCommand(completions.WithCompletion(newUpdateCmd(projectID, outputFormat), c))
+	root.AddCommand(completions.WithCompletion(newDeleteCmd(projectID), c))
 	root.AddCommand(newPublicKeysCmd(projectID, outputFormat))
 	root.AddCommand(newStoreKitConfigCmd(projectID, outputFormat))
 	return root

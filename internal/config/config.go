@@ -2,11 +2,15 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/BurntSushi/toml"
 )
+
+var validProfileName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
 
 const (
 	configDirName      = ".rc"
@@ -174,7 +178,24 @@ func Load() (*Config, error) {
 	return &cfg, nil
 }
 
+// Validate checks the config for common issues before saving.
+func (c *Config) Validate() error {
+	for name := range c.Profiles {
+		if !validProfileName.MatchString(name) {
+			return fmt.Errorf("invalid profile name %q: must be alphanumeric, hyphens, or underscores", name)
+		}
+	}
+	if c.CurrentProfile != "" && !validProfileName.MatchString(c.CurrentProfile) {
+		return fmt.Errorf("invalid current_profile %q", c.CurrentProfile)
+	}
+	return nil
+}
+
 func Save(cfg *Config) error {
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("config validation failed: %w", err)
+	}
+
 	dir, err := Dir()
 	if err != nil {
 		return err

@@ -9,6 +9,7 @@ import (
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
+	"github.com/andresdefi/rc/internal/completions"
 	"github.com/andresdefi/rc/internal/output"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
@@ -29,14 +30,15 @@ Examples:
   rc subscriptions refund sub1ab2c3d4e5`,
 	}
 
+	c := completions.SubscriptionIDs(projectID)
 	root.AddCommand(newListCmd(projectID, outputFormat))
-	root.AddCommand(newGetCmd(projectID, outputFormat))
-	root.AddCommand(newTransactionsCmd(projectID, outputFormat))
-	root.AddCommand(newEntitlementsCmd(projectID, outputFormat))
-	root.AddCommand(newCancelCmd(projectID))
-	root.AddCommand(newRefundCmd(projectID))
-	root.AddCommand(newRefundTransactionCmd(projectID))
-	root.AddCommand(newManagementURLCmd(projectID, outputFormat))
+	root.AddCommand(completions.WithCompletion(newGetCmd(projectID, outputFormat), c))
+	root.AddCommand(completions.WithCompletion(newTransactionsCmd(projectID, outputFormat), c))
+	root.AddCommand(completions.WithCompletion(newEntitlementsCmd(projectID, outputFormat), c))
+	root.AddCommand(completions.WithCompletion(newCancelCmd(projectID), c))
+	root.AddCommand(completions.WithCompletion(newRefundCmd(projectID), c))
+	root.AddCommand(completions.WithCompletion(newRefundTransactionCmd(projectID), c))
+	root.AddCommand(completions.WithCompletion(newManagementURLCmd(projectID, outputFormat), c))
 	return root
 }
 

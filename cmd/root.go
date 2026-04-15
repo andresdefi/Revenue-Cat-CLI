@@ -39,6 +39,7 @@ var (
 	noColorFlag  bool
 	prettyFlag   bool
 	verboseFlag  bool
+	logLevelFlag string
 	quietFlag    bool
 	dryRunFlag   bool
 	forceFlag    bool
@@ -69,8 +70,10 @@ audit logs, collaborators, and virtual currencies.`,
 		SilenceErrors:              true,
 		SuggestionsMinimumDistance: 2,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if outputFormat != "" && outputFormat != "table" && outputFormat != "json" {
-				return fmt.Errorf("invalid output format %q (must be table or json)", outputFormat)
+			switch outputFormat {
+			case "", "table", "json", "markdown", "md":
+			default:
+				return fmt.Errorf("invalid output format %q (must be table, json, or markdown)", outputFormat)
 			}
 			if noColorFlag {
 				output.ColorDisabled = true
@@ -78,7 +81,16 @@ audit logs, collaborators, and virtual currencies.`,
 			if prettyFlag {
 				output.PrettyJSON = true
 			}
+			if logLevelFlag != "" {
+				level, ok := output.ParseLogLevel(logLevelFlag)
+				if !ok {
+					return fmt.Errorf("invalid log level %q (must be error, warn, info, or debug)", logLevelFlag)
+				}
+				output.LogLevel = level
+				output.Verbose = level >= output.LogLevelDebug
+			}
 			if verboseFlag {
+				output.LogLevel = output.LogLevelDebug
 				output.Verbose = true
 			}
 			if quietFlag {
@@ -100,11 +112,12 @@ audit logs, collaborators, and virtual currencies.`,
 	root.SetVersionTemplate("rc {{.Version}}\n")
 
 	root.PersistentFlags().StringVarP(&projectID, "project", "p", "", "project ID (overrides default project)")
-	root.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "output format: table, json (default: table for TTY, json for pipes)")
+	root.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "output format: table, json, markdown (default: table for TTY, json for pipes)")
 	root.PersistentFlags().StringVar(&profileFlag, "profile", "", "config profile to use (overrides RC_PROFILE and current_profile)")
 	root.PersistentFlags().BoolVar(&noColorFlag, "no-color", false, "disable color output (also respects NO_COLOR env var)")
 	root.PersistentFlags().BoolVar(&prettyFlag, "pretty", false, "pretty-print JSON output (default for TTY, compact for pipes)")
-	root.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "show HTTP request/response details for debugging")
+	root.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "shorthand for --log-level debug")
+	root.PersistentFlags().StringVar(&logLevelFlag, "log-level", "", "log verbosity: error, warn, info, debug (default: warn)")
 	root.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (success messages, warnings, progress)")
 	root.PersistentFlags().BoolVar(&dryRunFlag, "dry-run", false, "show what would be done without executing mutations")
 	root.PersistentFlags().BoolVarP(&forceFlag, "yes", "y", false, "skip confirmation prompts for destructive operations")
@@ -159,18 +172,9 @@ func Execute() {
 		fmt.Fprintf(os.Stderr, "%sError:%s %s\n", output.ColorRed(), output.ColorReset(), err)
 
 		var apiErr *api.Error
-		switch {
-		case errors.As(err, &apiErr) && apiErr.StatusCode == 401:
-			os.Exit(exitcode.AuthError)
-		case errors.As(err, &apiErr) && apiErr.StatusCode == 404:
-			os.Exit(exitcode.NotFoundError)
-		case errors.As(err, &apiErr) && apiErr.StatusCode == 429:
-			os.Exit(exitcode.RateLimitError)
-		case errors.As(err, &apiErr) && apiErr.StatusCode >= 500:
-			os.Exit(exitcode.ServerError)
-		case errors.As(err, &apiErr):
-			os.Exit(exitcode.APIError)
-		default:
+		if errors.As(err, &apiErr) && apiErr.StatusCode > 0 {
+			os.Exit(exitcode.FromHTTPStatus(apiErr.StatusCode))
+		} else {
 			os.Exit(exitcode.GeneralError)
 		}
 	}
