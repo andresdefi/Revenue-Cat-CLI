@@ -18,11 +18,11 @@ func main() {
 	}
 
 	path := filepath.Join("docs", "COMMANDS.md")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		fmt.Fprintf(os.Stderr, "create docs dir: %v\n", err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		fmt.Fprintf(os.Stderr, "write %s: %v\n", path, err)
 		os.Exit(1)
 	}
