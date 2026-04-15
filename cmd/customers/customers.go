@@ -292,6 +292,9 @@ func newDeleteCmd(projectID *string) *cobra.Command {
   rc customers delete user-123`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.ConfirmDestructive("Delete", "customer", args[0]); err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -692,6 +695,9 @@ func newRevokeCmd(projectID *string) *cobra.Command {
 		Example: `  # Revoke an entitlement
   rc customers revoke --customer-id user-123 --entitlement-id entla1b2c3`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.ConfirmDestructive("Revoke entitlement from", "customer", customerID); err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err

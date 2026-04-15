@@ -226,6 +226,9 @@ func newDeleteCmd(projectID *string) *cobra.Command {
   rc webhooks delete wh1a2b3c4d5`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.ConfirmDestructive("Delete", "webhook", args[0]); err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err

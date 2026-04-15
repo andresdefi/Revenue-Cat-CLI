@@ -321,6 +321,9 @@ func newCancelCmd(projectID *string) *cobra.Command {
   rc subscriptions cancel sub1ab2c3d4e5`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.ConfirmDestructive("Cancel", "subscription", args[0]); err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -346,6 +349,9 @@ func newRefundCmd(projectID *string) *cobra.Command {
   rc subscriptions refund sub1ab2c3d4e5`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.ConfirmDestructive("Refund", "subscription", args[0]); err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -372,6 +378,9 @@ func newRefundTransactionCmd(projectID *string) *cobra.Command {
   rc subscriptions refund-transaction sub1ab2c3d4e5 --transaction-id txn1a2b3c`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.ConfirmDestructive("Refund", "transaction", transactionID); err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err

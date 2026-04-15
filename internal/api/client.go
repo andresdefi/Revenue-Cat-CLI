@@ -7,10 +7,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/andresdefi/rc/internal/auth"
+	"github.com/andresdefi/rc/internal/cache"
+	"github.com/andresdefi/rc/internal/output"
 )
 
 const (
@@ -19,6 +22,12 @@ const (
 )
 
 var BaseURL = "https://api.revenuecat.com/v2"
+
+// DryRun when true prevents POST/DELETE requests from being sent.
+var DryRun bool
+
+// CacheEnabled enables local response caching for GET requests.
+var CacheEnabled bool
 
 // Client is the RevenueCat API v2 HTTP client.
 type Client struct {
@@ -80,9 +89,23 @@ type ListResponse[T any] struct {
 	URL      string  `json:"url"`
 }
 
-// Get performs a GET request.
+// Get performs a GET request. Results are cached when CacheEnabled is true.
 func (c *Client) Get(path string, query url.Values) ([]byte, error) {
-	return c.do("GET", path, query, nil)
+	cacheKey := path
+	if len(query) > 0 {
+		cacheKey += "?" + query.Encode()
+	}
+	if CacheEnabled {
+		if cached := cache.Get(cacheKey); cached != nil {
+			output.Debug("Cache hit: %s", cacheKey)
+			return cached, nil
+		}
+	}
+	data, err := c.do("GET", path, query, nil)
+	if err == nil && CacheEnabled {
+		cache.Set(cacheKey, data)
+	}
+	return data, err
 }
 
 // Post performs a POST request with a JSON body.
@@ -99,6 +122,7 @@ func (c *Client) Delete(path string) ([]byte, error) {
 // The path should already include any query parameters.
 func (c *Client) GetFullURL(fullPath string) ([]byte, error) {
 	u := c.baseURL + fullPath
+	output.Debug("GET %s", u)
 
 	var lastErr error
 	for attempt := range MaxRetries {
@@ -113,6 +137,7 @@ func (c *Client) GetFullURL(fullPath string) ([]byte, error) {
 		resp, err := c.http.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("request failed: %w", err)
+			output.Debug("Attempt %d failed: %v", attempt+1, err)
 			continue
 		}
 
@@ -149,17 +174,40 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 		u += "?" + query.Encode()
 	}
 
+	var bodyData []byte
 	var bodyReader io.Reader
 	if body != nil {
-		data, err := json.Marshal(body)
+		var err error
+		bodyData, err = json.Marshal(body)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal request body: %w", err)
 		}
-		bodyReader = bytes.NewReader(data)
+		bodyReader = bytes.NewReader(bodyData)
+	}
+
+	output.Debug("%s %s", method, u)
+	if len(bodyData) > 0 {
+		output.Debug("Request body: %s", string(bodyData))
+	}
+
+	if DryRun && method != "GET" {
+		output.Debug("[dry-run] Skipping %s %s", method, path)
+		fmt.Fprintf(os.Stderr, "[dry-run] Would %s %s\n", method, path)
+		if len(bodyData) > 0 {
+			var pretty bytes.Buffer
+			if json.Indent(&pretty, bodyData, "  ", "  ") == nil {
+				fmt.Fprintf(os.Stderr, "  Body:\n  %s\n", pretty.String())
+			}
+		}
+		return []byte(`{}`), nil
 	}
 
 	var lastErr error
 	for attempt := range MaxRetries {
+		if bodyReader != nil {
+			bodyReader = bytes.NewReader(bodyData)
+		}
+
 		req, err := http.NewRequest(method, u, bodyReader)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)
@@ -174,12 +222,18 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 		resp, err := c.http.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("request failed: %w", err)
+			output.Debug("Attempt %d failed: %v", attempt+1, err)
 			continue
 		}
 
 		respBody, err := readResponseBody(resp)
 		if err != nil {
 			return nil, err
+		}
+
+		output.Debug("Response: %d (%d bytes)", resp.StatusCode, len(respBody))
+		if output.Verbose && len(respBody) > 0 && len(respBody) < 4096 {
+			output.Debug("Response body: %s", string(respBody))
 		}
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
@@ -191,6 +245,7 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 			apiErr.StatusCode = resp.StatusCode
 			if apiErr.Retryable && attempt < MaxRetries-1 {
 				backoff := retryBackoff(resp, &apiErr, attempt)
+				output.Debug("Retryable error, backing off %v", backoff)
 				time.Sleep(backoff)
 				lastErr = &apiErr
 				continue

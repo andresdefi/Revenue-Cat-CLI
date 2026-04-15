@@ -129,11 +129,14 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 
 	oldBaseURL := api.BaseURL
 	oldPrettyJSON := output.PrettyJSON
+	oldForceYes := cmdutil.ForceYes
 	api.BaseURL = server.URL
 	output.PrettyJSON = true
+	cmdutil.ForceYes = true
 	t.Cleanup(func() {
 		api.BaseURL = oldBaseURL
 		output.PrettyJSON = oldPrettyJSON
+		cmdutil.ForceYes = oldForceYes
 		cmdutil.ActiveProfile = ""
 	})
 

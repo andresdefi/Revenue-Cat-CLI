@@ -43,10 +43,14 @@ func PromptSelect(value *string, title string, options []string) error {
 		Run()
 }
 
-// PromptConfirm prompts for yes/no confirmation. Returns false if not a TTY.
+// PromptConfirm prompts for yes/no confirmation.
+// Returns true immediately if --yes was passed or not a TTY.
 func PromptConfirm(title string) (bool, error) {
+	if ForceYes {
+		return true, nil
+	}
 	if !output.IsTTY() {
-		return false, nil
+		return false, fmt.Errorf("destructive operation requires confirmation: use --yes to skip prompts in non-interactive mode")
 	}
 	var confirmed bool
 	err := huh.NewConfirm().
@@ -54,4 +58,18 @@ func PromptConfirm(title string) (bool, error) {
 		Value(&confirmed).
 		Run()
 	return confirmed, err
+}
+
+// ConfirmDestructive prompts for confirmation before a destructive operation.
+// Returns nil if confirmed, error if declined or non-interactive without --yes.
+func ConfirmDestructive(action, resourceType, resourceID string) error {
+	msg := fmt.Sprintf("%s %s %s?", action, resourceType, resourceID)
+	confirmed, err := PromptConfirm(msg)
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		return fmt.Errorf("aborted")
+	}
+	return nil
 }

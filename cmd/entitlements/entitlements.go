@@ -319,6 +319,9 @@ func newDeleteCmd(projectID *string) *cobra.Command {
   rc entitlements delete entla1b2c3d4e5`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.ConfirmDestructive("Delete", "entitlement", args[0]); err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err

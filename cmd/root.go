@@ -27,6 +27,7 @@ import (
 	"github.com/andresdefi/rc/internal/cmdutil"
 	"github.com/andresdefi/rc/internal/exitcode"
 	"github.com/andresdefi/rc/internal/output"
+	"github.com/andresdefi/rc/internal/update"
 	"github.com/andresdefi/rc/internal/version"
 	"github.com/spf13/cobra"
 )
@@ -37,6 +38,11 @@ var (
 	profileFlag  string
 	noColorFlag  bool
 	prettyFlag   bool
+	verboseFlag  bool
+	quietFlag    bool
+	dryRunFlag   bool
+	forceFlag    bool
+	fieldsFlag   string
 )
 
 func NewRootCmd() *cobra.Command {
@@ -72,7 +78,21 @@ audit logs, collaborators, and virtual currencies.`,
 			if prettyFlag {
 				output.PrettyJSON = true
 			}
+			if verboseFlag {
+				output.Verbose = true
+			}
+			if quietFlag {
+				output.Quiet = true
+			}
+			if dryRunFlag {
+				api.DryRun = true
+			}
 			cmdutil.ActiveProfile = profileFlag
+			if forceFlag {
+				cmdutil.ForceYes = true
+			}
+			cmdutil.FieldsFlag = fieldsFlag
+			output.FieldsFilter = fieldsFlag
 			return nil
 		},
 	}
@@ -84,9 +104,15 @@ audit logs, collaborators, and virtual currencies.`,
 	root.PersistentFlags().StringVar(&profileFlag, "profile", "", "config profile to use (overrides RC_PROFILE and current_profile)")
 	root.PersistentFlags().BoolVar(&noColorFlag, "no-color", false, "disable color output (also respects NO_COLOR env var)")
 	root.PersistentFlags().BoolVar(&prettyFlag, "pretty", false, "pretty-print JSON output (default for TTY, compact for pipes)")
+	root.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "show HTTP request/response details for debugging")
+	root.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (success messages, warnings, progress)")
+	root.PersistentFlags().BoolVar(&dryRunFlag, "dry-run", false, "show what would be done without executing mutations")
+	root.PersistentFlags().BoolVarP(&forceFlag, "yes", "y", false, "skip confirmation prompts for destructive operations")
+	root.PersistentFlags().StringVar(&fieldsFlag, "fields", "", "comma-separated list of fields to include in JSON output")
 
 	// Meta
 	root.AddCommand(newVersionCmd())
+	root.AddCommand(newCompletionCmd())
 
 	// Auth (no project needed)
 	root.AddCommand(auth.NewAuthCmd())
@@ -125,6 +151,10 @@ audit logs, collaborators, and virtual currencies.`,
 }
 
 func Execute() {
+	updateCh := make(chan string, 1)
+	update.CheckAsync(updateCh)
+	defer update.PrintNotice(updateCh)
+
 	if err := NewRootCmd().Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "%sError:%s %s\n", output.ColorRed(), output.ColorReset(), err)
 

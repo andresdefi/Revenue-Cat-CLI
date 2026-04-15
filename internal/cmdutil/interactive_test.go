@@ -62,21 +62,27 @@ func TestPromptSelect_EmptyValueNonTTY(t *testing.T) {
 }
 
 func TestPromptConfirm_NonTTY(t *testing.T) {
-	// In non-TTY mode, PromptConfirm returns false with no error
+	// In non-TTY mode without --yes, PromptConfirm returns an error
 	confirmed, err := PromptConfirm("Confirm?")
-	if err != nil {
-		t.Fatalf("PromptConfirm() error: %v", err)
+	if err == nil {
+		t.Fatal("PromptConfirm() in non-TTY without --yes should return error")
 	}
 	if confirmed {
 		t.Error("PromptConfirm() in non-TTY should return false")
 	}
 }
 
-func TestPromptConfirm_CallableInNonTTY(t *testing.T) {
-	// In non-TTY (test environment), PromptConfirm should return false
-	result, err := PromptConfirm("Test?")
+func TestPromptConfirm_ForceYes(t *testing.T) {
+	// With ForceYes, PromptConfirm returns true immediately
+	oldForce := ForceYes
+	ForceYes = true
+	defer func() { ForceYes = oldForce }()
+
+	confirmed, err := PromptConfirm("Confirm?")
 	if err != nil {
-		t.Logf("PromptConfirm returned error (expected in non-TTY): %v", err)
+		t.Fatalf("PromptConfirm() with ForceYes error: %v", err)
 	}
-	_ = result
+	if !confirmed {
+		t.Error("PromptConfirm() with ForceYes should return true")
+	}
 }

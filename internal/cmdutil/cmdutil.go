@@ -13,6 +13,12 @@ import (
 // Empty string means use the config's current_profile.
 var ActiveProfile string
 
+// ForceYes skips confirmation prompts when set via --yes/-y.
+var ForceYes bool
+
+// FieldsFlag is the comma-separated list of fields from --fields.
+var FieldsFlag string
+
 // ResolveProfile returns the effective profile name.
 // Priority: --profile flag > RC_PROFILE env var > config current_profile > default.
 func ResolveProfile() string {
