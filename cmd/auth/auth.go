@@ -25,6 +25,7 @@ func NewAuthCmd() *cobra.Command {
 	cmd.AddCommand(newStatusCmd())
 	cmd.AddCommand(newLogoutCmd())
 	cmd.AddCommand(newDoctorCmd())
+	cmd.AddCommand(newValidateCmd())
 	return cmd
 }
 
@@ -199,4 +200,16 @@ func newDoctorCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newValidateCmd() *cobra.Command {
+	cmd := newDoctorCmd()
+	cmd.Use = "validate"
+	cmd.Short = "Validate authentication and API connectivity"
+	cmd.Example = `  # Validate the active profile
+  rc auth validate
+
+  # Validate a specific profile
+  rc auth validate --profile production`
+	return cmd
 }

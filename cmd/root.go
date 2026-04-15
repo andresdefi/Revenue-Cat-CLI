@@ -10,6 +10,7 @@ import (
 	"github.com/andresdefi/rc/cmd/auth"
 	"github.com/andresdefi/rc/cmd/charts"
 	"github.com/andresdefi/rc/cmd/collaborators"
+	configcmd "github.com/andresdefi/rc/cmd/config"
 	"github.com/andresdefi/rc/cmd/currencies"
 	"github.com/andresdefi/rc/cmd/customers"
 	"github.com/andresdefi/rc/cmd/entitlements"
@@ -126,6 +127,10 @@ audit logs, collaborators, and virtual currencies.`,
 	// Meta
 	root.AddCommand(newVersionCmd())
 	root.AddCommand(newCompletionCmd())
+	root.AddCommand(newInitCmd(&projectID))
+	root.AddCommand(newDoctorCmd(&projectID))
+	root.AddCommand(newWhoamiCmd(&outputFormat))
+	root.AddCommand(configcmd.NewConfigCmd(&outputFormat))
 
 	// Auth (no project needed)
 	root.AddCommand(auth.NewAuthCmd())

@@ -5,7 +5,7 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X $(MODULE)/internal/version.Version=$(VERSION) -X $(MODULE)/internal/version.Commit=$(COMMIT) -X $(MODULE)/internal/version.Date=$(DATE)
 
-.PHONY: build test lint vet fmt clean install check tools security help
+.PHONY: build test test-integration lint vet fmt docs clean install check tools security help
 
 ## build: Build the rc binary
 build:
@@ -23,6 +23,10 @@ test:
 test-integration:
 	go test -race -tags integration ./...
 
+## docs: Generate command reference docs
+docs:
+	go run ./scripts/generate-commands-docs
+
 ## lint: Run golangci-lint
 lint:
 	golangci-lint run
@@ -39,8 +43,8 @@ fmt:
 security:
 	gosec -exclude=G304,G101,G115 ./...
 
-## check: Run all checks (fmt, vet, lint, test)
-check: fmt vet lint test
+## check: Run all checks (fmt, docs, vet, lint, test)
+check: fmt docs vet lint test
 
 ## tools: Install dev dependencies
 tools:
