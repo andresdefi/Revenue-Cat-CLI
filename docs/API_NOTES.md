@@ -9,6 +9,17 @@ Implementation notes captured from the CLI and test harness.
 - Archive and unarchive operations use action endpoints such as
   `/actions/archive` and `/actions/unarchive`.
 - Attach and detach operations use action endpoints with explicit ID arrays.
+- App updates accept nested store-specific objects. `rc apps update` sends App
+  Store credential fields under `app_store`, including `shared_secret`,
+  `subscription_private_key`, `subscription_key_id`, and
+  `subscription_key_issuer`.
+- The current RevenueCat v2 OpenAPI describes `subscription_private_key` as the
+  `.p8` PEM file contents. The CLI reads `--subscription-key-file` and sends the
+  file contents as-is.
+- The current RevenueCat v2 OpenAPI does not document a Google Play service
+  account credential field on app updates, and `play_store` disallows extra
+  fields. `--service-account-file` returns a clear error instead of sending an
+  undocumented credential payload.
 
 ## Pagination
 

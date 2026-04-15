@@ -1,6 +1,8 @@
 package apps_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/andresdefi/rc/internal/cmdtest"
@@ -102,7 +104,52 @@ func TestAppsUpdateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"apps", "update", "app_cmdtest", "--name", "Renamed App", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "app_cmdtest")
-	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/apps/app_cmdtest")
+	cmdtest.AssertRequestJSON(t, result, "POST", "/projects/proj_cmdtest/apps/app_cmdtest", map[string]any{
+		"name": "Renamed App",
+	})
+}
+
+func TestAppsUpdateAppStoreCredentials(t *testing.T) {
+	keyPath := filepath.Join(t.TempDir(), "SubscriptionKey_ABC123.p8")
+	keyContents := "-----BEGIN PRIVATE KEY-----\nfixture-key\n-----END PRIVATE KEY-----\n"
+	if err := os.WriteFile(keyPath, []byte(keyContents), 0o600); err != nil {
+		t.Fatalf("write subscription key fixture: %v", err)
+	}
+
+	result := cmdtest.Run(t, []string{
+		"apps", "update", "app_cmdtest",
+		"--shared-secret", "1234567890abcdef1234567890abcdef",
+		"--subscription-key-file", keyPath,
+		"--subscription-key-id", "ABC123",
+		"--subscription-key-issuer", "5a049d62-1b9b-453c-b605-1988189d8129",
+		"--output", "json",
+	})
+
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestJSON(t, result, "POST", "/projects/proj_cmdtest/apps/app_cmdtest", map[string]any{
+		"app_store": map[string]any{
+			"shared_secret":            "1234567890abcdef1234567890abcdef",
+			"subscription_private_key": keyContents,
+			"subscription_key_id":      "ABC123",
+			"subscription_key_issuer":  "5a049d62-1b9b-453c-b605-1988189d8129",
+		},
+	})
+}
+
+func TestAppsUpdateSubscriptionKeyFileError(t *testing.T) {
+	missingPath := filepath.Join(t.TempDir(), "missing.p8")
+	result := cmdtest.Run(t, []string{"apps", "update", "app_cmdtest", "--subscription-key-file", missingPath})
+	cmdtest.AssertErrorContains(t, result, "read subscription key file")
+}
+
+func TestAppsUpdatePlayStoreServiceAccountFileUnsupported(t *testing.T) {
+	credentialsPath := filepath.Join(t.TempDir(), "service-account.json")
+	if err := os.WriteFile(credentialsPath, []byte(`{"client_email":"fixture@example.com"}`), 0o600); err != nil {
+		t.Fatalf("write service account fixture: %v", err)
+	}
+
+	result := cmdtest.Run(t, []string{"apps", "update", "app_cmdtest", "--service-account-file", credentialsPath})
+	cmdtest.AssertErrorContains(t, result, "does not document a Play Store service-account credential field")
 }
 
 func TestAppsUpdateMissingArg(t *testing.T) {
