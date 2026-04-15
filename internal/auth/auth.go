@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/andresdefi/rc/internal/cache"
 	"github.com/andresdefi/rc/internal/cmdutil"
 	"github.com/andresdefi/rc/internal/config"
 	"github.com/zalando/go-keyring"
@@ -49,6 +50,7 @@ func SaveToken(profile, token string) error {
 					_ = config.Save(cfg)
 				}
 			}
+			_ = cache.Clear()
 			return nil
 		}
 	}
@@ -64,7 +66,11 @@ func SaveToken(profile, token string) error {
 	}
 	p.APIKey = token
 	cfg.SetProfile(profile, p)
-	return config.Save(cfg)
+	if err := config.Save(cfg); err != nil {
+		return err
+	}
+	_ = cache.Clear()
+	return nil
 }
 
 // GetToken retrieves the API key from keychain or config file for the given profile.
@@ -106,8 +112,11 @@ func DeleteToken(profile string) error {
 	if p != nil && p.APIKey != "" {
 		p.APIKey = ""
 		cfg.SetProfile(profile, p)
-		return config.Save(cfg)
+		if err := config.Save(cfg); err != nil {
+			return err
+		}
 	}
+	_ = cache.Clear()
 	return nil
 }
 

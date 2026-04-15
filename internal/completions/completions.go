@@ -1,13 +1,11 @@
 package completions
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/url"
 
 	"github.com/andresdefi/rc/internal/api"
-	"github.com/andresdefi/rc/internal/auth"
 	"github.com/andresdefi/rc/internal/cache"
 	"github.com/andresdefi/rc/internal/cmdutil"
 	"github.com/spf13/cobra"
@@ -161,10 +159,5 @@ func ProjectIDs() func(*cobra.Command, []string, string) ([]string, cobra.ShellC
 
 func cacheNamespace() string {
 	profile := cmdutil.ResolveProfile()
-	token, err := auth.GetToken(profile)
-	if err != nil || token == "" {
-		return "profile:" + profile
-	}
-	sum := sha256.Sum256([]byte(token))
-	return fmt.Sprintf("profile:%s:token:%x", profile, sum[:8])
+	return "profile:" + profile
 }
