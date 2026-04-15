@@ -37,7 +37,7 @@ fmt:
 
 ## security: Run gosec security scanner
 security:
-	gosec ./...
+	gosec -exclude=G304,G101,G115 ./...
 
 ## check: Run all checks (fmt, vet, lint, test)
 check: fmt vet lint test

@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	cacheDir    = ".rc"
-	cacheSub    = "cache"
-	defaultTTL  = 5 * time.Minute
+	cacheDir   = ".rc"
+	cacheSub   = "cache"
+	defaultTTL = 5 * time.Minute
 )
 
 type entry struct {
@@ -44,7 +44,7 @@ func SetWithTTL(key string, data []byte, ttl time.Duration) {
 	if dir == "" {
 		return
 	}
-	_ = os.MkdirAll(dir, 0700)
+	_ = os.MkdirAll(dir, 0o700)
 
 	e := entry{
 		Data:      data,
@@ -54,7 +54,7 @@ func SetWithTTL(key string, data []byte, ttl time.Duration) {
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(path(key), raw, 0600)
+	_ = os.WriteFile(path(key), raw, 0o600)
 }
 
 // Clear removes all cached entries.

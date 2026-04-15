@@ -95,7 +95,7 @@ This includes all products, entitlements, and offerings with their packages.`,
 				return fmt.Errorf("failed to marshal config: %w", err)
 			}
 
-			if err := os.WriteFile(file, data, 0644); err != nil {
+			if err := os.WriteFile(file, data, 0o600); err != nil { //nolint:gosec // user-specified export path
 				return fmt.Errorf("failed to write file: %w", err)
 			}
 

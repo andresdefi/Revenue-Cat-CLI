@@ -159,7 +159,7 @@ func TestKeychainUser(t *testing.T) {
 
 func TestSaveAndGetToken_RoundTrip(t *testing.T) {
 	home := setupTestHome(t)
-	_ = os.MkdirAll(filepath.Join(home, ".rc"), 0700)
+	_ = os.MkdirAll(filepath.Join(home, ".rc"), 0o700)
 
 	profile := "roundtrip"
 	token := "sk_roundtrip_test_value"

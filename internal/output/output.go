@@ -96,7 +96,7 @@ func printMarkdown(renderer func(t table.Writer)) {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	renderer(t)
-	fmt.Fprintln(os.Stdout, t.RenderMarkdown())
+	_, _ = fmt.Fprintln(os.Stdout, t.RenderMarkdown())
 }
 
 // filterFields reduces JSON data to only the requested fields.

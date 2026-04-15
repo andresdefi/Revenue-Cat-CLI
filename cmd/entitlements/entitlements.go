@@ -615,7 +615,7 @@ func newExportCmd(projectID *string) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				if err := os.WriteFile(file, out, 0644); err != nil {
+				if err := os.WriteFile(file, out, 0o600); err != nil { //nolint:gosec // user-specified export path
 					return err
 				}
 			case ".csv":

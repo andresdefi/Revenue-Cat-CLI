@@ -125,10 +125,16 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			output.Print(format, purchase, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Field", "Value"})
 				t.AppendRows([]table.Row{
-					{"ID", purchase.ID}, {"Customer", purchase.CustomerID}, {"Product", purchase.ProductID},
-					{"Status", purchase.Status}, {"Quantity", purchase.Quantity}, {"Store", purchase.Store},
-					{"Environment", purchase.Environment}, {"Ownership", purchase.Ownership},
-					{"Country", output.Deref(purchase.Country, "-")}, {"Purchased", output.FormatTimestamp(purchase.PurchasedAt)},
+					{"ID", purchase.ID},
+					{"Customer", purchase.CustomerID},
+					{"Product", purchase.ProductID},
+					{"Status", purchase.Status},
+					{"Quantity", purchase.Quantity},
+					{"Store", purchase.Store},
+					{"Environment", purchase.Environment},
+					{"Ownership", purchase.Ownership},
+					{"Country", output.Deref(purchase.Country, "-")},
+					{"Purchased", output.FormatTimestamp(purchase.PurchasedAt)},
 				})
 				if purchase.RevenueInUSD != nil {
 					t.AppendSeparator()

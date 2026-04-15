@@ -21,14 +21,14 @@ func overrideHome(t *testing.T, dir string) {
 func writeConfig(t *testing.T, home string, data map[string]string) {
 	t.Helper()
 	dir := filepath.Join(home, ".rc")
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
 	b, err := json.Marshal(data)
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "config.json"), b, 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "config.json"), b, 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 }

@@ -24,14 +24,14 @@ func Trimmed(name string, value *string) error {
 
 // knownPrefixes maps RevenueCat resource types to their expected ID prefixes.
 var knownPrefixes = map[string]string{
-	"project":     "proj",
-	"app":         "app",
-	"product":     "prod",
-	"entitlement": "entl",
-	"offering":    "ofrnge",
-	"package":     "pkge",
+	"project":      "proj",
+	"app":          "app",
+	"product":      "prod",
+	"entitlement":  "entl",
+	"offering":     "ofrnge",
+	"package":      "pkge",
 	"subscription": "sub",
-	"purchase":    "purch",
+	"purchase":     "purch",
 }
 
 // ResourceID validates that a resource ID is non-empty and optionally checks

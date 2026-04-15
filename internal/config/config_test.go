@@ -147,10 +147,10 @@ func TestSetProfile(t *testing.T) {
 func TestLegacyMigration(t *testing.T) {
 	home := setupTestHome(t)
 	rcDir := filepath.Join(home, ".rc")
-	os.MkdirAll(rcDir, 0700)
+	os.MkdirAll(rcDir, 0o700)
 
 	legacy := `{"api_key": "sk_old_key", "project_id": "proj_old"}`
-	os.WriteFile(filepath.Join(rcDir, "config.json"), []byte(legacy), 0600)
+	os.WriteFile(filepath.Join(rcDir, "config.json"), []byte(legacy), 0o600)
 
 	cfg, err := Load()
 	if err != nil {
@@ -192,7 +192,7 @@ func TestSave_FilePermissions(t *testing.T) {
 		t.Fatalf("Stat error: %v", err)
 	}
 	perm := info.Mode().Perm()
-	if perm != 0600 {
+	if perm != 0o600 {
 		t.Errorf("config file permissions = %o, want 0600", perm)
 	}
 }

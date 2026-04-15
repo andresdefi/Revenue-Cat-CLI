@@ -87,7 +87,7 @@ func fetchLatest() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("github returned %d", resp.StatusCode)
@@ -131,10 +131,10 @@ func saveCache(c *cachedCheck) {
 	if err != nil {
 		return
 	}
-	_ = os.MkdirAll(dir, 0700)
+	_ = os.MkdirAll(dir, 0o700)
 	data, err := json.Marshal(c)
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(filepath.Join(dir, checkFile), data, 0600)
+	_ = os.WriteFile(filepath.Join(dir, checkFile), data, 0o600)
 }
