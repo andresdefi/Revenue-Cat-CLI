@@ -10,8 +10,21 @@ rc auth login
 rc projects list --output table
 rc projects set-default proj1a2b3c4d5
 rc doctor
+rc project doctor
 rc products list
 ```
+
+## Check Project Readiness
+
+```bash
+rc project doctor --output table
+rc project doctor --output json
+rc project doctor --strict
+```
+
+`rc project doctor` checks apps, products, entitlements, offerings, packages,
+and package-product links. Use `--strict` in CI when a failed project health
+check should stop the run.
 
 ## Set Up Monthly And Yearly Products
 

@@ -21,7 +21,7 @@ cmd/
   foundation.go                  init, doctor, whoami
   auth/auth.go                   auth login/status/logout/doctor/validate
   config/config.go               config profiles
-  projects/projects.go           projects list/create/set-default
+  projects/projects.go           projects list/create/doctor/set-default
   apps/apps.go                   apps list/get/create/update/delete
   products/products.go           products list/get/create/update/delete/archive/unarchive
   entitlements/entitlements.go   entitlements list/get/create/update/delete/archive/unarchive/products/attach/detach
@@ -47,6 +47,7 @@ internal/
   cmdtest/cmdtest.go             Command test harness + request/pagination assertions
   commanddocs/commanddocs.go     Generated Cobra command reference
   output/output.go               JSON + table + markdown output formatting
+  projecthealth/projecthealth.go Read-only project setup analyzer for workflow commands
 docs/
   COMMANDS.md                    Generated command reference
   WORKFLOWS.md                   Copyable setup, offering, customer, and migration recipes
@@ -67,6 +68,7 @@ docs/
 - **Archive pattern:** Products, entitlements, offerings, and virtual currencies all support archive/unarchive
 - **Attach/detach pattern:** Products can be attached/detached from both entitlements and packages
 - **Project transfer:** `rc export`/`rc import` is beta. It carries apps, products, entitlements, offerings, packages, attachments, metadata, and archive/current state where the API allows it
+- **Project health:** `rc project doctor` reads apps, products, entitlements, offerings, packages, and package products to report setup issues. `--strict` returns non-zero on failed health checks
 - **Generated docs:** `docs/COMMANDS.md` is generated from Cobra. Run `make docs` after command changes
 - **Correctness harness:** Request-body golden tests, pagination contract tests, and opt-in integration tests guard API semantics
 
@@ -93,7 +95,7 @@ make help           # Show all targets
 ## Full API Coverage (99 subcommands, 95 API endpoints)
 - [x] Auth: login, status, logout
 - [x] Foundation: init, doctor, whoami, config profiles, auth validate
-- [x] Projects: list, create, set-default
+- [x] Projects: list, create, doctor, set-default
 - [x] Apps: list, get, create, update, delete, public-keys, storekit-config
 - [x] Products: list, get, create, update, delete, archive, unarchive, push-to-store
 - [x] Entitlements: list, get, create, update, delete, archive, unarchive, products, attach, detach
@@ -112,7 +114,7 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 539 default tests across 36 test files (543 with integration tag)
+- [x] 546 default tests across 37 test files (550 with integration tag)
 - [x] Request golden tests, pagination contract tests, generated docs drift test, opt-in integration tests
 - [x] Makefile with build/test/lint/fmt/docs/check targets
 - [x] .golangci.yml config

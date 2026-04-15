@@ -305,7 +305,7 @@ func TestNewRootCmd_ProjectsSubcommands(t *testing.T) {
 		subNames[c.Name()] = true
 	}
 
-	for _, name := range []string{"list", "create", "set-default"} {
+	for _, name := range []string{"list", "create", "doctor", "set-default"} {
 		if !subNames[name] {
 			t.Errorf("projects should have subcommand %q", name)
 		}

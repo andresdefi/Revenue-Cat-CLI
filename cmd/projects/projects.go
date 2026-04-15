@@ -23,6 +23,7 @@ func NewProjectsCmd(projectID, outputFormat *string) *cobra.Command {
 
 	root.AddCommand(newListCmd(outputFormat))
 	root.AddCommand(newCreateCmd(outputFormat))
+	root.AddCommand(newDoctorCmd(projectID, outputFormat))
 	root.AddCommand(completions.WithCompletion(newSetDefaultCmd(), completions.ProjectIDs()))
 	return root
 }

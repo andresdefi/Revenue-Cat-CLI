@@ -43,3 +43,11 @@ Implementation notes captured from the CLI and test harness.
 - Add pagination coverage for every new `--all` list command.
 - Add integration tests behind the `integration` build tag for real API
   behavior that cannot be proven with fixtures.
+
+## Project Health
+
+- `rc project doctor` is read-only.
+- It fetches apps, products, entitlements, entitlement-product links, offerings,
+  packages, and package-product links with `PaginateAll`.
+- The command reports failed setup checks by default without mutating anything.
+  Use `--strict` when failed checks should produce a non-zero exit code.

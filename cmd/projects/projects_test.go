@@ -1,6 +1,9 @@
 package projects_test
 
 import (
+	"encoding/json"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/andresdefi/rc/internal/cmdtest"
@@ -63,6 +66,38 @@ func TestProjectsCreateMissingRequiredFlag(t *testing.T) {
 	cmdtest.AssertErrorContains(t, result, "required flag")
 }
 
+func TestProjectsDoctorJSON(t *testing.T) {
+	result := cmdtest.Run(t, []string{"projects", "doctor", "--output", "json"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"object": "project_health_report"`)
+	cmdtest.AssertOutputContains(t, result, `"status": "pass"`)
+	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/apps")
+	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/products")
+	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/entitlements")
+	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/offerings")
+	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/packages/pkge_cmdtest/products")
+}
+
+func TestProjectDoctorAliasTable(t *testing.T) {
+	result := cmdtest.Run(t, []string{"project", "doctor", "--output", "table"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "PASS")
+	cmdtest.AssertOutputContains(t, result, "Current offering is default")
+}
+
+func TestProjectsDoctorReportsUnhealthyProject(t *testing.T) {
+	result := cmdtest.Run(t, []string{"projects", "doctor", "--output", "json"}, cmdtest.WithHandler(unhealthyProjectHandler))
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"status": "fail"`)
+	cmdtest.AssertOutputContains(t, result, "No apps found")
+	cmdtest.AssertOutputContains(t, result, "No current active offering")
+}
+
+func TestProjectsDoctorStrictFailsUnhealthyProject(t *testing.T) {
+	result := cmdtest.Run(t, []string{"projects", "doctor", "--strict"}, cmdtest.WithHandler(unhealthyProjectHandler))
+	cmdtest.AssertErrorContains(t, result, "project doctor found errors")
+}
+
 func TestProjectsSetDefaultSuccess(t *testing.T) {
 	result := cmdtest.Run(t, []string{"projects", "set-default", "proj_new_default"})
 	cmdtest.AssertSuccess(t, result)
@@ -114,4 +149,50 @@ func TestProjectsListShortOutputFlag(t *testing.T) {
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "proj_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects")
+}
+
+func unhealthyProjectHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeProjectTestJSON(w, http.StatusMethodNotAllowed, map[string]any{"object": "error", "type": "method_not_allowed", "message": "method not allowed"})
+		return
+	}
+
+	switch p := r.URL.Path; {
+	case strings.HasSuffix(p, "/apps"):
+		writeProjectTestJSON(w, http.StatusOK, projectTestList())
+	case strings.HasSuffix(p, "/products") && !strings.Contains(p, "/entitlements/") && !strings.Contains(p, "/packages/"):
+		writeProjectTestJSON(w, http.StatusOK, projectTestList(projectTestProduct()))
+	case strings.HasSuffix(p, "/entitlements"):
+		writeProjectTestJSON(w, http.StatusOK, projectTestList(projectTestEntitlement()))
+	case strings.Contains(p, "/entitlements/") && strings.HasSuffix(p, "/products"):
+		writeProjectTestJSON(w, http.StatusOK, projectTestList())
+	case strings.HasSuffix(p, "/offerings"):
+		writeProjectTestJSON(w, http.StatusOK, projectTestList(projectTestOffering(false)))
+	case strings.Contains(p, "/offerings/") && strings.HasSuffix(p, "/packages"):
+		writeProjectTestJSON(w, http.StatusOK, projectTestList())
+	default:
+		writeProjectTestJSON(w, http.StatusNotFound, map[string]any{"object": "error", "type": "not_found", "message": "no fixture"})
+	}
+}
+
+func projectTestList(items ...any) map[string]any {
+	return map[string]any{"object": "list", "items": items, "next_page": nil}
+}
+
+func projectTestProduct() map[string]any {
+	return map[string]any{"object": "product", "id": "prod_orphan", "store_identifier": "com.example.orphan", "type": "subscription", "state": "active", "app_id": "app_missing", "created_at": 1713072000000}
+}
+
+func projectTestEntitlement() map[string]any {
+	return map[string]any{"object": "entitlement", "id": "entl_empty", "project_id": cmdtest.TestProjectID, "lookup_key": "premium", "display_name": "Premium", "state": "active", "created_at": 1713072000000}
+}
+
+func projectTestOffering(current bool) map[string]any {
+	return map[string]any{"object": "offering", "id": "ofrnge_not_current", "project_id": cmdtest.TestProjectID, "lookup_key": "default", "display_name": "Default", "is_current": current, "state": "active", "created_at": 1713072000000}
+}
+
+func writeProjectTestJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
 }
