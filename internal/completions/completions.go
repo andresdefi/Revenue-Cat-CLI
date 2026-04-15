@@ -1,11 +1,13 @@
 package completions
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net/url"
 
 	"github.com/andresdefi/rc/internal/api"
+	"github.com/andresdefi/rc/internal/auth"
 	"github.com/andresdefi/rc/internal/cache"
 	"github.com/andresdefi/rc/internal/cmdutil"
 	"github.com/spf13/cobra"
@@ -30,7 +32,7 @@ func completeResourceIDs(projectFlag *string, pathFmt string) func(*cobra.Comman
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
 
-		cacheKey := fmt.Sprintf("completion:%s:%s", pid, pathFmt)
+		cacheKey := fmt.Sprintf("completion:%s:%s:%s", cacheNamespace(), pid, pathFmt)
 		var items []map[string]any
 
 		if cached := cache.Get(cacheKey); cached != nil {
@@ -125,7 +127,7 @@ func ProjectIDs() func(*cobra.Command, []string, string) ([]string, cobra.ShellC
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
 
-		cacheKey := "completion:projects"
+		cacheKey := fmt.Sprintf("completion:%s:projects", cacheNamespace())
 		var items []map[string]any
 
 		if cached := cache.Get(cacheKey); cached != nil {
@@ -155,4 +157,14 @@ func ProjectIDs() func(*cobra.Command, []string, string) ([]string, cobra.ShellC
 
 		return formatCompletions(items), cobra.ShellCompDirectiveNoFileComp
 	}
+}
+
+func cacheNamespace() string {
+	profile := cmdutil.ResolveProfile()
+	token, err := auth.GetToken(profile)
+	if err != nil || token == "" {
+		return "profile:" + profile
+	}
+	sum := sha256.Sum256([]byte(token))
+	return fmt.Sprintf("profile:%s:token:%x", profile, sum[:8])
 }

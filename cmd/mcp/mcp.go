@@ -10,6 +10,7 @@ import (
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/auth"
 	"github.com/andresdefi/rc/internal/cmdutil"
+	"github.com/andresdefi/rc/internal/version"
 	gomcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/spf13/cobra"
 )
@@ -82,7 +83,7 @@ func errResult(err error) (*gomcp.CallToolResult, any, error) {
 func runServer(client *api.Client) error {
 	server := gomcp.NewServer(&gomcp.Implementation{
 		Name:    "rc-mcp",
-		Version: "0.1.0",
+		Version: version.Version,
 	}, nil)
 
 	registerProjectTools(server, client)

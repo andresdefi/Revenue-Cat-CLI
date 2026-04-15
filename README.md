@@ -168,8 +168,8 @@ All commands support `--profile <name>` to select the config profile and `--outp
 
 | Command | Description |
 |---------|-------------|
-| `rc export --file config.json` | Export full project config (products, entitlements, offerings) |
-| `rc import --file config.json` | Import project config from a JSON file |
+| `rc export --file config.json` | Export full project config (apps, products, entitlements, offerings, packages, attachments) |
+| `rc import --file config.json` | Import project config into another project |
 
 ### MCP
 
@@ -305,11 +305,14 @@ rc entitlements import --file entitlements.csv --project proj_target123
 ### Project migration (export + import)
 
 ```bash
-# Export full project config (products, entitlements, offerings)
+# Export full project config, including relationships and attachments
 rc export --file project-config.json --project proj_source
 
 # Import into a different project
 rc import --file project-config.json --project proj_target
+
+# Map source apps to target apps when automatic matching is not enough
+rc import --file project-config.json --project proj_target --app-map app_source=app_target
 ```
 
 ### MCP server setup
