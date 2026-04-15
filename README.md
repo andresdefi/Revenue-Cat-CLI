@@ -78,7 +78,7 @@ rc mcp serve
 
 ## Commands
 
-All commands support `--profile <name>` to select the config profile and `--output json|table` to control output format.
+All commands support `--profile <name>` to select the config profile and `--output json|table|markdown` to control output format.
 
 ### Authentication
 
@@ -257,7 +257,10 @@ rc customers revoke --customer-id "user-123" --entitlement-id entla1b2c3
 ### Script with JSON output
 
 ```bash
-# List all product IDs
+# List all product IDs (using --fields for clean output)
+rc products list -o json --fields id,store_identifier
+
+# Or use jq for more complex filtering
 rc products list -o json | jq -r '.items[].id'
 
 # Find active subscribers
@@ -265,6 +268,9 @@ rc customers list -o json | jq '.items[] | select(.active_entitlements.items | l
 
 # Get revenue overview
 rc charts overview -o json | jq '.metrics[] | {name, value}'
+
+# Quiet mode for scripts (only data, no status messages)
+rc products delete prod1a2b3c --yes --quiet
 ```
 
 ### Multi-profile workflow
@@ -347,8 +353,57 @@ rc products list | jq '.items[].id'
 # Force JSON in terminal
 rc products list -o json
 
-# Force table in pipe
-rc products list -o table | head
+# Markdown table (great for docs and GitHub issues)
+rc products list -o markdown
+
+# Select specific fields in JSON output
+rc products list -o json --fields id,store_identifier,state
+
+# Pretty-print JSON even when piping
+rc products list -o json --pretty | less
+```
+
+## Global Flags
+
+These flags work on all commands:
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--output` | `-o` | Output format: `table`, `json`, `markdown` (default: table for TTY, json for pipes) |
+| `--project` | `-p` | Project ID (overrides default) |
+| `--profile` | | Config profile to use |
+| `--fields` | | Comma-separated field selection for JSON output |
+| `--pretty` | | Pretty-print JSON (default for TTY, compact for pipes) |
+| `--verbose` | `-v` | Shorthand for `--log-level debug` |
+| `--log-level` | | Log verbosity: `error`, `warn`, `info`, `debug` (default: `warn`) |
+| `--quiet` | `-q` | Suppress success messages, warnings, and progress output |
+| `--dry-run` | | Preview mutations without executing (shows method, path, body) |
+| `--yes` | `-y` | Skip confirmation prompts on destructive operations |
+| `--no-color` | | Disable color output (also respects `NO_COLOR` env var) |
+
+### Destructive operations
+
+Delete, refund, cancel, and revoke commands prompt for confirmation before executing. Use `--yes` to skip in scripts:
+
+```bash
+# Interactive: prompts "Delete product prod1a2b3c4d5?"
+rc products delete prod1a2b3c4d5
+
+# Non-interactive: skips the prompt
+rc products delete prod1a2b3c4d5 --yes
+
+# Preview what would happen without doing it
+rc products delete prod1a2b3c4d5 --dry-run
+```
+
+### Debugging API issues
+
+```bash
+# See HTTP request/response details
+rc products list --verbose
+
+# Or use tiered log levels
+rc products list --log-level debug
 ```
 
 ## Authentication
@@ -450,16 +505,45 @@ The MCP server resolves API keys in this order:
 
 ## Shell Completion
 
+Generate completions for your shell:
+
 ```bash
 # Bash
-rc completion bash > /etc/bash_completion.d/rc
+source <(rc completion bash)
+# Or persist: rc completion bash > /etc/bash_completion.d/rc
 
 # Zsh
 rc completion zsh > "${fpath[1]}/_rc"
 
 # Fish
 rc completion fish > ~/.config/fish/completions/rc.fish
+
+# PowerShell
+rc completion powershell | Out-String | Invoke-Expression
 ```
+
+Completions include **dynamic resource ID completion** - tab-complete product IDs, entitlement IDs, offering IDs, and more directly from the API (cached locally for speed). Works for products, entitlements, offerings, packages, apps, webhooks, subscriptions, and projects.
+
+## Exit Codes
+
+Exit codes map HTTP status codes for scripting:
+
+| Exit code | Meaning |
+|-----------|---------|
+| `0` | Success |
+| `1` | General error |
+| `2` | Usage error (bad flags/args) |
+| `3` | Config error |
+| `10-49` | HTTP 4xx: `10 + (status - 400)` (e.g. 401 -> 11, 404 -> 14, 429 -> 39) |
+| `60-99` | HTTP 5xx: `60 + (status - 500)` (e.g. 500 -> 60, 503 -> 63) |
+
+```bash
+rc products get bad-id; echo $?  # 14 (404 Not Found)
+```
+
+## Update Notifications
+
+rc checks for new versions in the background (once every 24 hours). If a newer release is available, a notice appears after the command completes. This never blocks or slows down your commands.
 
 ## Troubleshooting
 
@@ -479,10 +563,10 @@ rc projects set-default proj1ab2c3d4    # Set default
 
 ### API errors
 
-All RevenueCat API errors include a `doc_url` with details. Use `--output json` to see the full error response:
+All RevenueCat API errors include a `doc_url` with details. Use `--verbose` to see full HTTP request/response details:
 
 ```bash
-rc products create --store-id test --app-id bad --type sub -o json
+rc products create --store-id test --app-id bad --type sub --verbose
 ```
 
 ### Rate limits

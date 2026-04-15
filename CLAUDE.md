@@ -6,53 +6,69 @@ Repo: `andresdefi/Revenue-Cat-CLI` on GitHub. Binary name: `rc`.
 100% API v2 coverage - 99 subcommands covering all 95 API endpoints across 16 command groups.
 
 ## Tech Stack
-- **Language:** Go 1.23+ (go.mod directive: 1.23)
+- **Language:** Go 1.25+ (go.mod directive: 1.25)
 - **CLI framework:** Cobra (github.com/spf13/cobra)
 - **Table output:** go-pretty/v6 (github.com/jedib0t/go-pretty/v6)
 - **Keychain:** go-keyring (github.com/zalando/go-keyring)
-- **Release:** GoReleaser, Homebrew tap
-- **CI:** GitHub Actions (build, test, lint, release)
+- **Interactive prompts:** charmbracelet/huh
+- **Release:** GoReleaser (with macOS signing/notarization), Homebrew tap
+- **CI:** GitHub Actions (build, test, lint, gosec, govulncheck, CodeQL, release)
 
 ## Architecture
 ```
 main.go                          Entry point
 cmd/
-  root.go                        Root command, persistent flags (--project, --output)
-  auth/auth.go                   auth login/status/logout
-  projects/projects.go           projects list/create/set-default
-  apps/apps.go                   apps list/get/create/update/delete
-  products/products.go           products list/get/create/update/delete/archive/unarchive
-  entitlements/entitlements.go   entitlements list/get/create/update/delete/archive/unarchive/products/attach/detach
-  offerings/offerings.go         offerings list/get/create/update/delete/archive/unarchive
-  packages/packages.go           packages list/get/create/update/delete/products/attach/detach
-  customers/customers.go         customers list/lookup/create/delete/entitlements/subscriptions/purchases/aliases/attributes/set-attributes/grant/revoke/assign-offering/transfer
-  subscriptions/subscriptions.go subscriptions list/get/transactions/entitlements/cancel/refund/refund-transaction/management-url
-  purchases/purchases.go         purchases list/get/entitlements/refund
-  webhooks/webhooks.go           webhooks list/get/create/update/delete
-  charts/charts.go               charts overview/show
-  paywalls/paywalls.go           paywalls list/get/delete
-  auditlogs/auditlogs.go        audit-logs list
-  collaborators/collaborators.go collaborators list
-  currencies/currencies.go       currencies list/get/create/update/delete/archive/unarchive/balance/credit/set-balance
+  root.go                        Root command, persistent flags, update check, exit codes
+  completion.go                  Shell completion (bash/zsh/fish/powershell)
+  auth/auth.go                   auth login/status/logout/doctor
+  projects/projects.go           projects list/create/set-default (with dynamic completions)
+  apps/                          apps CRUD (with dynamic completions)
+  products/                      products CRUD + archive + bulk import/export
+  entitlements/                  entitlements CRUD + archive + attach/detach + bulk
+  offerings/                     offerings CRUD + archive
+  packages/                      packages CRUD + attach/detach
+  customers/                     customers CRUD + entitlements/subscriptions/purchases/grant/revoke
+  subscriptions/                 subscriptions CRUD + cancel/refund
+  purchases/                     purchases CRUD + refund
+  webhooks/                      webhooks CRUD
+  charts/                        charts overview/show/options
+  paywalls/                      paywalls CRUD
+  auditlogs/                     audit-logs list
+  collaborators/                 collaborators list
+  currencies/                    virtual currencies CRUD + balance/credit
+  mcp/                           MCP server (16 tools)
+  transfer/                      [beta] project config export/import
 internal/
-  api/client.go                  HTTP client with retry, auth header, error handling
+  api/client.go                  HTTP client: retry, Retry-After, verbose logging, dry-run, caching
   api/types.go                   All RevenueCat API v2 response types
-  auth/auth.go                   Token storage (keychain + config fallback)
-  config/config.go               Config file (~/.rc/config.json)
-  cmdutil/cmdutil.go             Shared helpers (ResolveProject, GetOutputFormat)
-  output/output.go               JSON + table output formatting
+  auth/auth.go                   Token storage (keychain + config fallback, RC_BYPASS_KEYCHAIN)
+  cache/cache.go                 File-based response cache (~/.rc/cache/) with TTL
+  cmdutil/cmdutil.go             Shared helpers (ResolveProject, GetOutputFormat, ForceYes)
+  cmdutil/interactive.go         Confirmation prompts (PromptConfirm, ConfirmDestructive)
+  cmdutil/stability.go           Stability labels ([experimental], [beta])
+  completions/completions.go     Dynamic shell completions for resource IDs (8 types)
+  config/config.go               TOML config with validation and legacy JSON migration
+  exitcode/exitcode.go           Granular exit codes: 4xx->10+(s-400), 5xx->60+(s-500)
+  output/output.go               JSON/table/markdown output, field selection, log levels, color
+  update/update.go               Non-blocking update check against GitHub releases
+  validate/validate.go           Input validation helpers
 ```
 
 ## Key Patterns
-- **Auth:** Bearer token via `Authorization: Bearer <sk_...>`. Stored in system keychain, falls back to `~/.rc/config.json`
+- **Auth:** Bearer token via `Authorization: Bearer <sk_...>`. Stored in system keychain, falls back to `~/.rc/config.toml`. Strict prefix validation (sk_/atk_)
+- **Profile resolution:** `--profile` flag > `RC_PROFILE` env > config `current_profile` > "default"
 - **Project resolution:** `--project` flag > config default > error with guidance
-- **Output:** `--output table` (default) or `--output json`. Table uses go-pretty, JSON uses encoding/json
-- **API client:** All requests go through `internal/api/client.go`. Retries on `retryable: true` errors with backoff
-- **Error handling:** API errors parsed into `api.Error` struct with type, message, doc_url
-- **Pagination:** Cursor-based with `starting_after` param (not yet implemented - lists return first page)
-- **No import cycles:** Command packages import `internal/cmdutil`, not `cmd`
+- **Output:** `--output table|json|markdown`. Table uses go-pretty, JSON uses encoding/json, Markdown uses go-pretty RenderMarkdown. Auto-detects: table for TTY, JSON for pipes
+- **Field selection:** `--fields id,name` filters JSON output to specified fields (works on objects and lists)
+- **API client:** All requests go through `internal/api/client.go`. Retries with Retry-After header + backoff_ms + exponential fallback. Verbose HTTP logging, dry-run mode, response caching
+- **Error handling:** API errors parsed into `api.Error` struct with type, message, doc_url, StatusCode. Exit codes map HTTP status granularly
+- **Confirmation prompts:** All 13 destructive ops (delete/refund/cancel/revoke) require confirmation. `--yes` skips, non-TTY without `--yes` errors safely
+- **Pagination:** Cursor-based with `next_page`. --all and --limit on all 14 list commands
+- **Log levels:** `--log-level error|warn|info|debug`, `--verbose` shorthand for debug, `--quiet` suppresses non-essential output
+- **Dynamic completions:** Tab-complete resource IDs from cached API responses (8 resource types)
+- **No import cycles:** Command packages import `internal/cmdutil` and `internal/completions`, not `cmd`
 - **Archive pattern:** Products, entitlements, offerings, and virtual currencies all support archive/unarchive
-- **Attach/detach pattern:** Products can be attached/detached from both entitlements and packages
+- **Stability labels:** Commands annotated as [experimental] or [beta] via Cobra annotations
 
 ## RevenueCat API v2 Reference
 - **Base URL:** `https://api.revenuecat.com/v2`
@@ -66,11 +82,14 @@ internal/
 
 ## Build & Run
 ```bash
-make build          # Build with version injection
-make test           # Run tests
-make lint           # Run linter
-make check          # Run all checks (fmt, vet, lint, test)
-make help           # Show all targets
+make build            # Build with version injection
+make test             # Run tests
+make test-integration # Run integration tests (requires RC_INTEGRATION_KEY)
+make lint             # Run golangci-lint (gofumpt + linters)
+make security         # Run gosec security scanner
+make check            # Run all checks (fmt, vet, lint, test)
+make tools            # Install dev dependencies (gofumpt, gosec, golangci-lint, govulncheck)
+make help             # Show all targets
 ```
 
 ## Full API Coverage (99 subcommands, 95 API endpoints)
@@ -93,23 +112,37 @@ make help           # Show all targets
 - [x] JSON + table output (TTY-aware: table for terminal, JSON for pipes)
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
-- [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] JSON + table output (TTY-aware: table for terminal, JSON for pipes)
-- [x] MCP server (rc mcp serve) - 16 tools via official Go MCP SDK
+- [x] Granular exit codes: 4xx -> 10+(status-400), 5xx -> 60+(status-500)
+- [x] JSON + table + markdown output (TTY-aware: table for terminal, JSON for pipes)
+- [x] --fields flag for JSON field selection
+- [x] --pretty flag, --no-color, NO_COLOR env var
+- [x] --verbose / --log-level (error/warn/info/debug) / --quiet
+- [x] --dry-run for previewing mutations
+- [x] --yes / -y for skipping confirmation prompts on destructive ops
+- [x] Confirmation prompts on all 13 destructive operations
+- [x] Shell completions: bash/zsh/fish/powershell with dynamic resource ID completion
+- [x] Update checking (non-blocking, 24h cache, GitHub releases)
+- [x] Local response caching (~/.rc/cache/, 5min TTL)
+- [x] MCP server (rc mcp serve) - 16 tools via official Go MCP SDK [experimental]
 - [x] Pagination: --all and --limit on all 14 list commands
 - [x] Multi-profile auth: --profile flag, RC_PROFILE env, TOML config with migration
 - [x] Watch mode: --watch on customers lookup/entitlements, subscriptions get, charts overview
 - [x] Bulk import/export: products and entitlements (CSV + JSON)
 - [x] Interactive mode: products/entitlements/offerings create prompt when TTY
-- [x] Project config transfer: rc export / rc import
-- [x] 522 tests, including command-level Cobra integration tests with httptest-backed RevenueCat API fixtures
-- [x] Makefile, .golangci.yml, pre-commit hook
+- [x] Project config transfer: rc export / rc import [beta]
+- [x] Strict token validation (sk_/atk_ prefix + length check)
+- [x] Config validation on save (profile name format)
+- [x] Input validation helpers (internal/validate)
+- [x] Stability labels on commands ([experimental], [beta])
+- [x] 522+ tests, including command-level Cobra integration tests with httptest fixtures
+- [x] Integration test framework (//go:build integration, gated on RC_INTEGRATION_KEY)
+- [x] Makefile with tools, security, test-integration targets
+- [x] gofumpt formatting, golangci-lint v2, pre-commit hook
+- [x] CI: build (Go 1.25 + stable), lint, gosec, govulncheck, CodeQL
+- [x] GoReleaser with Homebrew tap + macOS Developer ID signing/notarization
+- [x] Install script (curl | sh)
 - [x] README with badges, TOC, workflows, troubleshooting
 - [x] Community files: SECURITY.md, CODE_OF_CONDUCT.md, SUPPORT.md
-- [x] GitHub: issue/PR templates, topics, Discussions enabled
-- [x] CI: build (Go 1.25 + stable), lint (golangci-lint v2), CodeQL, govulncheck
-- [x] GoReleaser with Homebrew tap + ldflags
-- [x] Install script (curl | sh)
 
 ## Release
 - **v0.1.0** released 2026-04-13 - initial release, 100% API coverage
@@ -125,11 +158,8 @@ make help           # Show all targets
 - `github.com/BurntSushi/toml` - TOML config with profiles
 
 ## Future Improvements
-- [x] Rich workflow-oriented --help examples for high-traffic auth, products, entitlements, offerings, customers, and subscriptions commands
 - [ ] Command grouping in help output (by category)
-- [x] More tests (command integration tests with mock API server)
-- [ ] Documentation website
-- [x] Apple Developer ID signing and notarization hooks for macOS binaries (skips gracefully without secrets)
+- [ ] Documentation website (generated from cobra/doc)
 - [ ] Set up HOMEBREW_TAP_TOKEN secret for auto formula updates on release
 
 ## Module Path
