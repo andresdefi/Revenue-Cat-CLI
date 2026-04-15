@@ -31,6 +31,13 @@ func TestAuthDoctorLoggedIn(t *testing.T) {
 	cmdtest.AssertRequested(t, result, "GET", "/projects")
 }
 
+func TestAuthValidateLoggedIn(t *testing.T) {
+	result := cmdtest.Run(t, []string{"auth", "validate"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "API access:  OK")
+	cmdtest.AssertRequested(t, result, "GET", "/projects")
+}
+
 func TestAuthDoctorProfile(t *testing.T) {
 	result := cmdtest.Run(t, []string{"--profile", "cmdtest", "auth", "doctor"})
 	cmdtest.AssertSuccess(t, result)

@@ -3,7 +3,7 @@
 ## Project Overview
 Unofficial open-source CLI for the RevenueCat REST API v2. Written in Go with Cobra.
 Repo: `andresdefi/Revenue-Cat-CLI` on GitHub. Binary name: `rc`.
-100% API v2 coverage - 99+ subcommands covering all 95 API endpoints across 16 command groups.
+100% API v2 coverage - 130+ command reference entries covering all 95 API endpoints across 16 command groups, plus first-run and diagnostic commands.
 
 ## Tech Stack
 - **Language:** Go 1.25+ (go.mod directive: 1.25.0)
@@ -18,7 +18,9 @@ Repo: `andresdefi/Revenue-Cat-CLI` on GitHub. Binary name: `rc`.
 main.go                          Entry point
 cmd/
   root.go                        Root command, persistent flags (--project, --output)
-  auth/auth.go                   auth login/status/logout
+  foundation.go                  init, doctor, whoami
+  auth/auth.go                   auth login/status/logout/doctor/validate
+  config/config.go               config profiles
   projects/projects.go           projects list/create/set-default
   apps/apps.go                   apps list/get/create/update/delete
   products/products.go           products list/get/create/update/delete/archive/unarchive
@@ -42,7 +44,15 @@ internal/
   auth/auth.go                   Token storage (keychain + config fallback)
   config/config.go               TOML config file (~/.rc/config.toml) + legacy JSON migration
   cmdutil/cmdutil.go             Shared helpers (ResolveProject, GetOutputFormat)
+  cmdtest/cmdtest.go             Command test harness + request/pagination assertions
+  commanddocs/commanddocs.go     Generated Cobra command reference
   output/output.go               JSON + table + markdown output formatting
+docs/
+  COMMANDS.md                    Generated command reference
+  WORKFLOWS.md                   Copyable setup, offering, customer, and migration recipes
+  API_NOTES.md                   RevenueCat semantics and import/export notes
+  CI_CD.md                       Automation examples and auth guidance
+  TESTING.md                     Local, fixture, pagination, and integration test guidance
 ```
 
 ## Key Patterns
@@ -57,6 +67,8 @@ internal/
 - **Archive pattern:** Products, entitlements, offerings, and virtual currencies all support archive/unarchive
 - **Attach/detach pattern:** Products can be attached/detached from both entitlements and packages
 - **Project transfer:** `rc export`/`rc import` is beta. It carries apps, products, entitlements, offerings, packages, attachments, metadata, and archive/current state where the API allows it
+- **Generated docs:** `docs/COMMANDS.md` is generated from Cobra. Run `make docs` after command changes
+- **Correctness harness:** Request-body golden tests, pagination contract tests, and opt-in integration tests guard API semantics
 
 ## RevenueCat API v2 Reference
 - **Base URL:** `https://api.revenuecat.com/v2`
@@ -73,12 +85,14 @@ internal/
 make build          # Build with version injection
 make test           # Run tests
 make lint           # Run linter
-make check          # Run all checks (fmt, vet, lint, test)
+make docs           # Regenerate docs/COMMANDS.md
+make check          # Run all checks (fmt, docs, vet, lint, test)
 make help           # Show all targets
 ```
 
 ## Full API Coverage (99 subcommands, 95 API endpoints)
 - [x] Auth: login, status, logout
+- [x] Foundation: init, doctor, whoami, config profiles, auth validate
 - [x] Projects: list, create, set-default
 - [x] Apps: list, get, create, update, delete, public-keys, storekit-config
 - [x] Products: list, get, create, update, delete, archive, unarchive, push-to-store
@@ -98,10 +112,11 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 528 tests across 32 test files
-- [x] Makefile with build/test/lint/fmt/check targets
+- [x] 539 default tests across 36 test files (543 with integration tag)
+- [x] Request golden tests, pagination contract tests, generated docs drift test, opt-in integration tests
+- [x] Makefile with build/test/lint/fmt/docs/check targets
 - [x] .golangci.yml config
-- [x] README with badges, TOC, workflows, troubleshooting
+- [x] README with badges, TOC, workflows, troubleshooting, docs index
 - [x] Community files: SECURITY.md, CODE_OF_CONDUCT.md, SUPPORT.md
 - [x] GitHub: issue/PR templates, topics, Discussions enabled
 - [x] CI: build (Go 1.25 + stable), lint, CodeQL, govulncheck, gosec

@@ -50,6 +50,7 @@ func TestNewRootCmd_HasExpectedSubcommands(t *testing.T) {
 		"offerings", "packages", "customers", "subscriptions",
 		"purchases", "webhooks", "charts", "paywalls",
 		"audit-logs", "collaborators", "currencies", "version",
+		"completion", "init", "doctor", "whoami", "config",
 		"mcp", "export", "import",
 	}
 
@@ -69,9 +70,8 @@ func TestNewRootCmd_SubcommandCount(t *testing.T) {
 	root := NewRootCmd()
 	commands := root.Commands()
 
-	// 1 meta (version) + 1 auth + 3 project mgmt + 4 product config +
-	// 3 customer data + 5 integrations + 1 mcp + 2 transfer = 20 total
-	expectedMin := 20
+	// meta/foundation + auth + project/product/customer/integration groups + mcp + transfer
+	expectedMin := 25
 	if len(commands) < expectedMin {
 		t.Errorf("command count = %d, want >= %d", len(commands), expectedMin)
 	}
@@ -286,7 +286,7 @@ func TestNewRootCmd_AuthSubcommands(t *testing.T) {
 		subNames[c.Name()] = true
 	}
 
-	for _, name := range []string{"login", "status", "logout"} {
+	for _, name := range []string{"login", "status", "logout", "doctor", "validate"} {
 		if !subNames[name] {
 			t.Errorf("auth should have subcommand %q", name)
 		}

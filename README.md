@@ -13,6 +13,7 @@ An unofficial command-line interface for the [RevenueCat REST API v2](https://ww
 - [Quick Start](#quick-start)
 - [Commands](#commands)
 - [Common Workflows](#common-workflows)
+- [Documentation](#documentation)
 - [Output Formats](#output-formats)
 - [Authentication](#authentication)
 - [Profiles](#profiles)
@@ -51,14 +52,17 @@ Download pre-built binaries from [GitHub Releases](https://github.com/andresdefi
 # Authenticate with your RevenueCat API v2 secret key
 rc auth login
 
-# Authenticate with a named profile for staging
-rc auth login --profile staging
-
 # List your projects
 rc projects list
 
-# Set a default project (so you don't need --project every time)
-rc projects set-default proj1ab2c3d4
+# Initialize config and set a default project
+rc init --project proj1ab2c3d4
+
+# Validate local config, auth, default project, and API access
+rc doctor
+
+# Confirm the active profile context
+rc whoami
 
 # List products (all pages)
 rc products list --all
@@ -78,7 +82,16 @@ rc mcp serve
 
 ## Commands
 
-All commands support `--profile <name>` to select the config profile and `--output json|table|markdown` to control output format.
+All commands support `--profile <name>` to select the config profile and `--output json|table|markdown` to control output format. The generated command reference is in [docs/COMMANDS.md](docs/COMMANDS.md).
+
+### Foundation
+
+| Command | Description |
+|---------|-------------|
+| `rc init` | Initialize config for a profile and default project |
+| `rc doctor` | Check config, auth, project, and API connectivity |
+| `rc whoami` | Show active profile, auth source, and default project |
+| `rc config profiles` | List configured profiles |
 
 ### Authentication
 
@@ -86,6 +99,8 @@ All commands support `--profile <name>` to select the config profile and `--outp
 |---------|-------------|
 | `rc auth login` | Authenticate with API key |
 | `rc auth status` | Show authentication status |
+| `rc auth doctor` | Check authentication health and API connectivity |
+| `rc auth validate` | Alias-style validation for auth health |
 | `rc auth logout` | Remove stored credentials |
 | `rc version` | Print version info |
 
@@ -197,6 +212,8 @@ Select commands support live refresh:
 Supported on: `rc customers lookup`, `rc customers entitlements`, `rc subscriptions get`, `rc charts overview`.
 
 ## Common Workflows
+
+More recipes live in [docs/WORKFLOWS.md](docs/WORKFLOWS.md).
 
 ### Set up a new product with entitlements
 
@@ -315,6 +332,18 @@ rc import --file project-config.json --project proj_target
 rc import --file project-config.json --project proj_target --app-map app_source=app_target
 ```
 
+`rc export` and `rc import` are beta. Run with `--dry-run` before applying a migration to another project.
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [docs/COMMANDS.md](docs/COMMANDS.md) | Generated command reference from Cobra help |
+| [docs/WORKFLOWS.md](docs/WORKFLOWS.md) | Copyable RevenueCat workflow recipes |
+| [docs/API_NOTES.md](docs/API_NOTES.md) | API semantics, pagination, transfer, and error notes |
+| [docs/CI_CD.md](docs/CI_CD.md) | CI/CD setup and non-interactive usage |
+| [docs/TESTING.md](docs/TESTING.md) | Fixture, golden request, pagination, and integration test guidance |
+
 ### MCP server setup
 
 ```bash
@@ -418,6 +447,7 @@ Your key is stored in the system keychain (macOS Keychain, Windows Credential Ma
 ```bash
 rc auth login     # Enter your API key
 rc auth status    # Check current auth
+rc auth validate  # Validate API connectivity
 rc auth logout    # Remove stored key
 ```
 

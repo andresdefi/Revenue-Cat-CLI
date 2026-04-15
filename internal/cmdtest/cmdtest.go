@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -195,6 +196,43 @@ func AssertRequested(t *testing.T, result Result, method, requestPath string) {
 		}
 	}
 	t.Fatalf("missing request %s %s; got %#v", method, requestPath, result.Requests)
+}
+
+func AssertRequestJSON(t *testing.T, result Result, method, requestPath string, want map[string]any) {
+	t.Helper()
+	for _, req := range result.Requests {
+		if req.Method != method || req.Path != requestPath {
+			continue
+		}
+		var got map[string]any
+		if err := json.Unmarshal([]byte(req.Body), &got); err != nil {
+			t.Fatalf("request body for %s %s is not JSON: %v\nbody: %s", method, requestPath, err, req.Body)
+		}
+		gotRaw, _ := json.Marshal(got)
+		wantRaw, _ := json.Marshal(want)
+		if string(gotRaw) != string(wantRaw) {
+			t.Fatalf("request body for %s %s = %s, want %s", method, requestPath, gotRaw, wantRaw)
+		}
+		return
+	}
+	t.Fatalf("missing request %s %s; got %#v", method, requestPath, result.Requests)
+}
+
+func AssertRequestedWithQuery(t *testing.T, result Result, method, requestPath, queryKey, queryValue string) {
+	t.Helper()
+	for _, req := range result.Requests {
+		if req.Method != method || req.Path != requestPath {
+			continue
+		}
+		values, err := url.ParseQuery(req.Query)
+		if err != nil {
+			t.Fatalf("request query for %s %s is invalid: %v", method, requestPath, err)
+		}
+		if got := values.Get(queryKey); got == queryValue {
+			return
+		}
+	}
+	t.Fatalf("missing request %s %s with %s=%s; got %#v", method, requestPath, queryKey, queryValue, result.Requests)
 }
 
 func writeConfig(profile, projectID, token string) error {

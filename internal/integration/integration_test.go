@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -11,30 +12,51 @@ import (
 
 // These tests run against the real RevenueCat API.
 // They are gated behind the "integration" build tag and require:
-//   RC_INTEGRATION_KEY - a valid RevenueCat API v2 secret key (sk_...)
+//
+//	RC_INTEGRATION_KEY - a valid RevenueCat API v2 secret key (sk_...)
+//
+// Optional:
+//
+//	RC_INTEGRATION_PROJECT_ID - project used for project-scoped read tests
 //
 // Run with: go test -tags integration ./internal/integration/...
 // Or:       make test-integration
 
-func apiKey(t *testing.T) string {
+func integrationClient(t *testing.T) *api.Client {
 	t.Helper()
-	key := os.Getenv("RC_INTEGRATION_KEY")
-	if key == "" {
-		t.Skip("RC_INTEGRATION_KEY not set, skipping integration tests")
+	token := os.Getenv("RC_INTEGRATION_KEY")
+	if token == "" {
+		t.Skip("RC_INTEGRATION_KEY is required for integration tests")
 	}
-	return key
+	return api.NewClientWithToken(token)
 }
 
-func TestListProjects(t *testing.T) {
-	client := api.NewClientWithToken(apiKey(t))
-
+func TestProjectsListIntegration(t *testing.T) {
+	client := integrationClient(t)
 	data, err := client.Get("/projects", nil)
 	if err != nil {
-		t.Fatalf("GET /projects failed: %v", err)
+		t.Fatalf("projects list: %v", err)
 	}
-	if len(data) == 0 {
-		t.Fatal("expected non-empty response from /projects")
+	var resp api.ListResponse[api.Project]
+	if err := json.Unmarshal(data, &resp); err != nil {
+		t.Fatalf("unmarshal projects: %v", err)
 	}
+	if resp.Object != "list" {
+		t.Fatalf("object = %q, want list", resp.Object)
+	}
+}
+
+func TestProjectAppsListIntegration(t *testing.T) {
+	projectID := os.Getenv("RC_INTEGRATION_PROJECT_ID")
+	if projectID == "" {
+		t.Skip("RC_INTEGRATION_PROJECT_ID is required for project-scoped integration tests")
+	}
+	client := integrationClient(t)
+	items, err := api.PaginateAll[api.App](client, "/projects/"+projectID+"/apps", nil)
+	if err != nil {
+		t.Fatalf("project apps list: %v", err)
+	}
+	_ = items
 }
 
 func TestInvalidToken(t *testing.T) {
@@ -54,10 +76,8 @@ func TestInvalidToken(t *testing.T) {
 	}
 }
 
-func TestRateLimitExitCode(t *testing.T) {
-	// This test verifies that the API client populates StatusCode on errors.
-	// We use an invalid token which should return 401.
-	client := api.NewClientWithToken("sk_test_rate_limit_check")
+func TestErrorStatusCodePropagation(t *testing.T) {
+	client := api.NewClientWithToken("sk_test_status_code_check")
 
 	_, err := client.Get("/projects", nil)
 	if err == nil {
