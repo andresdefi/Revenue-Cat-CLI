@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
@@ -246,13 +247,29 @@ roku, mac_app_store, paddle`,
 }
 
 func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
-	var name string
+	var (
+		name                string
+		sharedSecret        string
+		subscriptionKeyFile string
+		subscriptionKeyID   string
+		subscriptionIssuer  string
+		serviceAccountFile  string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "update <app-id>",
 		Short: "Update an app",
 		Example: `  # Rename an app
-  rc apps update app1a2b3c4d5 --name "My Renamed App"`,
+  rc apps update app1a2b3c4d5 --name "My Renamed App"
+
+  # Configure App Store shared secret
+  rc apps update app1a2b3c4d5 --shared-secret 1234567890abcdef1234567890abcdef
+
+  # Configure App Store in-app purchase key
+  rc apps update app1a2b3c4d5 \
+    --subscription-key-file ./SubscriptionKey_ABC123.p8 \
+    --subscription-key-id ABC123 \
+    --subscription-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
@@ -267,6 +284,30 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 			body := map[string]any{}
 			if c.Flags().Changed("name") {
 				body["name"] = name
+			}
+			if c.Flags().Changed("service-account-file") {
+				return fmt.Errorf("RevenueCat API v2 does not document a Play Store service-account credential field for app updates; no request sent")
+			}
+
+			appStore := map[string]any{}
+			if c.Flags().Changed("shared-secret") {
+				appStore["shared_secret"] = sharedSecret
+			}
+			if c.Flags().Changed("subscription-key-file") {
+				contents, err := os.ReadFile(subscriptionKeyFile)
+				if err != nil {
+					return fmt.Errorf("read subscription key file: %w", err)
+				}
+				appStore["subscription_private_key"] = string(contents)
+			}
+			if c.Flags().Changed("subscription-key-id") {
+				appStore["subscription_key_id"] = subscriptionKeyID
+			}
+			if c.Flags().Changed("subscription-key-issuer") {
+				appStore["subscription_key_issuer"] = subscriptionIssuer
+			}
+			if len(appStore) > 0 {
+				body["app_store"] = appStore
 			}
 
 			data, err := client.Post(fmt.Sprintf("/projects/%s/apps/%s", url.PathEscape(pid), url.PathEscape(args[0])), body)
@@ -294,6 +335,11 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&name, "name", "", "new app name")
+	cmd.Flags().StringVar(&sharedSecret, "shared-secret", "", "App Store shared secret")
+	cmd.Flags().StringVar(&subscriptionKeyFile, "subscription-key-file", "", "path to App Store in-app purchase key .p8 file")
+	cmd.Flags().StringVar(&subscriptionKeyID, "subscription-key-id", "", "App Store in-app purchase key ID")
+	cmd.Flags().StringVar(&subscriptionIssuer, "subscription-key-issuer", "", "App Store in-app purchase key issuer ID")
+	cmd.Flags().StringVar(&serviceAccountFile, "service-account-file", "", "path to Google Play service account JSON file (not supported by RevenueCat API v2 app update)")
 	return cmd
 }
 

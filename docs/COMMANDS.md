@@ -161,12 +161,26 @@ Update an app
 **Flags**
 
 - `--name`: new app name
+- `--service-account-file`: path to Google Play service account JSON file (not supported by RevenueCat API v2 app update)
+- `--shared-secret`: App Store shared secret
+- `--subscription-key-file`: path to App Store in-app purchase key .p8 file
+- `--subscription-key-id`: App Store in-app purchase key ID
+- `--subscription-key-issuer`: App Store in-app purchase key issuer ID
 
 **Examples**
 
 ```bash
 # Rename an app
   rc apps update app1a2b3c4d5 --name "My Renamed App"
+
+  # Configure App Store shared secret
+  rc apps update app1a2b3c4d5 --shared-secret 1234567890abcdef1234567890abcdef
+
+  # Configure App Store in-app purchase key
+  rc apps update app1a2b3c4d5 \
+    --subscription-key-file ./SubscriptionKey_ABC123.p8 \
+    --subscription-key-id ABC123 \
+    --subscription-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129
 ```
 
 ### rc audit-logs

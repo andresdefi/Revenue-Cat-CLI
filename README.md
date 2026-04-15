@@ -116,7 +116,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 | Command | Description |
 |---------|-------------|
 | `rc projects list/create/doctor/set-default` | Manage projects and project health |
-| `rc apps list/get/create/update/delete` | Manage platform apps |
+| `rc apps list/get/create/update/delete` | Manage platform apps and App Store credentials |
 | `rc apps public-keys <app-id>` | List public API keys |
 | `rc apps storekit-config <app-id>` | Get StoreKit configuration |
 | `rc collaborators list` | View project collaborators |

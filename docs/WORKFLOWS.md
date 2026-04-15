@@ -36,6 +36,26 @@ rc launch-check --strict
 an app, active products, active entitlements with product links, a current
 offering, packages, and package-product links.
 
+## Configure App Store Credentials
+
+```bash
+rc apps update app1a2b3c4d5 \
+  --shared-secret 1234567890abcdef1234567890abcdef
+```
+
+```bash
+rc apps update app1a2b3c4d5 \
+  --subscription-key-file ./SubscriptionKey_ABC123.p8 \
+  --subscription-key-id ABC123 \
+  --subscription-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129
+```
+
+`--subscription-key-file` reads the `.p8` file from disk and sends its contents
+as `app_store.subscription_private_key`. RevenueCat API v2 does not currently
+document a Google Play service-account credential field for app updates, so
+`--service-account-file` fails with guidance instead of sending an unsupported
+payload.
+
 ## Set Up Monthly And Yearly Products
 
 ```bash

@@ -23,7 +23,7 @@ cmd/
   auth/auth.go                   auth login/status/logout/doctor/validate
   config/config.go               config profiles
   projects/projects.go           projects list/create/doctor/set-default
-  apps/apps.go                   apps list/get/create/update/delete
+  apps/apps.go                   apps list/get/create/update/delete, App Store credential updates
   products/products.go           products list/get/create/update/delete/archive/unarchive
   entitlements/entitlements.go   entitlements list/get/create/update/delete/archive/unarchive/products/attach/detach
   offerings/offerings.go         offerings list/get/create/update/delete/archive/unarchive
@@ -68,6 +68,7 @@ docs/
 - **No import cycles:** Command packages import `internal/cmdutil`, not `cmd`
 - **Archive pattern:** Products, entitlements, offerings, and virtual currencies all support archive/unarchive
 - **Attach/detach pattern:** Products can be attached/detached from both entitlements and packages
+- **App credentials:** `rc apps update` can configure documented App Store credential fields. The current RevenueCat v2 OpenAPI does not expose a Play Store service-account credential update field
 - **Project transfer:** `rc export`/`rc import` is beta. It carries apps, products, entitlements, offerings, packages, attachments, metadata, and archive/current state where the API allows it
 - **Project health:** `rc project doctor` reads apps, products, entitlements, offerings, packages, and package products to report setup issues. `--strict` returns non-zero on failed health checks
 - **Launch readiness:** `rc launch-check` reuses project health and summarizes whether required launch paths exist. `--strict` returns non-zero when the project is not ready
@@ -99,7 +100,7 @@ make help           # Show all targets
 - [x] Foundation: init, doctor, whoami, config profiles, auth validate
 - [x] Workflow checks: project doctor, launch-check
 - [x] Projects: list, create, doctor, set-default
-- [x] Apps: list, get, create, update, delete, public-keys, storekit-config
+- [x] Apps: list, get, create, update, delete, App Store credentials, public-keys, storekit-config
 - [x] Products: list, get, create, update, delete, archive, unarchive, push-to-store
 - [x] Entitlements: list, get, create, update, delete, archive, unarchive, products, attach, detach
 - [x] Offerings: list, get, create, update, delete, archive, unarchive
@@ -117,7 +118,7 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 553 default tests across 38 test files (557 with integration tag)
+- [x] 556 default tests across 38 test files (560 with integration tag)
 - [x] Request golden tests, pagination contract tests, generated docs drift test, opt-in integration tests
 - [x] Makefile with build/test/lint/fmt/docs/check targets
 - [x] .golangci.yml config
