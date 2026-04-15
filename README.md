@@ -61,6 +61,9 @@ rc init --project proj1ab2c3d4
 # Validate local config, auth, default project, and API access
 rc doctor
 
+# Check RevenueCat project setup before launch
+rc project doctor
+
 # Confirm the active profile context
 rc whoami
 
@@ -108,7 +111,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 
 | Command | Description |
 |---------|-------------|
-| `rc projects list/create/set-default` | Manage projects |
+| `rc projects list/create/doctor/set-default` | Manage projects and project health |
 | `rc apps list/get/create/update/delete` | Manage platform apps |
 | `rc apps public-keys <app-id>` | List public API keys |
 | `rc apps storekit-config <app-id>` | Get StoreKit configuration |

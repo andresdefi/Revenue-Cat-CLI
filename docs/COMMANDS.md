@@ -1912,6 +1912,33 @@ Create a new project
   rc projects create --name "My App" -o json
 ```
 
+#### rc projects doctor
+
+Check project setup for common RevenueCat launch issues
+
+Check project setup for common RevenueCat launch issues.
+
+The doctor reads apps, products, entitlements, offerings, packages, and
+package-product links. It reports missing or incomplete relationships without
+mutating the project.
+
+**Flags**
+
+- `--strict`: return a non-zero exit code when errors are found Default: `false`.
+
+**Examples**
+
+```bash
+# Check the active project
+  rc project doctor
+
+  # Check a specific project and emit JSON
+  rc project doctor --project proj1a2b3c4d5 --output json
+
+  # Fail the command when project health has errors
+  rc project doctor --strict
+```
+
 #### rc projects list
 
 List all projects
