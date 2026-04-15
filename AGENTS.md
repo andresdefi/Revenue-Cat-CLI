@@ -28,7 +28,7 @@ cmd/
   entitlements/entitlements.go   entitlements list/get/create/update/delete/archive/unarchive/products/attach/detach
   offerings/offerings.go         offerings list/get/create/update/delete/archive/unarchive
   packages/packages.go           packages list/get/create/update/delete/products/attach/detach
-  customers/customers.go         customers list/lookup/create/delete/entitlements/subscriptions/purchases/aliases/attributes/set-attributes/grant/revoke/assign-offering/transfer
+  customers/customers.go         customers list/lookup/diagnose/create/delete/entitlements/subscriptions/purchases/aliases/attributes/set-attributes/grant/revoke/assign-offering/transfer
   subscriptions/subscriptions.go subscriptions list/get/transactions/entitlements/cancel/refund/refund-transaction/management-url
   purchases/purchases.go         purchases list/get/entitlements/refund
   webhooks/webhooks.go           webhooks list/get/create/update/delete
@@ -47,6 +47,7 @@ internal/
   cmdutil/cmdutil.go             Shared helpers (ResolveProject, GetOutputFormat)
   cmdtest/cmdtest.go             Command test harness + request/pagination assertions
   commanddocs/commanddocs.go     Generated Cobra command reference
+  customerdiagnosis/             Read-only customer access analyzer
   output/output.go               JSON + table + markdown output formatting
   projecthealth/projecthealth.go Read-only project setup analyzer for workflow commands
 docs/
@@ -95,7 +96,7 @@ make check          # Run all checks (fmt, docs, vet, lint, test)
 make help           # Show all targets
 ```
 
-## Full API Coverage (99 subcommands, 95 API endpoints)
+## Full API Coverage (100 subcommands, 95 API endpoints)
 - [x] Auth: login, status, logout
 - [x] Foundation: init, doctor, whoami, config profiles, auth validate
 - [x] Workflow checks: project doctor, launch-check
@@ -105,7 +106,7 @@ make help           # Show all targets
 - [x] Entitlements: list, get, create, update, delete, archive, unarchive, products, attach, detach
 - [x] Offerings: list, get, create, update, delete, archive, unarchive
 - [x] Packages: list, get, create, update, delete, products, attach, detach
-- [x] Customers: list, lookup, create, delete, entitlements, subscriptions, purchases, aliases, attributes, set-attributes, grant, revoke, assign-offering, transfer, restore-purchase, invoices, invoice-file
+- [x] Customers: list, lookup, diagnose, create, delete, entitlements, subscriptions, purchases, aliases, attributes, set-attributes, grant, revoke, assign-offering, transfer, restore-purchase, invoices, invoice-file
 - [x] Subscriptions: list, get, transactions, entitlements, cancel, refund, refund-transaction, management-url
 - [x] Purchases: list, get, entitlements, refund
 - [x] Webhooks: list, get, create, update, delete
@@ -118,7 +119,7 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 556 default tests across 38 test files (560 with integration tag)
+- [x] 562 default tests across 39 test files (566 with integration tag)
 - [x] Request golden tests, pagination contract tests, generated docs drift test, opt-in integration tests
 - [x] Makefile with build/test/lint/fmt/docs/check targets
 - [x] .golangci.yml config

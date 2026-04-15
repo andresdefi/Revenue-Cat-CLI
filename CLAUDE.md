@@ -3,7 +3,7 @@
 ## Project Overview
 Unofficial open-source CLI for the RevenueCat REST API v2. Written in Go with Cobra.
 Repo: `andresdefi/Revenue-Cat-CLI` on GitHub. Binary name: `rc`.
-100% API v2 coverage - 99 subcommands covering all 95 API endpoints across 16 command groups.
+100% API v2 coverage - 100 subcommands covering all 95 API endpoints across 16 command groups.
 
 ## Tech Stack
 - **Language:** Go 1.25+ (go.mod directive: 1.25)
@@ -92,7 +92,7 @@ make tools            # Install dev dependencies (gofumpt, gosec, golangci-lint,
 make help             # Show all targets
 ```
 
-## Full API Coverage (99 subcommands, 95 API endpoints)
+## Full API Coverage (100 subcommands, 95 API endpoints)
 - [x] Auth: login, status, logout
 - [x] Projects: list, create, set-default
 - [x] Apps: list, get, create, update, delete, public-keys, storekit-config
@@ -100,7 +100,7 @@ make help             # Show all targets
 - [x] Entitlements: list, get, create, update, delete, archive, unarchive, products, attach, detach
 - [x] Offerings: list, get, create, update, delete, archive, unarchive
 - [x] Packages: list, get, create, update, delete, products, attach, detach
-- [x] Customers: list, lookup, create, delete, entitlements, subscriptions, purchases, aliases, attributes, set-attributes, grant, revoke, assign-offering, transfer, restore-purchase, invoices, invoice-file
+- [x] Customers: list, lookup, diagnose, create, delete, entitlements, subscriptions, purchases, aliases, attributes, set-attributes, grant, revoke, assign-offering, transfer, restore-purchase, invoices, invoice-file
 - [x] Subscriptions: list, get, transactions, entitlements, cancel, refund, refund-transaction, management-url
 - [x] Purchases: list, get, entitlements, refund
 - [x] Webhooks: list, get, create, update, delete

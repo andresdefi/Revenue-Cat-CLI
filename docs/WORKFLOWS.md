@@ -106,11 +106,18 @@ rc offerings update ofrnge1a2b3c4d5 --is-current
 ## Inspect Customer Access
 
 ```bash
+rc customers diagnose user_123 --output table
 rc customers lookup user_123 --output json --pretty
 rc customers entitlements user_123 --output table
 rc customers subscriptions user_123 --all --output table
 rc customers purchases user_123 --all --output table
 ```
+
+Start with `rc customers diagnose` for a read-only support summary. It reports
+whether active entitlement access is present, lists subscriptions and purchases,
+surfaces aliases that may explain split identity, and suggests follow-up CLI
+commands. Use `--strict` when failed access checks should return a non-zero exit
+code in automation.
 
 If a customer does not have expected access, check the product-to-entitlement
 links first, then inspect the customer purchases and subscriptions.
