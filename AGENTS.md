@@ -19,6 +19,7 @@ main.go                          Entry point
 cmd/
   root.go                        Root command, persistent flags (--project, --output)
   foundation.go                  init, doctor, whoami
+  launch_check.go                launch-check readiness preflight
   auth/auth.go                   auth login/status/logout/doctor/validate
   config/config.go               config profiles
   projects/projects.go           projects list/create/doctor/set-default
@@ -69,6 +70,7 @@ docs/
 - **Attach/detach pattern:** Products can be attached/detached from both entitlements and packages
 - **Project transfer:** `rc export`/`rc import` is beta. It carries apps, products, entitlements, offerings, packages, attachments, metadata, and archive/current state where the API allows it
 - **Project health:** `rc project doctor` reads apps, products, entitlements, offerings, packages, and package products to report setup issues. `--strict` returns non-zero on failed health checks
+- **Launch readiness:** `rc launch-check` reuses project health and summarizes whether required launch paths exist. `--strict` returns non-zero when the project is not ready
 - **Generated docs:** `docs/COMMANDS.md` is generated from Cobra. Run `make docs` after command changes
 - **Correctness harness:** Request-body golden tests, pagination contract tests, and opt-in integration tests guard API semantics
 
@@ -95,6 +97,7 @@ make help           # Show all targets
 ## Full API Coverage (99 subcommands, 95 API endpoints)
 - [x] Auth: login, status, logout
 - [x] Foundation: init, doctor, whoami, config profiles, auth validate
+- [x] Workflow checks: project doctor, launch-check
 - [x] Projects: list, create, doctor, set-default
 - [x] Apps: list, get, create, update, delete, public-keys, storekit-config
 - [x] Products: list, get, create, update, delete, archive, unarchive, push-to-store
@@ -114,7 +117,7 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 546 default tests across 37 test files (550 with integration tag)
+- [x] 553 default tests across 38 test files (557 with integration tag)
 - [x] Request golden tests, pagination contract tests, generated docs drift test, opt-in integration tests
 - [x] Makefile with build/test/lint/fmt/docs/check targets
 - [x] .golangci.yml config

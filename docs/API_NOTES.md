@@ -51,3 +51,6 @@ Implementation notes captured from the CLI and test harness.
   packages, and package-product links with `PaginateAll`.
 - The command reports failed setup checks by default without mutating anything.
   Use `--strict` when failed checks should produce a non-zero exit code.
+- `rc launch-check` reuses the project health analyzer and adds launch-readiness
+  checks for the required product, entitlement, current offering, package, and
+  package-product paths.

@@ -1286,6 +1286,33 @@ an API key; run rc auth login before or after init.
   rc doctor --profile staging
 ```
 
+### rc launch-check
+
+Run a pre-launch RevenueCat readiness check
+
+Run a pre-launch RevenueCat readiness check.
+
+Launch check reuses the project health analyzer and summarizes whether the
+active project has the minimum product, entitlement, offering, package, and
+package-product paths needed before shipping.
+
+**Flags**
+
+- `--strict`: return a non-zero exit code when launch requirements are missing Default: `false`.
+
+**Examples**
+
+```bash
+# Check whether the active project is ready to launch
+  rc launch-check
+
+  # Emit JSON for automation
+  rc launch-check --output json
+
+  # Fail when required launch paths are missing
+  rc launch-check --strict
+```
+
 ### rc mcp
 
 [experimental] MCP server for RevenueCat operations

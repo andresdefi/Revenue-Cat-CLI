@@ -11,6 +11,7 @@ rc projects list --output table
 rc projects set-default proj1a2b3c4d5
 rc doctor
 rc project doctor
+rc launch-check
 rc products list
 ```
 
@@ -25,6 +26,15 @@ rc project doctor --strict
 `rc project doctor` checks apps, products, entitlements, offerings, packages,
 and package-product links. Use `--strict` in CI when a failed project health
 check should stop the run.
+
+```bash
+rc launch-check --output table
+rc launch-check --strict
+```
+
+`rc launch-check` summarizes whether the project has the required launch paths:
+an app, active products, active entitlements with product links, a current
+offering, packages, and package-product links.
 
 ## Set Up Monthly And Yearly Products
 

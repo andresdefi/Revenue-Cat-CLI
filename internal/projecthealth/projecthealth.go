@@ -43,6 +43,16 @@ type Check struct {
 	Details []string `json:"details,omitempty"`
 }
 
+type LaunchReport struct {
+	Object        string  `json:"object"`
+	ProjectID     string  `json:"project_id"`
+	Ready         bool    `json:"ready"`
+	Status        string  `json:"status"`
+	ProjectStatus string  `json:"project_status"`
+	Counts        Counts  `json:"counts"`
+	Checks        []Check `json:"checks"`
+}
+
 type entitlementProducts struct {
 	entitlement api.Entitlement
 	products    []api.Product
@@ -64,6 +74,25 @@ func Analyze(client *api.Client, projectID string) (*Report, error) {
 		return nil, err
 	}
 	return buildReport(projectID, snapshot), nil
+}
+
+func AssessLaunch(report *Report) *LaunchReport {
+	launch := &LaunchReport{
+		Object:        "launch_check_report",
+		ProjectID:     report.ProjectID,
+		Ready:         true,
+		Status:        StatusPass,
+		ProjectStatus: report.Status,
+		Counts:        report.Counts,
+	}
+
+	launch.add(checkProjectHealth(report))
+	launch.add(checkLaunchCatalog(report.Counts))
+	launch.add(checkLaunchEntitlements(report.Counts))
+	launch.add(checkLaunchOffering(report.Counts))
+	launch.add(checkLaunchPackages(report.Counts))
+
+	return launch
 }
 
 type snapshot struct {
@@ -218,13 +247,100 @@ func buildReport(projectID string, s *snapshot) *Report {
 
 func (r *Report) add(check Check) {
 	r.Checks = append(r.Checks, check)
-	switch check.Status {
+	applyStatus(&r.Status, check.Status)
+}
+
+func (r *LaunchReport) add(check Check) {
+	r.Checks = append(r.Checks, check)
+	applyStatus(&r.Status, check.Status)
+	if check.Status == StatusFail {
+		r.Ready = false
+	}
+}
+
+func applyStatus(current *string, next string) {
+	switch next {
 	case StatusFail:
-		r.Status = StatusFail
+		*current = StatusFail
 	case StatusWarn:
-		if r.Status != StatusFail {
-			r.Status = StatusWarn
+		if *current != StatusFail {
+			*current = StatusWarn
 		}
+	}
+}
+
+func failingMessages(checks []Check) []string {
+	return messagesByStatus(checks, StatusFail)
+}
+
+func warningMessages(checks []Check) []string {
+	return messagesByStatus(checks, StatusWarn)
+}
+
+func messagesByStatus(checks []Check, status string) []string {
+	var messages []string
+	for _, check := range checks {
+		if check.Status != status {
+			continue
+		}
+		messages = append(messages, fmt.Sprintf("%s: %s", check.Area, check.Message))
+		messages = append(messages, check.Details...)
+	}
+	return messages
+}
+
+func checkProjectHealth(report *Report) Check {
+	switch report.Status {
+	case StatusFail:
+		return Check{Status: StatusFail, Area: "project", Message: "Project doctor found blocking setup errors.", Details: failingMessages(report.Checks)}
+	case StatusWarn:
+		return Check{Status: StatusWarn, Area: "project", Message: "Project doctor found warnings to review.", Details: warningMessages(report.Checks)}
+	default:
+		return Check{Status: StatusPass, Area: "project", Message: "Project doctor checks passed."}
+	}
+}
+
+func checkLaunchCatalog(counts Counts) Check {
+	switch {
+	case counts.Apps == 0:
+		return Check{Status: StatusFail, Area: "catalog", Message: "At least one app is required before launch."}
+	case counts.ActiveProducts == 0:
+		return Check{Status: StatusFail, Area: "catalog", Message: "At least one active product is required before launch."}
+	default:
+		return Check{Status: StatusPass, Area: "catalog", Message: fmt.Sprintf("%d app(s) and %d active product(s) are configured.", counts.Apps, counts.ActiveProducts)}
+	}
+}
+
+func checkLaunchEntitlements(counts Counts) Check {
+	switch {
+	case counts.ActiveEntitlements == 0:
+		return Check{Status: StatusFail, Area: "access", Message: "At least one active entitlement is required before launch."}
+	case counts.EntitlementProductLinks == 0:
+		return Check{Status: StatusFail, Area: "access", Message: "At least one product must be attached to an entitlement."}
+	default:
+		return Check{Status: StatusPass, Area: "access", Message: fmt.Sprintf("%d active entitlement(s) have product access paths.", counts.ActiveEntitlements)}
+	}
+}
+
+func checkLaunchOffering(counts Counts) Check {
+	switch {
+	case counts.CurrentOfferings == 0:
+		return Check{Status: StatusFail, Area: "offering", Message: "Exactly one current active offering is required before launch."}
+	case counts.CurrentOfferings > 1:
+		return Check{Status: StatusWarn, Area: "offering", Message: fmt.Sprintf("%d current active offerings found; expected exactly one.", counts.CurrentOfferings)}
+	default:
+		return Check{Status: StatusPass, Area: "offering", Message: "One current active offering is configured."}
+	}
+}
+
+func checkLaunchPackages(counts Counts) Check {
+	switch {
+	case counts.Packages == 0:
+		return Check{Status: StatusFail, Area: "paywall", Message: "The current offering needs at least one package before launch."}
+	case counts.PackageProductLinks == 0:
+		return Check{Status: StatusFail, Area: "paywall", Message: "At least one package must have an attached product before launch."}
+	default:
+		return Check{Status: StatusPass, Area: "paywall", Message: fmt.Sprintf("%d package(s) and %d package-product link(s) are configured.", counts.Packages, counts.PackageProductLinks)}
 	}
 }
 
