@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,12 +74,88 @@ func check() string {
 }
 
 func compareVersions(latest string) string {
-	current := strings.TrimPrefix(version.Version, "v")
-	latest = strings.TrimPrefix(latest, "v")
-	if latest != "" && latest != current && latest > current {
-		return fmt.Sprintf("\nA new version of rc is available: %s -> %s\nUpdate with: brew upgrade rc || go install github.com/andresdefi/rc@latest", current, latest)
+	current := version.Version
+	if newerVersionAvailable(current, latest) {
+		return fmt.Sprintf("\nA new version of rc is available: %s -> %s\nUpdate with: brew upgrade rc || go install github.com/andresdefi/rc@latest", strings.TrimPrefix(current, "v"), strings.TrimPrefix(latest, "v"))
 	}
 	return ""
+}
+
+func newerVersionAvailable(current, latest string) bool {
+	c, ok := parseVersion(current)
+	if !ok {
+		return false
+	}
+	l, ok := parseVersion(latest)
+	if !ok {
+		return false
+	}
+	return compareParsedVersion(l, c) > 0
+}
+
+type parsedVersion struct {
+	major      int
+	minor      int
+	patch      int
+	prerelease string
+}
+
+func parseVersion(v string) (parsedVersion, bool) {
+	v = strings.TrimSpace(strings.TrimPrefix(v, "v"))
+	if v == "" {
+		return parsedVersion{}, false
+	}
+	if i := strings.Index(v, "+"); i >= 0 {
+		v = v[:i]
+	}
+
+	prerelease := ""
+	if i := strings.Index(v, "-"); i >= 0 {
+		prerelease = v[i+1:]
+		v = v[:i]
+	}
+
+	parts := strings.Split(v, ".")
+	if len(parts) > 3 {
+		return parsedVersion{}, false
+	}
+	nums := [3]int{}
+	for i, part := range parts {
+		if part == "" {
+			return parsedVersion{}, false
+		}
+		n, err := strconv.Atoi(part)
+		if err != nil || n < 0 {
+			return parsedVersion{}, false
+		}
+		nums[i] = n
+	}
+	return parsedVersion{major: nums[0], minor: nums[1], patch: nums[2], prerelease: prerelease}, true
+}
+
+func compareParsedVersion(a, b parsedVersion) int {
+	for _, pair := range [][2]int{{a.major, b.major}, {a.minor, b.minor}, {a.patch, b.patch}} {
+		switch {
+		case pair[0] > pair[1]:
+			return 1
+		case pair[0] < pair[1]:
+			return -1
+		}
+	}
+	switch {
+	case a.prerelease == b.prerelease:
+		return 0
+	case a.prerelease == "":
+		return 1
+	case b.prerelease == "":
+		return -1
+	case a.prerelease > b.prerelease:
+		return 1
+	case a.prerelease < b.prerelease:
+		return -1
+	default:
+		return 0
+	}
 }
 
 func fetchLatest() (string, error) {

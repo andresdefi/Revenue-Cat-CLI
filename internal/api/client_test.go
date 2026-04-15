@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -639,6 +640,78 @@ func TestClient_ConcurrentRequests(t *testing.T) {
 	}
 }
 
+func TestPaginateAll_ResolvesNextPageURLs(t *testing.T) {
+	tests := []struct {
+		name     string
+		nextPage func(serverURL string) string
+	}{
+		{
+			name: "absolute URL",
+			nextPage: func(serverURL string) string {
+				return serverURL + "/v2/projects?starting_after=proj_1"
+			},
+		},
+		{
+			name: "path including API version",
+			nextPage: func(_ string) string {
+				return "/v2/projects?starting_after=proj_1"
+			},
+		},
+		{
+			name: "bare resource path",
+			nextPage: func(_ string) string {
+				return "projects?starting_after=proj_1"
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var requestCount int32
+			var nextPage string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/v2/projects" {
+					t.Errorf("unexpected path: %s", r.URL.Path)
+				}
+
+				switch atomic.AddInt32(&requestCount, 1) {
+				case 1:
+					if got := r.URL.Query().Get("limit"); got != "1" {
+						t.Errorf("limit = %q, want 1", got)
+					}
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"object":"list","items":[{"object":"project","id":"proj_1","name":"First"}],"next_page":` + stringLiteral(nextPage) + `}`))
+				case 2:
+					if got := r.URL.Query().Get("starting_after"); got != "proj_1" {
+						t.Errorf("starting_after = %q, want proj_1", got)
+					}
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(`{"object":"list","items":[{"object":"project","id":"proj_2","name":"Second"}],"next_page":null}`))
+				default:
+					t.Errorf("unexpected extra request %s", r.URL.String())
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			}))
+			defer server.Close()
+
+			nextPage = tt.nextPage(server.URL)
+			client := newTestClient(t, server.URL+"/v2")
+			query := url.Values{}
+			query.Set("limit", "1")
+			items, err := PaginateAll[Project](client, "/projects", query)
+			if err != nil {
+				t.Fatalf("PaginateAll() error: %v", err)
+			}
+			if len(items) != 2 {
+				t.Fatalf("items count = %d, want 2", len(items))
+			}
+			if got := atomic.LoadInt32(&requestCount); got != 2 {
+				t.Errorf("request count = %d, want 2", got)
+			}
+		})
+	}
+}
+
 func TestClient_PathEncoding(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -804,5 +877,10 @@ func TestListResponse_Empty(t *testing.T) {
 
 func intToJSON(n int) string {
 	b, _ := json.Marshal(n)
+	return string(b)
+}
+
+func stringLiteral(s string) string {
+	b, _ := json.Marshal(s)
 	return string(b)
 }

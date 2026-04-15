@@ -30,7 +30,7 @@ func completeResourceIDs(projectFlag *string, pathFmt string) func(*cobra.Comman
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
 
-		cacheKey := fmt.Sprintf("completion:%s:%s", pid, pathFmt)
+		cacheKey := fmt.Sprintf("completion:%s:%s:%s", cacheNamespace(), pid, pathFmt)
 		var items []map[string]any
 
 		if cached := cache.Get(cacheKey); cached != nil {
@@ -125,7 +125,7 @@ func ProjectIDs() func(*cobra.Command, []string, string) ([]string, cobra.ShellC
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
 
-		cacheKey := "completion:projects"
+		cacheKey := fmt.Sprintf("completion:%s:projects", cacheNamespace())
 		var items []map[string]any
 
 		if cached := cache.Get(cacheKey); cached != nil {
@@ -155,4 +155,9 @@ func ProjectIDs() func(*cobra.Command, []string, string) ([]string, cobra.ShellC
 
 		return formatCompletions(items), cobra.ShellCompDirectiveNoFileComp
 	}
+}
+
+func cacheNamespace() string {
+	profile := cmdutil.ResolveProfile()
+	return "profile:" + profile
 }

@@ -3,10 +3,10 @@
 ## Project Overview
 Unofficial open-source CLI for the RevenueCat REST API v2. Written in Go with Cobra.
 Repo: `andresdefi/Revenue-Cat-CLI` on GitHub. Binary name: `rc`.
-100% API v2 coverage - 99 subcommands covering all 95 API endpoints across 16 command groups.
+100% API v2 coverage - 99+ subcommands covering all 95 API endpoints across 16 command groups.
 
 ## Tech Stack
-- **Language:** Go 1.23+ (go.mod directive: 1.23)
+- **Language:** Go 1.25+ (go.mod directive: 1.25.0)
 - **CLI framework:** Cobra (github.com/spf13/cobra)
 - **Table output:** go-pretty/v6 (github.com/jedib0t/go-pretty/v6)
 - **Keychain:** go-keyring (github.com/zalando/go-keyring)
@@ -30,29 +30,33 @@ cmd/
   purchases/purchases.go         purchases list/get/entitlements/refund
   webhooks/webhooks.go           webhooks list/get/create/update/delete
   charts/charts.go               charts overview/show
-  paywalls/paywalls.go           paywalls list/get/delete
+  paywalls/paywalls.go           paywalls list/get/create/delete
   auditlogs/auditlogs.go        audit-logs list
   collaborators/collaborators.go collaborators list
   currencies/currencies.go       currencies list/get/create/update/delete/archive/unarchive/balance/credit/set-balance
+  mcp/mcp.go                     mcp serve
+  transfer/transfer.go           export/import project configuration
 internal/
   api/client.go                  HTTP client with retry, auth header, error handling
   api/types.go                   All RevenueCat API v2 response types
   auth/auth.go                   Token storage (keychain + config fallback)
-  config/config.go               Config file (~/.rc/config.json)
+  config/config.go               TOML config file (~/.rc/config.toml) + legacy JSON migration
   cmdutil/cmdutil.go             Shared helpers (ResolveProject, GetOutputFormat)
-  output/output.go               JSON + table output formatting
+  output/output.go               JSON + table + markdown output formatting
 ```
 
 ## Key Patterns
-- **Auth:** Bearer token via `Authorization: Bearer <sk_...>`. Stored in system keychain, falls back to `~/.rc/config.json`
-- **Project resolution:** `--project` flag > config default > error with guidance
-- **Output:** `--output table` (default) or `--output json`. Table uses go-pretty, JSON uses encoding/json
+- **Auth:** Bearer token via `Authorization: Bearer <sk_...>`. Stored in system keychain, falls back to profile entries in `~/.rc/config.toml`
+- **Profiles:** `--profile` flag > `RC_PROFILE` env var > `current_profile` > `default`
+- **Project resolution:** `--project` flag > active profile default project > error with guidance
+- **Output:** `--output table`, `--output json`, or `--output markdown`. Table uses go-pretty, JSON uses encoding/json
 - **API client:** All requests go through `internal/api/client.go`. Retries on `retryable: true` errors with backoff
 - **Error handling:** API errors parsed into `api.Error` struct with type, message, doc_url
-- **Pagination:** Cursor-based with `starting_after` param (not yet implemented - lists return first page)
+- **Pagination:** Cursor-based list pagination is implemented with `--all`. `next_page` can be an absolute URL, a `/v2/...` path, or a bare resource path
 - **No import cycles:** Command packages import `internal/cmdutil`, not `cmd`
 - **Archive pattern:** Products, entitlements, offerings, and virtual currencies all support archive/unarchive
 - **Attach/detach pattern:** Products can be attached/detached from both entitlements and packages
+- **Project transfer:** `rc export`/`rc import` is beta. It carries apps, products, entitlements, offerings, packages, attachments, metadata, and archive/current state where the API allows it
 
 ## RevenueCat API v2 Reference
 - **Base URL:** `https://api.revenuecat.com/v2`
@@ -90,32 +94,31 @@ make help           # Show all targets
 - [x] Audit Logs: list
 - [x] Collaborators: list
 - [x] Virtual Currencies: list, get, create, update, delete, archive, unarchive, balance, credit, set-balance
-- [x] JSON + table output (TTY-aware: table for terminal, JSON for pipes)
+- [x] JSON + table + markdown output (TTY-aware: table for terminal, JSON for pipes)
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 107 tests across 7 test files
+- [x] 528 tests across 32 test files
 - [x] Makefile with build/test/lint/fmt/check targets
 - [x] .golangci.yml config
 - [x] README with badges, TOC, workflows, troubleshooting
 - [x] Community files: SECURITY.md, CODE_OF_CONDUCT.md, SUPPORT.md
 - [x] GitHub: issue/PR templates, topics, Discussions enabled
-- [x] CI: build (Go 1.24 + stable), lint, CodeQL, govulncheck
+- [x] CI: build (Go 1.25 + stable), lint, CodeQL, govulncheck, gosec
 - [x] GoReleaser config with Homebrew tap + ldflags
 - [x] Install script (curl | sh)
 - [x] Pre-commit hook
 
 ## Release
-- **v0.1.0** released 2026-04-13
+- **v0.2.0** released 2026-04-15
 - Homebrew: `brew install andresdefi/tap/rc`
 - Install script: `curl -fsSL https://raw.githubusercontent.com/andresdefi/Revenue-Cat-CLI/main/install.sh | sh`
 - Go: `go install github.com/andresdefi/rc@latest`
 
 ## Future Improvements
-- [ ] Pagination support (auto-fetch all pages with `--all` flag)
 - [ ] Interactive mode for create commands (prompt for required fields)
 - [ ] `--watch` flag for polling commands
-- [ ] More tests (command integration tests with mock API server)
+- [ ] More edge-case tests for project transfer and import/export fixtures
 - [ ] Documentation website
 - [ ] Apple code signing for macOS binaries
 - [ ] Set up HOMEBREW_TAP_TOKEN secret for auto formula updates on release

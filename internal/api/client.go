@@ -9,17 +9,20 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/andresdefi/rc/internal/auth"
 	"github.com/andresdefi/rc/internal/cache"
 	"github.com/andresdefi/rc/internal/output"
+	"github.com/andresdefi/rc/internal/version"
 )
 
 const (
-	UserAgent  = "rc-cli/0.1.0"
 	MaxRetries = 3
 )
+
+var UserAgent = "rc-cli/" + version.Version
 
 var BaseURL = "https://api.revenuecat.com/v2"
 
@@ -121,7 +124,10 @@ func (c *Client) Delete(path string) ([]byte, error) {
 // GetFullURL performs a GET using a full URL path (e.g. from next_page).
 // The path should already include any query parameters.
 func (c *Client) GetFullURL(fullPath string) ([]byte, error) {
-	u := c.baseURL + fullPath
+	u, err := c.resolvePageURL(fullPath)
+	if err != nil {
+		return nil, err
+	}
 	output.Debug("GET %s", u)
 
 	var lastErr error
@@ -166,6 +172,29 @@ func (c *Client) GetFullURL(fullPath string) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("request failed after %d attempts: %w", MaxRetries, lastErr)
+}
+
+func (c *Client) resolvePageURL(nextPage string) (string, error) {
+	if nextPage == "" {
+		return "", fmt.Errorf("empty next page URL")
+	}
+	if parsed, err := url.Parse(nextPage); err == nil && parsed.IsAbs() {
+		return nextPage, nil
+	}
+
+	base, err := url.Parse(c.baseURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid base URL: %w", err)
+	}
+
+	nextPath := nextPage
+	if !strings.HasPrefix(nextPath, "/") {
+		nextPath = "/" + nextPath
+	}
+	if base.Path != "" && strings.HasPrefix(nextPath, base.Path+"/") {
+		nextPath = strings.TrimPrefix(nextPath, base.Path)
+	}
+	return strings.TrimRight(c.baseURL, "/") + nextPath, nil
 }
 
 func (c *Client) do(method, path string, query url.Values, body any) ([]byte, error) {
