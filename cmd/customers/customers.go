@@ -27,6 +27,7 @@ check active entitlements, grant/revoke access, and manage subscriptions.
 Examples:
   rc customers list
   rc customers lookup user-123
+  rc customers diagnose user-123
   rc customers entitlements user-123
   rc customers subscriptions user-123
   rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --expires-at 1735689600000
@@ -35,6 +36,7 @@ Examples:
 
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	root.AddCommand(newLookupCmd(projectID, outputFormat))
+	root.AddCommand(newDiagnoseCmd(projectID, outputFormat))
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
 	root.AddCommand(newDeleteCmd(projectID))
 	root.AddCommand(newEntitlementsCmd(projectID, outputFormat))

@@ -625,6 +625,7 @@ check active entitlements, grant/revoke access, and manage subscriptions.
 Examples:
   rc customers list
   rc customers lookup user-123
+  rc customers diagnose user-123
   rc customers entitlements user-123
   rc customers subscriptions user-123
   rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --expires-at 1735689600000
@@ -699,6 +700,33 @@ Delete a customer
 ```bash
 # Delete a customer
   rc customers delete user-123
+```
+
+#### rc customers diagnose
+
+Diagnose why a customer does or does not have access
+
+Diagnose why a customer does or does not have access.
+
+The diagnosis is read-only. It looks up the customer, active entitlements,
+subscriptions, purchases, aliases, and attributes, then reports likely access
+issues and follow-up commands for support debugging.
+
+**Flags**
+
+- `--strict`: return a non-zero exit code when failed checks are found Default: `false`.
+
+**Examples**
+
+```bash
+# Diagnose customer access
+  rc customers diagnose user-123
+
+  # Emit JSON for scripts
+  rc customers diagnose user-123 --output json
+
+  # Fail when blocking access findings are found
+  rc customers diagnose user-123 --strict
 ```
 
 #### rc customers entitlements

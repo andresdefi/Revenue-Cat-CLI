@@ -79,6 +79,9 @@ rc products create --store-id "com.app.premium_monthly" --app-id app1a2b3c4 --ty
 # Look up a customer with live refresh
 rc customers lookup "user-123" --watch
 
+# Diagnose why a customer does or does not have access
+rc customers diagnose "user-123"
+
 # View metrics
 rc charts overview
 
@@ -145,6 +148,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 | Command | Description |
 |---------|-------------|
 | `rc customers list/lookup/create/delete` | Manage customers |
+| `rc customers diagnose <id>` | Diagnose customer access |
 | `rc customers entitlements <id>` | Active entitlements |
 | `rc customers subscriptions <id>` | Customer subscriptions |
 | `rc customers purchases <id>` | Customer purchases |
