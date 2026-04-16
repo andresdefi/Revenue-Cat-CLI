@@ -36,6 +36,7 @@ Examples:
 	root.AddCommand(completions.WithCompletion(newGetCmd(projectID, outputFormat), c))
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
 	root.AddCommand(completions.WithCompletion(newUpdateCmd(projectID, outputFormat), c))
+	root.AddCommand(completions.WithCompletion(newPublishCmd(projectID, outputFormat), c))
 	root.AddCommand(completions.WithCompletion(newDeleteCmd(projectID), c))
 	root.AddCommand(completions.WithCompletion(newArchiveCmd(projectID), c))
 	root.AddCommand(completions.WithCompletion(newUnarchiveCmd(projectID), c))

@@ -51,7 +51,7 @@ func TestNewRootCmd_HasExpectedSubcommands(t *testing.T) {
 		"purchases", "webhooks", "charts", "paywalls",
 		"audit-logs", "collaborators", "currencies", "version",
 		"completion", "init", "doctor", "whoami", "config", "launch-check",
-		"mcp", "export", "import",
+		"setup", "mcp", "export", "import", "migrate",
 	}
 
 	commands := make(map[string]bool)
@@ -71,7 +71,7 @@ func TestNewRootCmd_SubcommandCount(t *testing.T) {
 	commands := root.Commands()
 
 	// meta/foundation + auth + project/product/customer/integration groups + mcp + transfer
-	expectedMin := 25
+	expectedMin := 27
 	if len(commands) < expectedMin {
 		t.Errorf("command count = %d, want >= %d", len(commands), expectedMin)
 	}
@@ -344,7 +344,7 @@ func TestNewRootCmd_CustomersSubcommands(t *testing.T) {
 		subNames[c.Name()] = true
 	}
 
-	expected := []string{"list", "lookup", "create", "delete", "entitlements", "subscriptions", "purchases", "aliases", "attributes", "set-attributes", "grant", "revoke", "assign-offering", "transfer", "restore-purchase", "invoices", "invoice-file"}
+	expected := []string{"list", "lookup", "diagnose", "create", "delete", "entitlements", "subscriptions", "purchases", "aliases", "attributes", "set-attributes", "grant", "revoke", "assign-offering", "transfer", "restore-purchase", "invoices", "invoice-file"}
 	for _, name := range expected {
 		if !subNames[name] {
 			t.Errorf("customers should have subcommand %q", name)
@@ -404,7 +404,7 @@ func TestNewRootCmd_OfferingsSubcommands(t *testing.T) {
 		subNames[c.Name()] = true
 	}
 
-	expected := []string{"list", "get", "create", "update", "delete", "archive", "unarchive"}
+	expected := []string{"list", "get", "create", "update", "publish", "delete", "archive", "unarchive"}
 	for _, name := range expected {
 		if !subNames[name] {
 			t.Errorf("offerings should have subcommand %q", name)
@@ -524,7 +524,7 @@ func TestNewRootCmd_PaywallsSubcommands(t *testing.T) {
 		subNames[c.Name()] = true
 	}
 
-	expected := []string{"list", "get", "create", "delete"}
+	expected := []string{"list", "get", "create", "validate", "delete"}
 	for _, name := range expected {
 		if !subNames[name] {
 			t.Errorf("paywalls should have subcommand %q", name)
@@ -677,6 +677,36 @@ func TestNewRootCmd_ImportSubcommand(t *testing.T) {
 	}
 }
 
+func TestNewRootCmd_SetupSubcommand(t *testing.T) {
+	root := NewRootCmd()
+	setupCmd, _, err := root.Find([]string{"setup"})
+	if err != nil {
+		t.Fatalf("Find setup: %v", err)
+	}
+	subNames := make(map[string]bool)
+	for _, c := range setupCmd.Commands() {
+		subNames[c.Name()] = true
+	}
+	if !subNames["product"] {
+		t.Error("setup should have 'product' subcommand")
+	}
+}
+
+func TestNewRootCmd_MigrateSubcommand(t *testing.T) {
+	root := NewRootCmd()
+	migrateCmd, _, err := root.Find([]string{"migrate"})
+	if err != nil {
+		t.Fatalf("Find migrate: %v", err)
+	}
+	subNames := make(map[string]bool)
+	for _, c := range migrateCmd.Commands() {
+		subNames[c.Name()] = true
+	}
+	if !subNames["project"] {
+		t.Error("migrate should have 'project' subcommand")
+	}
+}
+
 func TestNewRootCmd_ProfileFlag(t *testing.T) {
 	root := NewRootCmd()
 
@@ -743,7 +773,7 @@ func TestNewRootCmd_HelpContainsNewSubcommands(t *testing.T) {
 
 	helpOutput := buf.String()
 
-	newSubs := []string{"mcp", "export", "import", "launch-check"}
+	newSubs := []string{"mcp", "export", "import", "launch-check", "setup", "migrate"}
 	for _, sub := range newSubs {
 		if !strings.Contains(helpOutput, sub) {
 			t.Errorf("help output should list %q subcommand", sub)

@@ -129,13 +129,16 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 	defer server.Close()
 
 	oldBaseURL := api.BaseURL
+	oldDryRun := api.DryRun
 	oldPrettyJSON := output.PrettyJSON
 	oldForceYes := cmdutil.ForceYes
 	api.BaseURL = server.URL
+	api.DryRun = false
 	output.PrettyJSON = true
 	cmdutil.ForceYes = true
 	t.Cleanup(func() {
 		api.BaseURL = oldBaseURL
+		api.DryRun = oldDryRun
 		output.PrettyJSON = oldPrettyJSON
 		cmdutil.ForceYes = oldForceYes
 		cmdutil.ActiveProfile = ""

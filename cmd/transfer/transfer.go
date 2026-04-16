@@ -11,6 +11,7 @@ import (
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
 	"github.com/andresdefi/rc/internal/output"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 )
 
@@ -61,6 +62,38 @@ type PackageConfig struct {
 type PackageProductConfig struct {
 	ProductID           string `json:"product_id"`
 	EligibilityCriteria string `json:"eligibility_criteria"`
+}
+
+type MigrationPlan struct {
+	Object          string            `json:"object"`
+	SourceProjectID string            `json:"source_project_id"`
+	TargetProjectID string            `json:"target_project_id"`
+	DryRun          bool              `json:"dry_run"`
+	Status          string            `json:"status"`
+	Counts          MigrationCounts   `json:"counts"`
+	Warnings        []string          `json:"warnings,omitempty"`
+	Actions         []MigrationAction `json:"actions"`
+}
+
+type MigrationCounts struct {
+	Products        int `json:"products"`
+	Entitlements    int `json:"entitlements"`
+	Offerings       int `json:"offerings"`
+	Packages        int `json:"packages"`
+	PackageProducts int `json:"package_products"`
+	Create          int `json:"create"`
+	Reuse           int `json:"reuse"`
+	Skip            int `json:"skip"`
+	Update          int `json:"update"`
+	Archive         int `json:"archive"`
+}
+
+type MigrationAction struct {
+	Status   string `json:"status"`
+	Area     string `json:"area"`
+	Action   string `json:"action"`
+	Resource string `json:"resource"`
+	Message  string `json:"message"`
 }
 
 // NewExportCmd creates the `rc export` command.
@@ -183,6 +216,303 @@ Apps are matched to existing target apps by ID or by name and type. Use
 	cmd.Flags().StringArrayVar(&appMaps, "app-map", nil, "map source app ID to target app ID (source=target, repeatable)")
 	cmdutil.MarkBeta(cmd)
 	return cmd
+}
+
+func NewMigrateCmd(projectID, outputFormat *string) *cobra.Command {
+	root := &cobra.Command{
+		Use:   "migrate",
+		Short: "Plan project migration workflows",
+		Long: `Plan project migration workflows.
+
+Migration commands provide a safer UX around export/import behavior. The
+project workflow currently supports dry-run planning only and never mutates the
+target project.`,
+	}
+	root.AddCommand(newMigrateProjectCmd(projectID, outputFormat))
+	cmdutil.MarkBeta(root)
+	return root
+}
+
+func newMigrateProjectCmd(projectID, outputFormat *string) *cobra.Command {
+	var (
+		sourceProjectID string
+		targetProjectID string
+		appMaps         []string
+	)
+	cmd := &cobra.Command{
+		Use:   "project",
+		Short: "Dry-run a project configuration migration",
+		Long: `Dry-run a project configuration migration.
+
+The command exports the source project in memory, compares it with the target
+project, and reports what import would create, reuse, update, attach, archive,
+or skip. It requires --dry-run so migration planning stays read-only.`,
+		Example: `  # Plan a migration into the default project
+  rc migrate project --source-project proj_source --dry-run
+
+  # Plan a migration into an explicit target project
+  rc migrate project --source-project proj_source --target-project proj_target --dry-run
+
+  # Include explicit app ID mappings
+  rc migrate project --source-project proj_source --target-project proj_target --app-map app_source=app_target --dry-run`,
+		RunE: func(c *cobra.Command, args []string) error {
+			if !api.DryRun {
+				return fmt.Errorf("migrate project requires --dry-run")
+			}
+			if sourceProjectID == "" {
+				return fmt.Errorf("--source-project is required")
+			}
+			targetID := targetProjectID
+			if targetID == "" {
+				var err error
+				targetID, err = cmdutil.ResolveProject(projectID)
+				if err != nil {
+					return err
+				}
+			}
+			if sourceProjectID == targetID {
+				return fmt.Errorf("source and target projects must be different")
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+			plan, err := dryRunProjectMigration(client, sourceProjectID, targetID, appMaps)
+			if err != nil {
+				return err
+			}
+			format := cmdutil.GetOutputFormat(outputFormat)
+			output.Print(format, plan, renderMigrationPlan(plan))
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&sourceProjectID, "source-project", "", "source project ID (required)")
+	cmd.Flags().StringVar(&targetProjectID, "target-project", "", "target project ID (defaults to --project/default project)")
+	cmd.Flags().StringArrayVar(&appMaps, "app-map", nil, "map source app ID to target app ID (source=target, repeatable)")
+	return cmd
+}
+
+func dryRunProjectMigration(client *api.Client, sourceProjectID, targetProjectID string, appMaps []string) (*MigrationPlan, error) {
+	config, err := exportProjectConfig(client, sourceProjectID)
+	if err != nil {
+		return nil, err
+	}
+	targetApps, err := api.PaginateAll[api.App](client, fmt.Sprintf("/projects/%s/apps", url.PathEscape(targetProjectID)), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target apps: %w", err)
+	}
+	targetProducts, err := api.PaginateAll[api.Product](client, fmt.Sprintf("/projects/%s/products", url.PathEscape(targetProjectID)), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target products: %w", err)
+	}
+	targetEntitlements, err := api.PaginateAll[api.Entitlement](client, fmt.Sprintf("/projects/%s/entitlements", url.PathEscape(targetProjectID)), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target entitlements: %w", err)
+	}
+	targetOfferings, err := api.PaginateAll[api.Offering](client, fmt.Sprintf("/projects/%s/offerings", url.PathEscape(targetProjectID)), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target offerings: %w", err)
+	}
+
+	appMap, err := buildAppMap(config.Apps, targetApps, appMaps)
+	if err != nil {
+		return nil, err
+	}
+	plan := &MigrationPlan{
+		Object:          "project_migration_plan",
+		SourceProjectID: sourceProjectID,
+		TargetProjectID: targetProjectID,
+		DryRun:          true,
+		Status:          "ok",
+	}
+	productMap := planProducts(plan, config.Products, targetProducts, appMap)
+	entitlementMap := planEntitlements(plan, config.Entitlements, targetEntitlements, productMap)
+	offeringMap, packageMap := planOfferings(client, plan, targetProjectID, config.Offerings, targetOfferings, productMap)
+	planArchives(plan, config.Products, config.Entitlements, config.Offerings, productMap, entitlementMap, offeringMap, packageMap)
+	if len(plan.Warnings) > 0 || plan.Counts.Skip > 0 {
+		plan.Status = "warn"
+	}
+	return plan, nil
+}
+
+func planProducts(plan *MigrationPlan, products, targetProducts []api.Product, appMap map[string]string) map[string]string {
+	productMap := make(map[string]string, len(products))
+	existing := make(map[string]api.Product, len(targetProducts))
+	for _, product := range targetProducts {
+		existing[productKey(product.AppID, product.StoreIdentifier, product.Type)] = product
+	}
+	plan.Counts.Products = len(products)
+	for _, product := range products {
+		targetAppID := appMap[product.AppID]
+		if targetAppID == "" {
+			plan.warn(fmt.Sprintf("No target app mapping for product %s from source app %s.", product.StoreIdentifier, product.AppID))
+			plan.add("skip", "products", "skip", product.StoreIdentifier, "No target app mapping.")
+			continue
+		}
+		if found, ok := existing[productKey(targetAppID, product.StoreIdentifier, product.Type)]; ok {
+			productMap[product.ID] = found.ID
+			plan.add("reuse", "products", "reuse", product.StoreIdentifier, fmt.Sprintf("Would reuse target product %s.", found.ID))
+			continue
+		}
+		productMap[product.ID] = "(new product)"
+		plan.add("create", "products", "create", product.StoreIdentifier, "Would create product.")
+	}
+	return productMap
+}
+
+func planEntitlements(plan *MigrationPlan, entitlements []EntitlementConfig, targetEntitlements []api.Entitlement, productMap map[string]string) map[string]string {
+	entitlementMap := make(map[string]string, len(entitlements))
+	existing := make(map[string]api.Entitlement, len(targetEntitlements))
+	for _, entitlement := range targetEntitlements {
+		existing[entitlement.LookupKey] = entitlement
+	}
+	plan.Counts.Entitlements = len(entitlements)
+	for _, entitlement := range entitlements {
+		targetID := "(new entitlement)"
+		if found, ok := existing[entitlement.LookupKey]; ok {
+			targetID = found.ID
+			plan.add("reuse", "entitlements", "reuse", entitlement.LookupKey, fmt.Sprintf("Would reuse target entitlement %s.", found.ID))
+			if found.DisplayName != entitlement.DisplayName {
+				plan.add("update", "entitlements", "update", entitlement.LookupKey, "Would update display name.")
+			}
+		} else {
+			plan.add("create", "entitlements", "create", entitlement.LookupKey, "Would create entitlement.")
+		}
+		entitlementMap[entitlement.ID] = targetID
+		for _, sourceProductID := range entitlement.ProductIDs {
+			if productMap[sourceProductID] == "" {
+				plan.add("skip", "entitlements", "attach-product", entitlement.LookupKey, fmt.Sprintf("Would skip missing product attachment %s.", sourceProductID))
+				continue
+			}
+			plan.add("update", "entitlements", "attach-product", entitlement.LookupKey, fmt.Sprintf("Would attach mapped product for %s.", sourceProductID))
+		}
+	}
+	return entitlementMap
+}
+
+func planOfferings(client *api.Client, plan *MigrationPlan, targetProjectID string, offerings []OfferingConfig, targetOfferings []api.Offering, productMap map[string]string) (map[string]string, map[string]string) {
+	offeringMap := make(map[string]string, len(offerings))
+	packageMap := map[string]string{}
+	existing := make(map[string]api.Offering, len(targetOfferings))
+	for _, offering := range targetOfferings {
+		existing[offering.LookupKey] = offering
+	}
+	plan.Counts.Offerings = len(offerings)
+	for _, offering := range offerings {
+		targetID := "(new offering)"
+		targetPackages := []api.Package{}
+		if found, ok := existing[offering.LookupKey]; ok {
+			targetID = found.ID
+			plan.add("reuse", "offerings", "reuse", offering.LookupKey, fmt.Sprintf("Would reuse target offering %s.", found.ID))
+			if found.DisplayName != offering.DisplayName || found.IsCurrent != offering.IsCurrent {
+				plan.add("update", "offerings", "update", offering.LookupKey, "Would update offering fields.")
+			}
+			var err error
+			targetPackages, err = api.PaginateAll[api.Package](client, fmt.Sprintf("/projects/%s/offerings/%s/packages", url.PathEscape(targetProjectID), url.PathEscape(found.ID)), nil)
+			if err != nil {
+				plan.warn(fmt.Sprintf("Could not inspect target packages for offering %s: %v", offering.LookupKey, err))
+			}
+		} else {
+			plan.add("create", "offerings", "create", offering.LookupKey, "Would create offering.")
+		}
+		offeringMap[offering.ID] = targetID
+		planPackages(plan, offering, targetPackages, productMap, packageMap)
+	}
+	return offeringMap, packageMap
+}
+
+func planPackages(plan *MigrationPlan, offering OfferingConfig, targetPackages []api.Package, productMap map[string]string, packageMap map[string]string) {
+	existing := make(map[string]api.Package, len(targetPackages))
+	for _, pkg := range targetPackages {
+		existing[pkg.LookupKey] = pkg
+	}
+	plan.Counts.Packages += len(offering.Packages)
+	for _, pkg := range offering.Packages {
+		targetID := "(new package)"
+		if found, ok := existing[pkg.LookupKey]; ok {
+			targetID = found.ID
+			plan.add("reuse", "packages", "reuse", pkg.LookupKey, fmt.Sprintf("Would reuse target package %s.", found.ID))
+			if found.DisplayName != pkg.DisplayName {
+				plan.add("update", "packages", "update", pkg.LookupKey, "Would update display name.")
+			}
+		} else {
+			plan.add("create", "packages", "create", pkg.LookupKey, "Would create package.")
+		}
+		packageMap[pkg.ID] = targetID
+		plan.Counts.PackageProducts += len(pkg.Products)
+		for _, product := range pkg.Products {
+			if productMap[product.ProductID] == "" {
+				plan.add("skip", "packages", "attach-product", pkg.LookupKey, fmt.Sprintf("Would skip missing product attachment %s.", product.ProductID))
+				continue
+			}
+			plan.add("update", "packages", "attach-product", pkg.LookupKey, fmt.Sprintf("Would attach mapped product for %s.", product.ProductID))
+		}
+	}
+}
+
+func planArchives(plan *MigrationPlan, products []api.Product, entitlements []EntitlementConfig, offerings []OfferingConfig, productMap, entitlementMap, offeringMap, packageMap map[string]string) {
+	for _, product := range products {
+		if product.State == "archived" && productMap[product.ID] != "" {
+			plan.add("archive", "products", "archive", product.StoreIdentifier, "Would archive target product.")
+		}
+	}
+	for _, entitlement := range entitlements {
+		if entitlement.State == "archived" && entitlementMap[entitlement.ID] != "" {
+			plan.add("archive", "entitlements", "archive", entitlement.LookupKey, "Would archive target entitlement.")
+		}
+	}
+	for _, offering := range offerings {
+		if offering.State == "archived" && offeringMap[offering.ID] != "" {
+			plan.add("archive", "offerings", "archive", offering.LookupKey, "Would archive target offering.")
+		}
+		for _, pkg := range offering.Packages {
+			if packageMap[pkg.ID] == "" {
+				continue
+			}
+		}
+	}
+}
+
+func (p *MigrationPlan) warn(message string) {
+	p.Warnings = append(p.Warnings, message)
+}
+
+func (p *MigrationPlan) add(status, area, action, resource, message string) {
+	switch status {
+	case "create":
+		p.Counts.Create++
+	case "reuse":
+		p.Counts.Reuse++
+	case "skip":
+		p.Counts.Skip++
+	case "update":
+		p.Counts.Update++
+	case "archive":
+		p.Counts.Archive++
+	}
+	p.Actions = append(p.Actions, MigrationAction{Status: status, Area: area, Action: action, Resource: resource, Message: message})
+}
+
+func renderMigrationPlan(plan *MigrationPlan) func(t table.Writer) {
+	return func(t table.Writer) {
+		t.AppendHeader(table.Row{"Status", "Area", "Action", "Resource", "Message"})
+		for _, action := range plan.Actions {
+			t.AppendRow(table.Row{action.Status, action.Area, action.Action, action.Resource, action.Message})
+		}
+		if len(plan.Warnings) > 0 {
+			t.AppendSeparator()
+			for _, warning := range plan.Warnings {
+				t.AppendRow(table.Row{"warn", "migration", "warning", "", warning})
+			}
+		}
+		t.AppendFooter(table.Row{
+			plan.Status,
+			"migration",
+			"dry-run",
+			fmt.Sprintf("%s -> %s", plan.SourceProjectID, plan.TargetProjectID),
+			fmt.Sprintf("create=%d reuse=%d update=%d skip=%d archive=%d", plan.Counts.Create, plan.Counts.Reuse, plan.Counts.Update, plan.Counts.Skip, plan.Counts.Archive),
+		})
+	}
 }
 
 func exportProjectConfig(client *api.Client, pid string) (*ProjectConfig, error) {
