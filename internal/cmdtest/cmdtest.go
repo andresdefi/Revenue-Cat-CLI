@@ -221,6 +221,29 @@ func AssertRequestJSON(t *testing.T, result Result, method, requestPath string, 
 	t.Fatalf("missing request %s %s; got %#v", method, requestPath, result.Requests)
 }
 
+func AssertRequestBody(t *testing.T, result Result, method, requestPath, want string) {
+	t.Helper()
+	for _, req := range result.Requests {
+		if req.Method != method || req.Path != requestPath {
+			continue
+		}
+		if req.Body != want {
+			t.Fatalf("request body for %s %s = %q, want %q", method, requestPath, req.Body, want)
+		}
+		return
+	}
+	t.Fatalf("missing request %s %s; got %#v", method, requestPath, result.Requests)
+}
+
+func AssertNotRequested(t *testing.T, result Result, method, requestPath string) {
+	t.Helper()
+	for _, req := range result.Requests {
+		if req.Method == method && req.Path == requestPath {
+			t.Fatalf("unexpected request %s %s; got %#v", method, requestPath, result.Requests)
+		}
+	}
+}
+
 func AssertRequestedWithQuery(t *testing.T, result Result, method, requestPath, queryKey, queryValue string) {
 	t.Helper()
 	for _, req := range result.Requests {

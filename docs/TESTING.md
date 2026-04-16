@@ -15,7 +15,10 @@ Command tests use `internal/cmdtest`, which starts a local HTTP server and point
 the API client at it. Use these tests for command behavior, output shape, request
 paths, and request bodies.
 
-For mutating commands, add a golden request-body assertion:
+For mutating commands, add a golden request-body assertion. Keep coverage
+systematic across create/update/archive/unarchive/attach/detach/import paths,
+and add fixture behavior tests when the important contract is retry behavior,
+API error surfacing, archived-resource handling, or import idempotency:
 
 ```go
 cmdtest.AssertRequestJSON(t, result, "POST", "/projects/proj/products", map[string]any{
