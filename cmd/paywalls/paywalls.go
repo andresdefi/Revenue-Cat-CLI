@@ -21,6 +21,7 @@ func NewPaywallsCmd(projectID, outputFormat *string) *cobra.Command {
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	root.AddCommand(newGetCmd(projectID, outputFormat))
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
+	root.AddCommand(newValidateCmd(projectID, outputFormat))
 	root.AddCommand(newDeleteCmd(projectID))
 	return root
 }

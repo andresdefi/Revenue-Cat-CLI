@@ -21,6 +21,7 @@ import (
 	"github.com/andresdefi/rc/cmd/products"
 	"github.com/andresdefi/rc/cmd/projects"
 	"github.com/andresdefi/rc/cmd/purchases"
+	"github.com/andresdefi/rc/cmd/setup"
 	"github.com/andresdefi/rc/cmd/subscriptions"
 	"github.com/andresdefi/rc/cmd/transfer"
 	"github.com/andresdefi/rc/cmd/webhooks"
@@ -132,6 +133,7 @@ audit logs, collaborators, and virtual currencies.`,
 	root.AddCommand(newWhoamiCmd(&outputFormat))
 	root.AddCommand(configcmd.NewConfigCmd(&outputFormat))
 	root.AddCommand(newLaunchCheckCmd(&projectID, &outputFormat))
+	root.AddCommand(setup.NewSetupCmd(&projectID, &outputFormat))
 
 	// Auth (no project needed)
 	root.AddCommand(auth.NewAuthCmd())
@@ -165,6 +167,7 @@ audit logs, collaborators, and virtual currencies.`,
 	// Project config transfer
 	root.AddCommand(transfer.NewExportCmd(&projectID, &outputFormat))
 	root.AddCommand(transfer.NewImportCmd(&projectID, &outputFormat))
+	root.AddCommand(transfer.NewMigrateCmd(&projectID, &outputFormat))
 
 	return root
 }

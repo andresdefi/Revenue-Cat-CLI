@@ -102,6 +102,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 | `rc whoami` | Show active profile, auth source, and default project |
 | `rc config profiles` | List configured profiles |
 | `rc launch-check` | Check whether project setup has the required launch paths |
+| `rc setup product` | Create or reuse a complete product access path |
 
 ### Authentication
 
@@ -139,6 +140,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 | `rc entitlements export --file ent.csv` | Export entitlements to CSV or JSON |
 | `rc entitlements import --file ent.csv` | Import entitlements from CSV or JSON |
 | `rc offerings list/get/create/update/delete` | Manage offerings |
+| `rc offerings publish <id>` | Validate and make an offering current |
 | `rc offerings archive/unarchive` | Archive or restore offerings |
 | `rc packages list/get/create/update/delete` | Manage packages |
 | `rc packages products/attach/detach` | Manage package products |
@@ -179,6 +181,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 | `rc charts show <name>` | Chart data (revenue, mrr, etc.) |
 | `rc charts options <name>` | Chart filter options |
 | `rc paywalls list/get/create/delete` | Manage paywalls |
+| `rc paywalls validate` | Validate paywall readiness |
 | `rc audit-logs list` | View audit logs |
 
 ### Virtual Currencies
@@ -196,6 +199,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 |---------|-------------|
 | `rc export --file config.json` | Export full project config (apps, products, entitlements, offerings, packages, attachments) |
 | `rc import --file config.json` | Import project config into another project |
+| `rc migrate project --dry-run` | Plan project migration without writes |
 
 ### MCP
 
@@ -229,14 +233,13 @@ More recipes live in [docs/WORKFLOWS.md](docs/WORKFLOWS.md).
 ### Set up a new product with entitlements
 
 ```bash
-# Create the product
-rc products create --store-id "com.app.pro_monthly" --app-id app1a2b3c4 --type subscription
-
-# Create an entitlement
-rc entitlements create --lookup-key pro --display-name "Pro Access"
-
-# Attach the product to the entitlement
-rc entitlements attach --entitlement-id entla1b2c3d4e5 --product-id prod1a2b3c4d5e
+rc setup product \
+  --app-id app1a2b3c4 \
+  --store-id "com.app.pro_monthly" \
+  --display-name "Pro Monthly" \
+  --entitlement-key pro \
+  --offering-key default \
+  --package-key '$rc_monthly'
 ```
 
 ### Set up an offering with packages
@@ -251,6 +254,9 @@ rc packages create --offering-id ofrnge1a2b3c --lookup-key annual --display-name
 
 # Attach products to packages
 rc packages attach --package-id pkge1a2b3c --product-id prod1a2b3c
+
+# Validate and make the offering current
+rc offerings publish ofrnge1a2b3c
 ```
 
 ### Debug a customer's subscription
@@ -333,6 +339,9 @@ rc entitlements import --file entitlements.csv --project proj_target123
 ### Project migration (export + import)
 
 ```bash
+# Preview migration work without mutating the target project
+rc migrate project --source-project proj_source --target-project proj_target --dry-run
+
 # Export full project config, including relationships and attachments
 rc export --file project-config.json --project proj_source
 

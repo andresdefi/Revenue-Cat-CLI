@@ -1382,6 +1382,47 @@ The API key is resolved in this order:
   RC_API_KEY=sk_test_xxx rc mcp serve
 ```
 
+### rc migrate
+
+[beta] Plan project migration workflows
+
+**Stability:** `beta`
+
+Plan project migration workflows.
+
+Migration commands provide a safer UX around export/import behavior. The
+project workflow currently supports dry-run planning only and never mutates the
+target project.
+
+#### rc migrate project
+
+Dry-run a project configuration migration
+
+Dry-run a project configuration migration.
+
+The command exports the source project in memory, compares it with the target
+project, and reports what import would create, reuse, update, attach, archive,
+or skip. It requires --dry-run so migration planning stays read-only.
+
+**Flags**
+
+- `--app-map`: map source app ID to target app ID (source=target, repeatable) Default: `[]`.
+- `--source-project`: source project ID (required)
+- `--target-project`: target project ID (defaults to --project/default project)
+
+**Examples**
+
+```bash
+# Plan a migration into the default project
+  rc migrate project --source-project proj_source --dry-run
+
+  # Plan a migration into an explicit target project
+  rc migrate project --source-project proj_source --target-project proj_target --dry-run
+
+  # Include explicit app ID mappings
+  rc migrate project --source-project proj_source --target-project proj_target --app-map app_source=app_target --dry-run
+```
+
 ### rc offerings
 
 Manage offerings
@@ -1499,6 +1540,25 @@ List offerings in a project
 
   # Fetch every page
   rc offerings list --all --limit 100
+```
+
+#### rc offerings publish
+
+Validate and make an offering current
+
+Validate and make an offering current.
+
+Publish checks that the offering is active, has packages, and that each package
+has product links before setting it as the current offering.
+
+**Examples**
+
+```bash
+# Publish an offering after validation
+  rc offerings publish ofrnge1a2b3c4d5
+
+  # Preview the checks and publish result as JSON
+  rc offerings publish ofrnge1a2b3c4d5 --output json
 ```
 
 #### rc offerings unarchive
@@ -1754,6 +1814,33 @@ List paywalls
 
   # List with JSON output
   rc paywalls list -o json
+```
+
+#### rc paywalls validate
+
+Validate paywall readiness
+
+Validate paywall readiness.
+
+The validator is read-only. It checks that paywalls exist and that the current
+offering has packages with product links, which are the RevenueCat paths a
+paywall needs before launch.
+
+**Flags**
+
+- `--strict`: return a non-zero exit code when failed checks are found Default: `false`.
+
+**Examples**
+
+```bash
+# Validate paywall readiness
+  rc paywalls validate
+
+  # Emit JSON for automation
+  rc paywalls validate --output json
+
+  # Return non-zero when blocking checks fail
+  rc paywalls validate --strict
 ```
 
 ### rc products
@@ -2104,6 +2191,56 @@ Refund a purchase
 ```bash
 # Refund a purchase
   rc purchases refund purch1a2b3c4d5
+```
+
+### rc setup
+
+Run guided setup workflows
+
+Run guided setup workflows.
+
+Setup commands compose lower-level RevenueCat API operations into repeatable
+project configuration flows.
+
+#### rc setup product
+
+Set up a product access path
+
+Set up a product access path.
+
+This workflow creates or reuses a product, entitlement, offering, and package,
+then ensures the product is attached to both the entitlement and package. It is
+safe to rerun because existing resources are reused by store ID, lookup key, and
+package key.
+
+**Flags**
+
+- `--app-id`: RevenueCat app ID (required)
+- `--display-name`: product display name (defaults to --store-id)
+- `--entitlement-key`: entitlement lookup key Default: `premium`.
+- `--entitlement-name`: entitlement display name Default: `Premium`.
+- `--make-current`: make the offering current after setup Default: `false`.
+- `--offering-key`: offering lookup key Default: `default`.
+- `--offering-name`: offering display name Default: `Default`.
+- `--package-key`: package lookup key Default: `$rc_monthly`.
+- `--package-name`: package display name Default: `Monthly`.
+- `--store-id`: store product identifier (required)
+- `--type`: product type: subscription, one_time, consumable, non_consumable Default: `subscription`.
+
+**Examples**
+
+```bash
+# Set up a monthly subscription path
+  rc setup product \
+    --app-id app1a2b3c4 \
+    --store-id com.example.app.monthly \
+    --display-name "Monthly" \
+    --entitlement-key premium \
+    --offering-key default \
+    --package-key '$rc_monthly'
+
+  # Also make the offering current
+  rc setup product --app-id app1a2b3c4 --store-id com.example.app.monthly --make-current
 ```
 
 ### rc subscriptions

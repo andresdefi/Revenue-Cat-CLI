@@ -1,6 +1,9 @@
 package paywalls_test
 
 import (
+	"encoding/json"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/andresdefi/rc/internal/cmdtest"
@@ -117,4 +120,38 @@ func TestPaywallsListLimit(t *testing.T) {
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "paywall_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/paywalls")
+}
+
+func TestPaywallsValidatePasses(t *testing.T) {
+	result := cmdtest.Run(t, []string{"paywalls", "validate", "--output", "json"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"object": "paywall_validation_report"`)
+	cmdtest.AssertOutputContains(t, result, `"status": "pass"`)
+	cmdtest.AssertRequested(t, result, http.MethodGet, "/projects/proj_cmdtest/paywalls")
+	cmdtest.AssertRequested(t, result, http.MethodGet, "/projects/proj_cmdtest/offerings")
+	cmdtest.AssertRequested(t, result, http.MethodGet, "/projects/proj_cmdtest/offerings/ofrnge_cmdtest/packages")
+	cmdtest.AssertRequested(t, result, http.MethodGet, "/projects/proj_cmdtest/packages/pkge_cmdtest/products")
+}
+
+func TestPaywallsValidateStrictFails(t *testing.T) {
+	result := cmdtest.Run(t, []string{"paywalls", "validate", "--strict"}, cmdtest.WithHandler(emptyPaywallValidationHandler))
+	cmdtest.AssertErrorContains(t, result, "paywall validation failed")
+	cmdtest.AssertOutputContains(t, result, "No paywalls found")
+}
+
+func emptyPaywallValidationHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet && (strings.HasSuffix(r.URL.Path, "/paywalls") || strings.HasSuffix(r.URL.Path, "/offerings")) {
+		writePaywallJSON(w, paywallList())
+		return
+	}
+	writePaywallJSON(w, map[string]any{"object": "error", "type": "not_found", "message": "not found"})
+}
+
+func paywallList(items ...any) map[string]any {
+	return map[string]any{"object": "list", "items": items, "next_page": nil, "url": "/fixture"}
+}
+
+func writePaywallJSON(w http.ResponseWriter, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(value)
 }

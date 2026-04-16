@@ -20,25 +20,26 @@ cmd/
   root.go                        Root command, persistent flags (--project, --output)
   foundation.go                  init, doctor, whoami
   launch_check.go                launch-check readiness preflight
+  setup/setup.go                 setup product workflow
   auth/auth.go                   auth login/status/logout/doctor/validate
   config/config.go               config profiles
   projects/projects.go           projects list/create/doctor/set-default
   apps/apps.go                   apps list/get/create/update/delete, App Store credential updates
   products/products.go           products list/get/create/update/delete/archive/unarchive
   entitlements/entitlements.go   entitlements list/get/create/update/delete/archive/unarchive/products/attach/detach
-  offerings/offerings.go         offerings list/get/create/update/delete/archive/unarchive
+  offerings/offerings.go         offerings list/get/create/update/delete/publish/archive/unarchive
   packages/packages.go           packages list/get/create/update/delete/products/attach/detach
   customers/customers.go         customers list/lookup/diagnose/create/delete/entitlements/subscriptions/purchases/aliases/attributes/set-attributes/grant/revoke/assign-offering/transfer
   subscriptions/subscriptions.go subscriptions list/get/transactions/entitlements/cancel/refund/refund-transaction/management-url
   purchases/purchases.go         purchases list/get/entitlements/refund
   webhooks/webhooks.go           webhooks list/get/create/update/delete
   charts/charts.go               charts overview/show
-  paywalls/paywalls.go           paywalls list/get/create/delete
+  paywalls/paywalls.go           paywalls list/get/create/delete/validate
   auditlogs/auditlogs.go        audit-logs list
   collaborators/collaborators.go collaborators list
   currencies/currencies.go       currencies list/get/create/update/delete/archive/unarchive/balance/credit/set-balance
   mcp/mcp.go                     mcp serve
-  transfer/transfer.go           export/import project configuration
+  transfer/transfer.go           export/import project configuration, migrate project dry-run
 internal/
   api/client.go                  HTTP client with retry, auth header, error handling
   api/types.go                   All RevenueCat API v2 response types
@@ -70,7 +71,8 @@ docs/
 - **Archive pattern:** Products, entitlements, offerings, and virtual currencies all support archive/unarchive
 - **Attach/detach pattern:** Products can be attached/detached from both entitlements and packages
 - **App credentials:** `rc apps update` can configure documented App Store credential fields. The current RevenueCat v2 OpenAPI does not expose a Play Store service-account credential update field
-- **Project transfer:** `rc export`/`rc import` is beta. It carries apps, products, entitlements, offerings, packages, attachments, metadata, and archive/current state where the API allows it
+- **Workflow commands:** `rc setup product`, `rc offerings publish`, `rc paywalls validate`, and `rc migrate project --dry-run` compose lower-level API calls into safer launch/migration flows
+- **Project transfer:** `rc export`/`rc import` and `rc migrate project --dry-run` are beta. Export/import carries apps, products, entitlements, offerings, packages, attachments, metadata, and archive/current state where the API allows it
 - **Project health:** `rc project doctor` reads apps, products, entitlements, offerings, packages, and package products to report setup issues. `--strict` returns non-zero on failed health checks
 - **Launch readiness:** `rc launch-check` reuses project health and summarizes whether required launch paths exist. `--strict` returns non-zero when the project is not ready
 - **Generated docs:** `docs/COMMANDS.md` is generated from Cobra. Run `make docs` after command changes
@@ -96,22 +98,22 @@ make check          # Run all checks (fmt, docs, vet, lint, test)
 make help           # Show all targets
 ```
 
-## Full API Coverage (100 subcommands, 95 API endpoints)
+## Full API Coverage (104 subcommands, 95 API endpoints)
 - [x] Auth: login, status, logout
 - [x] Foundation: init, doctor, whoami, config profiles, auth validate
-- [x] Workflow checks: project doctor, launch-check
+- [x] Workflow checks: project doctor, launch-check, setup product, offerings publish, paywalls validate, migrate project dry-run
 - [x] Projects: list, create, doctor, set-default
 - [x] Apps: list, get, create, update, delete, App Store credentials, public-keys, storekit-config
 - [x] Products: list, get, create, update, delete, archive, unarchive, push-to-store
 - [x] Entitlements: list, get, create, update, delete, archive, unarchive, products, attach, detach
-- [x] Offerings: list, get, create, update, delete, archive, unarchive
+- [x] Offerings: list, get, create, update, delete, publish, archive, unarchive
 - [x] Packages: list, get, create, update, delete, products, attach, detach
 - [x] Customers: list, lookup, diagnose, create, delete, entitlements, subscriptions, purchases, aliases, attributes, set-attributes, grant, revoke, assign-offering, transfer, restore-purchase, invoices, invoice-file
 - [x] Subscriptions: list, get, transactions, entitlements, cancel, refund, refund-transaction, management-url
 - [x] Purchases: list, get, entitlements, refund
 - [x] Webhooks: list, get, create, update, delete
 - [x] Charts: overview, show, options
-- [x] Paywalls: list, get, create, delete
+- [x] Paywalls: list, get, create, delete, validate
 - [x] Audit Logs: list
 - [x] Collaborators: list
 - [x] Virtual Currencies: list, get, create, update, delete, archive, unarchive, balance, credit, set-balance
@@ -119,7 +121,7 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 562 default tests across 39 test files (566 with integration tag)
+- [x] 573 default tests across 40 test files (577 with integration tag)
 - [x] Request golden tests, pagination contract tests, generated docs drift test, opt-in integration tests
 - [x] Makefile with build/test/lint/fmt/docs/check targets
 - [x] .golangci.yml config

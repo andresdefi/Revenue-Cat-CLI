@@ -3,7 +3,7 @@
 ## Project Overview
 Unofficial open-source CLI for the RevenueCat REST API v2. Written in Go with Cobra.
 Repo: `andresdefi/Revenue-Cat-CLI` on GitHub. Binary name: `rc`.
-100% API v2 coverage - 100 subcommands covering all 95 API endpoints across 16 command groups.
+100% API v2 coverage - 104 subcommands covering all 95 API endpoints across 16 command groups.
 
 ## Tech Stack
 - **Language:** Go 1.25+ (go.mod directive: 1.25)
@@ -22,22 +22,23 @@ cmd/
   completion.go                  Shell completion (bash/zsh/fish/powershell)
   auth/auth.go                   auth login/status/logout/doctor
   projects/projects.go           projects list/create/set-default (with dynamic completions)
+  setup/                         setup product workflow
   apps/                          apps CRUD (with dynamic completions)
   products/                      products CRUD + archive + bulk import/export
   entitlements/                  entitlements CRUD + archive + attach/detach + bulk
-  offerings/                     offerings CRUD + archive
+  offerings/                     offerings CRUD + publish + archive
   packages/                      packages CRUD + attach/detach
   customers/                     customers CRUD + entitlements/subscriptions/purchases/grant/revoke
   subscriptions/                 subscriptions CRUD + cancel/refund
   purchases/                     purchases CRUD + refund
   webhooks/                      webhooks CRUD
   charts/                        charts overview/show/options
-  paywalls/                      paywalls CRUD
+  paywalls/                      paywalls CRUD + validate
   auditlogs/                     audit-logs list
   collaborators/                 collaborators list
   currencies/                    virtual currencies CRUD + balance/credit
   mcp/                           MCP server (16 tools)
-  transfer/                      [beta] project config export/import
+  transfer/                      [beta] project config export/import + migrate dry-run
 internal/
   api/client.go                  HTTP client: retry, Retry-After, verbose logging, dry-run, caching
   api/types.go                   All RevenueCat API v2 response types
@@ -92,20 +93,21 @@ make tools            # Install dev dependencies (gofumpt, gosec, golangci-lint,
 make help             # Show all targets
 ```
 
-## Full API Coverage (100 subcommands, 95 API endpoints)
+## Full API Coverage (104 subcommands, 95 API endpoints)
 - [x] Auth: login, status, logout
 - [x] Projects: list, create, set-default
 - [x] Apps: list, get, create, update, delete, public-keys, storekit-config
 - [x] Products: list, get, create, update, delete, archive, unarchive, push-to-store
 - [x] Entitlements: list, get, create, update, delete, archive, unarchive, products, attach, detach
-- [x] Offerings: list, get, create, update, delete, archive, unarchive
+- [x] Workflow commands: setup product, offerings publish, paywalls validate, migrate project dry-run
+- [x] Offerings: list, get, create, update, delete, publish, archive, unarchive
 - [x] Packages: list, get, create, update, delete, products, attach, detach
 - [x] Customers: list, lookup, diagnose, create, delete, entitlements, subscriptions, purchases, aliases, attributes, set-attributes, grant, revoke, assign-offering, transfer, restore-purchase, invoices, invoice-file
 - [x] Subscriptions: list, get, transactions, entitlements, cancel, refund, refund-transaction, management-url
 - [x] Purchases: list, get, entitlements, refund
 - [x] Webhooks: list, get, create, update, delete
 - [x] Charts: overview, show, options
-- [x] Paywalls: list, get, create, delete
+- [x] Paywalls: list, get, create, delete, validate
 - [x] Audit Logs: list
 - [x] Collaborators: list
 - [x] Virtual Currencies: list, get, create, update, delete, archive, unarchive, balance, credit, set-balance
@@ -129,12 +131,12 @@ make help             # Show all targets
 - [x] Watch mode: --watch on customers lookup/entitlements, subscriptions get, charts overview
 - [x] Bulk import/export: products and entitlements (CSV + JSON)
 - [x] Interactive mode: products/entitlements/offerings create prompt when TTY
-- [x] Project config transfer: rc export / rc import [beta]
+- [x] Project config transfer: rc export / rc import / rc migrate project --dry-run [beta]
 - [x] Strict token validation (sk_/atk_ prefix + length check)
 - [x] Config validation on save (profile name format)
 - [x] Input validation helpers (internal/validate)
 - [x] Stability labels on commands ([experimental], [beta])
-- [x] 522+ tests, including command-level Cobra integration tests with httptest fixtures
+- [x] 573 default tests across 40 test files (577 with integration tag)
 - [x] Integration test framework (//go:build integration, gated on RC_INTEGRATION_KEY)
 - [x] Makefile with tools, security, test-integration targets
 - [x] gofumpt formatting, golangci-lint v2, pre-commit hook

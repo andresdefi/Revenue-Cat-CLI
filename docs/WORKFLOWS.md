@@ -61,6 +61,20 @@ payload.
 ```bash
 rc apps list --output table
 
+rc setup product \
+  --app-id app1a2b3c4d5 \
+  --store-id com.example.app.monthly \
+  --display-name "Monthly" \
+  --entitlement-key premium \
+  --offering-key default \
+  --package-key '$rc_monthly'
+```
+
+`rc setup product` creates or reuses the product, entitlement, offering,
+package, and product attachments needed for a working access path. Use the
+lower-level commands below when you need separate review or custom sequencing.
+
+```bash
 rc products create \
   --app-id app1a2b3c4d5 \
   --store-id com.example.app.monthly \
@@ -100,8 +114,21 @@ rc packages attach \
   --package-id pkge1a2b3c4d5 \
   --product-id prod_monthly
 
-rc offerings update ofrnge1a2b3c4d5 --is-current
+rc offerings publish ofrnge1a2b3c4d5
 ```
+
+`rc offerings publish` validates that packages and product links exist before
+making the offering current.
+
+## Validate Paywalls
+
+```bash
+rc paywalls validate --output table
+rc paywalls validate --strict
+```
+
+`rc paywalls validate` checks that paywalls exist and that the current offering
+has packages with package-product links.
 
 ## Inspect Customer Access
 
@@ -125,6 +152,12 @@ links first, then inspect the customer purchases and subscriptions.
 ## Move Project Configuration Safely
 
 ```bash
+rc migrate project \
+  --source-project proj_source \
+  --target-project proj_target \
+  --app-map app_source_ios=app_target_ios \
+  --dry-run
+
 rc export --project proj_source --file project-config.json
 
 rc import \
@@ -139,5 +172,6 @@ rc import \
   --app-map app_source_ios=app_target_ios
 ```
 
-`rc export` and `rc import` are beta. Use `--dry-run` first and inspect warnings
-for missing app or product mappings before applying changes.
+`rc migrate project --dry-run`, `rc export`, and `rc import` are beta. Start
+with the migration dry-run plan to inspect creates, reuses, skips, and required
+app mappings before applying an export/import migration.

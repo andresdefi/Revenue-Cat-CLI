@@ -191,3 +191,24 @@ func TestNewImportCmd_Long(t *testing.T) {
 		t.Error("Long description should not be empty")
 	}
 }
+
+func TestMigrateProjectRequiresDryRun(t *testing.T) {
+	result := cmdtest.Run(t, []string{"migrate", "project", "--source-project", "proj_source"})
+	cmdtest.AssertErrorContains(t, result, "requires --dry-run")
+}
+
+func TestMigrateProjectDryRunPlan(t *testing.T) {
+	result := cmdtest.Run(t, []string{"migrate", "project", "--source-project", "proj_source", "--target-project", "proj_target", "--dry-run", "--output", "json"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"object": "project_migration_plan"`)
+	cmdtest.AssertOutputContains(t, result, `"source_project_id": "proj_source"`)
+	cmdtest.AssertOutputContains(t, result, `"target_project_id": "proj_target"`)
+	cmdtest.AssertRequested(t, result, http.MethodGet, "/projects/proj_source/products")
+	cmdtest.AssertRequested(t, result, http.MethodGet, "/projects/proj_target/products")
+
+	for _, req := range result.Requests {
+		if req.Method == http.MethodPost || req.Method == http.MethodDelete {
+			t.Fatalf("migrate project --dry-run should not mutate, got %s %s", req.Method, req.Path)
+		}
+	}
+}
