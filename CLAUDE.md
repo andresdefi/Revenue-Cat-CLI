@@ -64,6 +64,7 @@ internal/
 - **API client:** All requests go through `internal/api/client.go`. Retries with Retry-After header + backoff_ms + exponential fallback. Verbose HTTP logging, dry-run mode, response caching
 - **Error handling:** API errors parsed into `api.Error` struct with type, message, doc_url, StatusCode. Exit codes map HTTP status granularly
 - **Confirmation prompts:** All 13 destructive ops (delete/refund/cancel/revoke) require confirmation. `--yes` skips, non-TTY without `--yes` errors safely
+- **Interactive create flows:** Create/setup commands prompt for missing required values when stdout is a TTY and return `missing required value` errors in non-interactive scripts
 - **Pagination:** Cursor-based with `next_page`. --all and --limit on all 14 list commands
 - **Log levels:** `--log-level error|warn|info|debug`, `--verbose` shorthand for debug, `--quiet` suppresses non-essential output
 - **Dynamic completions:** Tab-complete resource IDs from cached API responses (8 resource types)
@@ -130,13 +131,13 @@ make help             # Show all targets
 - [x] Multi-profile auth: --profile flag, RC_PROFILE env, TOML config with migration
 - [x] Watch mode: --watch on customers lookup/entitlements, subscriptions get, charts overview
 - [x] Bulk import/export: products and entitlements (CSV + JSON)
-- [x] Interactive mode: products/entitlements/offerings create prompt when TTY
+- [x] Interactive mode: create/setup commands prompt for missing required values when TTY
 - [x] Project config transfer: rc export / rc import / rc migrate project --dry-run [beta]
 - [x] Strict token validation (sk_/atk_ prefix + length check)
 - [x] Config validation on save (profile name format)
 - [x] Input validation helpers (internal/validate)
 - [x] Stability labels on commands ([experimental], [beta])
-- [x] 596 default tests across 41 test files (600 with integration tag)
+- [x] 603 default tests across 41 test files (607 with integration tag)
 - [x] Integration test framework (//go:build integration, gated on RC_INTEGRATION_KEY)
 - [x] Makefile with tools, security, test-integration targets
 - [x] gofumpt formatting, golangci-lint v2, pre-commit hook

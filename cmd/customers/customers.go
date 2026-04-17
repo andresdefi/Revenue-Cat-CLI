@@ -245,12 +245,21 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a customer",
+		Long: `Create a customer. Required flags are prompted interactively when
+running in a terminal and not provided on the command line.`,
 		Example: `  # Create a customer
   rc customers create --id user-456
 
   # Create and output as JSON
-  rc customers create --id user-456 -o json`,
+  rc customers create --id user-456 -o json
+
+  # Interactive mode (prompts for missing fields)
+  rc customers create`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&customerID, "Customer ID", "user-456"); err != nil {
+				return err
+			}
+
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -283,7 +292,6 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&customerID, "id", "", "customer ID (required)")
-	cmdutil.MustMarkFlagRequired(cmd, "id")
 	return cmd
 }
 

@@ -75,6 +75,7 @@ docs/
 - **Project transfer:** `rc export`/`rc import` and `rc migrate project --dry-run` are beta. Export/import carries apps, products, entitlements, offerings, packages, attachments, metadata, and archive/current state where the API allows it
 - **Project health:** `rc project doctor` reads apps, products, entitlements, offerings, packages, and package products to report setup issues. `--strict` returns non-zero on failed health checks
 - **Launch readiness:** `rc launch-check` reuses project health and summarizes whether required launch paths exist. `--strict` returns non-zero when the project is not ready
+- **Interactive create flows:** Create/setup commands prompt for missing required values when stdout is a TTY and return `missing required value` errors in non-interactive scripts
 - **Generated docs:** `docs/COMMANDS.md` is generated from Cobra. Run `make docs` after command changes
 - **Correctness harness:** Request-body golden tests, pagination contract tests, and opt-in integration tests guard API semantics
 
@@ -121,7 +122,7 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 596 default tests across 41 test files (600 with integration tag)
+- [x] 603 default tests across 41 test files (607 with integration tag)
 - [x] Request golden tests, pagination contract tests, generated docs drift test, opt-in integration tests
 - [x] Makefile with build/test/lint/fmt/docs/check targets
 - [x] .golangci.yml config
@@ -140,7 +141,6 @@ make help           # Show all targets
 - Go: `go install github.com/andresdefi/rc@latest`
 
 ## Future Improvements
-- [ ] Interactive mode for create commands (prompt for required fields)
 - [ ] `--watch` flag for polling commands
 - [ ] More edge-case tests for project transfer and import/export fixtures
 - [ ] Documentation website

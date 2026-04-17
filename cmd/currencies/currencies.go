@@ -140,10 +140,23 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		name string
 	)
 	cmd := &cobra.Command{
-		Use: "create", Short: "Create a virtual currency",
+		Use:   "create",
+		Short: "Create a virtual currency",
+		Long: `Create a virtual currency. Required flags are prompted interactively
+when running in a terminal and not provided on the command line.`,
 		Example: `  # Create a virtual currency
-  rc currencies create --code COINS --name "Gold Coins"`,
+  rc currencies create --code COINS --name "Gold Coins"
+
+  # Interactive mode (prompts for missing fields)
+  rc currencies create`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&code, "Currency code", "COINS"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptIfEmpty(&name, "Display name", "Gold Coins"); err != nil {
+				return err
+			}
+
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -171,8 +184,6 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&code, "code", "", "currency code, e.g. COINS (required)")
 	cmd.Flags().StringVar(&name, "name", "", "display name (required)")
-	cmdutil.MustMarkFlagRequired(cmd, "code")
-	cmdutil.MustMarkFlagRequired(cmd, "name")
 	return cmd
 }
 

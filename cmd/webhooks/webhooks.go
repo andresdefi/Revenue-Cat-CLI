@@ -134,10 +134,23 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		webhookURL string
 	)
 	cmd := &cobra.Command{
-		Use: "create", Short: "Create a new webhook integration",
+		Use:   "create",
+		Short: "Create a new webhook integration",
+		Long: `Create a new webhook integration. Required flags are prompted
+interactively when running in a terminal and not provided on the command line.`,
 		Example: `  # Create a webhook
-  rc webhooks create --name "My Webhook" --url https://example.com/webhook`,
+  rc webhooks create --name "My Webhook" --url https://example.com/webhook
+
+  # Interactive mode (prompts for missing fields)
+  rc webhooks create`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&name, "Webhook name", "My Webhook"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptIfEmpty(&webhookURL, "Webhook URL", "https://example.com/webhook"); err != nil {
+				return err
+			}
+
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -165,8 +178,6 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&name, "name", "", "webhook name (required)")
 	cmd.Flags().StringVar(&webhookURL, "url", "", "webhook endpoint URL (required)")
-	cmdutil.MustMarkFlagRequired(cmd, "name")
-	cmdutil.MustMarkFlagRequired(cmd, "url")
 	return cmd
 }
 

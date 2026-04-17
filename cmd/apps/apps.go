@@ -179,7 +179,10 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		Long: `Create a new platform app in a project.
 
 Supported types: app_store, play_store, amazon, stripe, rc_billing,
-roku, mac_app_store, paddle`,
+roku, mac_app_store, paddle.
+
+Required flags are prompted interactively when running in a terminal and not
+provided on the command line.`,
 		Example: `  # Create an iOS app
   rc apps create --name "iOS App" --type app_store --bundle-id com.example.app
 
@@ -187,8 +190,18 @@ roku, mac_app_store, paddle`,
   rc apps create --name "Android App" --type play_store --bundle-id com.example.app
 
   # Create a Stripe app
-  rc apps create --name "Web Payments" --type stripe`,
+  rc apps create --name "Web Payments" --type stripe
+
+  # Interactive mode (prompts for missing fields)
+  rc apps create`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&name, "App name", "iOS App"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptSelect(&appType, "Platform type", []string{"app_store", "play_store", "amazon", "stripe", "rc_billing", "roku", "mac_app_store", "paddle"}); err != nil {
+				return err
+			}
+
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -241,8 +254,6 @@ roku, mac_app_store, paddle`,
 	cmd.Flags().StringVar(&name, "name", "", "app name (required)")
 	cmd.Flags().StringVar(&appType, "type", "", "platform type: app_store, play_store, amazon, stripe, rc_billing, roku, mac_app_store, paddle (required)")
 	cmd.Flags().StringVar(&bundleID, "bundle-id", "", "bundle ID / package name (for app_store, play_store, amazon)")
-	cmdutil.MustMarkFlagRequired(cmd, "name")
-	cmdutil.MustMarkFlagRequired(cmd, "type")
 	return cmd
 }
 

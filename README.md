@@ -93,6 +93,8 @@ rc mcp serve
 
 All commands support `--profile <name>` to select the config profile and `--output json|table|markdown` to control output format. The generated command reference is in [docs/COMMANDS.md](docs/COMMANDS.md).
 
+Create/setup commands prompt for missing required values when run in a terminal. In scripts and pipes they fail fast with a `missing required value` error, so automation stays predictable.
+
 ### Foundation
 
 | Command | Description |

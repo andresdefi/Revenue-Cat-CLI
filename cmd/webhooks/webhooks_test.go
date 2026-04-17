@@ -72,7 +72,12 @@ func TestWebhooksCreateJSON(t *testing.T) {
 
 func TestWebhooksCreateMissingRequiredFlag(t *testing.T) {
 	result := cmdtest.Run(t, []string{"webhooks", "create"})
-	cmdtest.AssertErrorContains(t, result, "required flag")
+	cmdtest.AssertErrorContains(t, result, "missing required value: Webhook name")
+}
+
+func TestWebhooksCreateMissingURLFlag(t *testing.T) {
+	result := cmdtest.Run(t, []string{"webhooks", "create", "--name", "Events"})
+	cmdtest.AssertErrorContains(t, result, "missing required value: Webhook URL")
 }
 
 func TestWebhooksDeleteSuccess(t *testing.T) {

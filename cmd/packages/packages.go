@@ -189,12 +189,27 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new package in an offering",
+		Long: `Create a new package in an offering. Required flags are prompted
+interactively when running in a terminal and not provided on the command line.`,
 		Example: `  # Create a package
   rc packages create --offering-id ofrnge1a2b3c --lookup-key monthly --display-name "Monthly"
 
   # Create with position
-  rc packages create --offering-id ofrnge1a2b3c --lookup-key annual --display-name "Annual" --position 1`,
+  rc packages create --offering-id ofrnge1a2b3c --lookup-key annual --display-name "Annual" --position 1
+
+  # Interactive mode (prompts for missing fields)
+  rc packages create`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&offeringID, "Offering ID", "ofrnge1a2b3c4d5"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptIfEmpty(&lookupKey, "Lookup key", "$rc_monthly"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptIfEmpty(&displayName, "Display name", "Monthly"); err != nil {
+				return err
+			}
+
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -233,9 +248,6 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&lookupKey, "lookup-key", "", "lookup key (required)")
 	cmd.Flags().StringVar(&displayName, "display-name", "", "display name (required)")
 	cmd.Flags().IntVar(&position, "position", 0, "display position (min 1)")
-	cmdutil.MustMarkFlagRequired(cmd, "offering-id")
-	cmdutil.MustMarkFlagRequired(cmd, "lookup-key")
-	cmdutil.MustMarkFlagRequired(cmd, "display-name")
 	return cmd
 }
 
