@@ -81,7 +81,11 @@ Confirmed and fixed in the CLI:
   explicit `--app-map source=target` overrides.
 - Import warns and skips dependent links when a source product cannot be mapped
   into the target project.
-- Always run import with `--dry-run` before applying a project migration.
+- Fixture tests cover archived state export/import, idempotent re-imports,
+  partial product create failures, attachment restoration, and migration
+  dry-run archive planning.
+- Always run `rc migrate project --dry-run` before applying an export/import
+  migration.
 
 ## Error Handling
 
