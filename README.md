@@ -287,7 +287,7 @@ rc subscriptions get sub1ab2c3d4e5
 rc customers grant \
   --customer-id "user-123" \
   --entitlement-id entla1b2c3 \
-  --expires-at 1738281600000
+  --duration 30d
 
 # Later, revoke if needed
 rc customers revoke --customer-id "user-123" --entitlement-id entla1b2c3
@@ -367,6 +367,7 @@ rc import --file project-config.json --project proj_target --app-map app_source=
 | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) | Copyable RevenueCat workflow recipes |
 | [docs/API_NOTES.md](docs/API_NOTES.md) | API semantics, pagination, transfer, and error notes |
 | [docs/CI_CD.md](docs/CI_CD.md) | CI/CD setup and non-interactive usage |
+| [docs/MCP.md](docs/MCP.md) | MCP server setup and exposed tool inventory |
 | [docs/TESTING.md](docs/TESTING.md) | Fixture, golden request, pagination, and integration test guidance |
 
 ### MCP server setup

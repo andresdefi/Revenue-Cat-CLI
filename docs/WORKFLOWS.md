@@ -50,11 +50,24 @@ rc apps update app1a2b3c4d5 \
   --subscription-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129
 ```
 
+```bash
+rc apps update app1a2b3c4d5 \
+  --asc-api-key-file ./AuthKey_ABC123.p8 \
+  --asc-api-key-id ABC123 \
+  --asc-api-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129 \
+  --asc-vendor-number 12345678
+```
+
+```bash
+rc apps creds status app1a2b3c4d5
+```
+
 `--subscription-key-file` reads the `.p8` file from disk and sends its contents
-as `app_store.subscription_private_key`. RevenueCat API v2 does not currently
-document a Google Play service-account credential field for app updates, so
-`--service-account-file` fails with guidance instead of sending an unsupported
-payload.
+as `app_store.subscription_private_key`. `--asc-*` is shorthand for App Store
+Connect fields in `rc` and does not require the separate `asc` CLI. RevenueCat
+API v2 does not currently document a Google Play service-account credential
+field for app updates, so `--service-account-file` fails with guidance instead
+of sending an unsupported payload.
 
 ## Set Up Monthly And Yearly Products
 

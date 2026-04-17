@@ -2,7 +2,9 @@ package customers_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/andresdefi/rc/internal/cmdtest"
 )
@@ -170,6 +172,50 @@ func TestCustomersGrantSuccess(t *testing.T) {
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/customers/cust_cmdtest/actions/grant_entitlement")
 }
 
+func TestCustomersGrantDurationComputesExpiration(t *testing.T) {
+	before := time.Now().Add(29 * 24 * time.Hour).UnixMilli()
+	result := cmdtest.Run(t, []string{"customers", "grant", "--customer-id", "cust_cmdtest", "--entitlement-id", "entl_cmdtest", "--duration", "30d"})
+	after := time.Now().Add(31 * 24 * time.Hour).UnixMilli()
+
+	cmdtest.AssertSuccess(t, result)
+	body := customerGrantBody(t, result)
+	if body["entitlement_id"] != "entl_cmdtest" {
+		t.Fatalf("entitlement_id = %#v, want entl_cmdtest", body["entitlement_id"])
+	}
+	expiresAt, ok := body["expires_at"].(float64)
+	if !ok {
+		t.Fatalf("expires_at = %#v, want number", body["expires_at"])
+	}
+	if got := int64(expiresAt); got < before || got > after {
+		t.Fatalf("expires_at = %d, want between %d and %d", got, before, after)
+	}
+}
+
+func TestCustomersGrantLifetimeUsesFarFutureExpiration(t *testing.T) {
+	result := cmdtest.Run(t, []string{"customers", "grant", "--customer-id", "cust_cmdtest", "--entitlement-id", "entl_cmdtest", "--lifetime"})
+
+	cmdtest.AssertSuccess(t, result)
+	body := customerGrantBody(t, result)
+	if got := int64(body["expires_at"].(float64)); got != 253402300799999 {
+		t.Fatalf("expires_at = %d, want far-future lifetime timestamp", got)
+	}
+}
+
+func TestCustomersGrantRequiresExpirationChoice(t *testing.T) {
+	result := cmdtest.Run(t, []string{"customers", "grant", "--customer-id", "cust_cmdtest", "--entitlement-id", "entl_cmdtest"})
+	cmdtest.AssertErrorContains(t, result, "one of --expires-at, --duration, or --lifetime is required")
+}
+
+func TestCustomersGrantRejectsMultipleExpirationChoices(t *testing.T) {
+	result := cmdtest.Run(t, []string{"customers", "grant", "--customer-id", "cust_cmdtest", "--entitlement-id", "entl_cmdtest", "--duration", "30d", "--lifetime"})
+	cmdtest.AssertErrorContains(t, result, "use only one of --expires-at, --duration, or --lifetime")
+}
+
+func TestCustomersGrantRejectsInvalidDuration(t *testing.T) {
+	result := cmdtest.Run(t, []string{"customers", "grant", "--customer-id", "cust_cmdtest", "--entitlement-id", "entl_cmdtest", "--duration", "soon"})
+	cmdtest.AssertErrorContains(t, result, "invalid --duration")
+}
+
 func TestCustomersRevokeSuccess(t *testing.T) {
 	result := cmdtest.Run(t, []string{"customers", "revoke", "--customer-id", "cust_cmdtest", "--entitlement-id", "entl_cmdtest"})
 	cmdtest.AssertSuccess(t, result)
@@ -180,4 +226,19 @@ func TestCustomersRevokeSuccess(t *testing.T) {
 func TestCustomersInvalidOutputFlag(t *testing.T) {
 	result := cmdtest.Run(t, []string{"customers", "list", "--output", "yaml"})
 	cmdtest.AssertErrorContains(t, result, "invalid output format")
+}
+
+func customerGrantBody(t *testing.T, result cmdtest.Result) map[string]any {
+	t.Helper()
+	for _, req := range result.Requests {
+		if req.Method == "POST" && req.Path == "/projects/proj_cmdtest/customers/cust_cmdtest/actions/grant_entitlement" {
+			var body map[string]any
+			if err := json.Unmarshal([]byte(req.Body), &body); err != nil {
+				t.Fatalf("grant body is not JSON: %v", err)
+			}
+			return body
+		}
+	}
+	t.Fatalf("missing grant request; got %#v", result.Requests)
+	return nil
 }

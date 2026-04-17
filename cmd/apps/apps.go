@@ -36,6 +36,7 @@ Examples:
 	root.AddCommand(completions.WithCompletion(newGetCmd(projectID, outputFormat), c))
 	root.AddCommand(newCreateCmd(projectID, outputFormat))
 	root.AddCommand(completions.WithCompletion(newUpdateCmd(projectID, outputFormat), c))
+	root.AddCommand(newCredsCmd(projectID, outputFormat, c))
 	root.AddCommand(completions.WithCompletion(newDeleteCmd(projectID), c))
 	root.AddCommand(newPublicKeysCmd(projectID, outputFormat))
 	root.AddCommand(newStoreKitConfigCmd(projectID, outputFormat))
@@ -160,6 +161,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 					{"Project ID", app.ProjectID},
 					{"Created", output.FormatTimestamp(app.CreatedAt)},
 				})
+				appendAppStoreRows(t, appStoreFields(app))
+				appendPlayStoreRows(t, app.PlayStore)
 			})
 			return nil
 		},
@@ -315,33 +318,33 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 			if c.Flags().Changed("shared-secret") {
 				appStore["shared_secret"] = sharedSecret
 			}
-			if c.Flags().Changed("subscription-key-file") {
+			if flagChanged(c, "subscription-key-file") {
 				contents, err := os.ReadFile(subscriptionKeyFile)
 				if err != nil {
 					return fmt.Errorf("read subscription key file: %w", err)
 				}
 				appStore["subscription_private_key"] = string(contents)
 			}
-			if c.Flags().Changed("subscription-key-id") {
+			if flagChanged(c, "subscription-key-id") {
 				appStore["subscription_key_id"] = subscriptionKeyID
 			}
-			if c.Flags().Changed("subscription-key-issuer") {
+			if flagChanged(c, "subscription-key-issuer") {
 				appStore["subscription_key_issuer"] = subscriptionIssuer
 			}
-			if c.Flags().Changed("app-store-connect-api-key-file") {
+			if flagChanged(c, "app-store-connect-api-key-file", "asc-api-key-file") {
 				contents, err := os.ReadFile(connectKeyFile)
 				if err != nil {
 					return fmt.Errorf("read App Store Connect API key file: %w", err)
 				}
 				appStore["app_store_connect_api_key"] = string(contents)
 			}
-			if c.Flags().Changed("app-store-connect-api-key-id") {
+			if flagChanged(c, "app-store-connect-api-key-id", "asc-api-key-id") {
 				appStore["app_store_connect_api_key_id"] = connectKeyID
 			}
-			if c.Flags().Changed("app-store-connect-api-key-issuer") {
+			if flagChanged(c, "app-store-connect-api-key-issuer", "asc-api-key-issuer") {
 				appStore["app_store_connect_api_key_issuer"] = connectIssuer
 			}
-			if c.Flags().Changed("app-store-connect-vendor-number") {
+			if flagChanged(c, "app-store-connect-vendor-number", "asc-vendor-number") {
 				appStore["app_store_connect_vendor_number"] = connectVendorNumber
 			}
 			if len(appStore) > 0 {
@@ -381,8 +384,189 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&connectKeyID, "app-store-connect-api-key-id", "", "App Store Connect API key ID")
 	cmd.Flags().StringVar(&connectIssuer, "app-store-connect-api-key-issuer", "", "App Store Connect API key issuer ID")
 	cmd.Flags().StringVar(&connectVendorNumber, "app-store-connect-vendor-number", "", "App Store Connect vendor number")
+	cmd.Flags().StringVar(&connectKeyFile, "asc-api-key-file", "", "alias for --app-store-connect-api-key-file")
+	cmd.Flags().StringVar(&connectKeyID, "asc-api-key-id", "", "alias for --app-store-connect-api-key-id")
+	cmd.Flags().StringVar(&connectIssuer, "asc-api-key-issuer", "", "alias for --app-store-connect-api-key-issuer")
+	cmd.Flags().StringVar(&connectVendorNumber, "asc-vendor-number", "", "alias for --app-store-connect-vendor-number")
 	cmd.Flags().StringVar(&serviceAccountFile, "service-account-file", "", "path to Google Play service account JSON file (not supported by RevenueCat API v2 app update)")
 	return cmd
+}
+
+type credentialsStatusReport struct {
+	Object    string                `json:"object"`
+	ProjectID string                `json:"project_id"`
+	AppID     string                `json:"app_id"`
+	AppName   string                `json:"app_name"`
+	AppType   string                `json:"app_type"`
+	AppStore  *appStoreCredsStatus  `json:"app_store,omitempty"`
+	PlayStore *playStoreCredsStatus `json:"play_store,omitempty"`
+}
+
+type appStoreCredsStatus struct {
+	BundleID                     string `json:"bundle_id,omitempty"`
+	SubscriptionKeyConfigured    *bool  `json:"subscription_key_configured,omitempty"`
+	AppStoreConnectKeyConfigured *bool  `json:"app_store_connect_api_key_configured,omitempty"`
+	SharedSecretConfigured       *bool  `json:"shared_secret_configured,omitempty"`
+}
+
+type playStoreCredsStatus struct {
+	PackageName string `json:"package_name,omitempty"`
+	Message     string `json:"message"`
+}
+
+func newCredsCmd(projectID, outputFormat *string, completion func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective)) *cobra.Command {
+	root := &cobra.Command{
+		Use:   "creds",
+		Short: "Inspect app credential configuration",
+		Long: `Inspect app credential configuration.
+
+RevenueCat API v2 exposes whether App Store keys are configured. This status
+does not validate the credentials against Apple; it reports the configured
+state returned by RevenueCat.`,
+	}
+	root.AddCommand(completions.WithCompletion(newCredsStatusCmd(projectID, outputFormat), completion))
+	return root
+}
+
+func newCredsStatusCmd(projectID, outputFormat *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "status <app-id>",
+		Short: "Show app credential configuration status",
+		Example: `  # Show App Store credential configuration
+  rc apps creds status app1a2b3c4d5
+
+  # Emit JSON for automation
+  rc apps creds status app1a2b3c4d5 --output json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+			data, err := client.Get(fmt.Sprintf("/projects/%s/apps/%s", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			if err != nil {
+				return err
+			}
+			var app api.App
+			if err := json.Unmarshal(data, &app); err != nil {
+				return fmt.Errorf("failed to parse response: %w", err)
+			}
+
+			report := buildCredentialsStatusReport(pid, app)
+			format := cmdutil.GetOutputFormat(outputFormat)
+			output.Print(format, report, renderCredentialsStatus(report))
+			return nil
+		},
+	}
+}
+
+func buildCredentialsStatusReport(projectID string, app api.App) credentialsStatusReport {
+	report := credentialsStatusReport{
+		Object:    "app_credentials_status",
+		ProjectID: projectID,
+		AppID:     app.ID,
+		AppName:   app.Name,
+		AppType:   app.Type,
+	}
+	if store := appStoreFields(app); store != nil {
+		report.AppStore = &appStoreCredsStatus{
+			BundleID:                     store.BundleID,
+			SubscriptionKeyConfigured:    store.SubscriptionKeyConfigured,
+			AppStoreConnectKeyConfigured: store.AppStoreConnectAPIKeyConfigured,
+			SharedSecretConfigured:       store.SharedSecretConfigured,
+		}
+	}
+	if app.PlayStore != nil {
+		report.PlayStore = &playStoreCredsStatus{
+			PackageName: app.PlayStore.PackageName,
+			Message:     "RevenueCat API v2 app updates expose package_name only; Play Store service-account upload/status is not documented.",
+		}
+	}
+	return report
+}
+
+func renderCredentialsStatus(report credentialsStatusReport) func(t table.Writer) {
+	return func(t table.Writer) {
+		t.AppendHeader(table.Row{"Field", "Value"})
+		t.AppendRows([]table.Row{
+			{"App ID", report.AppID},
+			{"Name", report.AppName},
+			{"Type", report.AppType},
+		})
+		if report.AppStore != nil {
+			t.AppendSeparator()
+			t.AppendRows([]table.Row{
+				{"Bundle ID", valueOrDash(report.AppStore.BundleID)},
+				{"In-App Purchase Key", configuredStatus(report.AppStore.SubscriptionKeyConfigured)},
+				{"App Store Connect API Key", configuredStatus(report.AppStore.AppStoreConnectKeyConfigured)},
+				{"Shared Secret", configuredStatus(report.AppStore.SharedSecretConfigured)},
+			})
+		}
+		if report.PlayStore != nil {
+			t.AppendSeparator()
+			t.AppendRows([]table.Row{
+				{"Package Name", valueOrDash(report.PlayStore.PackageName)},
+				{"Service Account", report.PlayStore.Message},
+			})
+		}
+	}
+}
+
+func appendAppStoreRows(t table.Writer, appStore *api.AppStoreApp) {
+	if appStore == nil {
+		return
+	}
+	t.AppendSeparator()
+	t.AppendRows([]table.Row{
+		{"Bundle ID", valueOrDash(appStore.BundleID)},
+		{"In-App Purchase Key", configuredStatus(appStore.SubscriptionKeyConfigured)},
+		{"App Store Connect API Key", configuredStatus(appStore.AppStoreConnectAPIKeyConfigured)},
+	})
+}
+
+func appendPlayStoreRows(t table.Writer, playStore *api.PlayStoreApp) {
+	if playStore == nil {
+		return
+	}
+	t.AppendSeparator()
+	t.AppendRow(table.Row{"Package Name", valueOrDash(playStore.PackageName)})
+}
+
+func appStoreFields(app api.App) *api.AppStoreApp {
+	if app.AppStore != nil {
+		return app.AppStore
+	}
+	return app.MacAppStore
+}
+
+func configuredStatus(value *bool) string {
+	if value == nil {
+		return "unknown"
+	}
+	if *value {
+		return "configured"
+	}
+	return "not configured"
+}
+
+func valueOrDash(value string) string {
+	if value == "" {
+		return "-"
+	}
+	return value
+}
+
+func flagChanged(cmd *cobra.Command, names ...string) bool {
+	for _, name := range names {
+		if cmd.Flags().Changed(name) {
+			return true
+		}
+	}
+	return false
 }
 
 func newDeleteCmd(projectID *string) *cobra.Command {

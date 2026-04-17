@@ -444,7 +444,7 @@ func TestNewRootCmd_AppsSubcommands(t *testing.T) {
 		subNames[c.Name()] = true
 	}
 
-	expected := []string{"list", "get", "create", "update", "delete", "public-keys", "storekit-config"}
+	expected := []string{"list", "get", "create", "update", "creds", "delete", "public-keys", "storekit-config"}
 	for _, name := range expected {
 		if !subNames[name] {
 			t.Errorf("apps should have subcommand %q", name)

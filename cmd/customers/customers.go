@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/andresdefi/rc/internal/api"
@@ -727,12 +729,24 @@ func newGrantCmd(projectID *string) *cobra.Command {
 		customerID    string
 		entitlementID string
 		expiresAt     int64
+		duration      string
+		lifetime      bool
 	)
 	cmd := &cobra.Command{
 		Use: "grant", Short: "Grant an entitlement to a customer",
 		Example: `  # Grant an entitlement with expiration
-  rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --expires-at 1735689600000`,
+  rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --expires-at 1735689600000
+
+  # Grant access for 30 days
+  rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --duration 30d
+
+  # Grant long-lived access
+  rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --lifetime`,
 		RunE: func(c *cobra.Command, args []string) error {
+			resolvedExpiresAt, err := resolveGrantExpiresAt(c, expiresAt, duration, lifetime, time.Now())
+			if err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -743,7 +757,7 @@ func newGrantCmd(projectID *string) *cobra.Command {
 			}
 			_, err = client.Post(
 				fmt.Sprintf("/projects/%s/customers/%s/actions/grant_entitlement", url.PathEscape(pid), url.PathEscape(customerID)),
-				map[string]any{"entitlement_id": entitlementID, "expires_at": expiresAt},
+				map[string]any{"entitlement_id": entitlementID, "expires_at": resolvedExpiresAt},
 			)
 			if err != nil {
 				return err
@@ -754,11 +768,71 @@ func newGrantCmd(projectID *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&entitlementID, "entitlement-id", "", "entitlement ID to grant (required)")
-	cmd.Flags().Int64Var(&expiresAt, "expires-at", 0, "expiration timestamp in ms since epoch (required)")
+	cmd.Flags().Int64Var(&expiresAt, "expires-at", 0, "expiration timestamp in ms since epoch")
+	cmd.Flags().StringVar(&duration, "duration", "", "grant duration (for example 12h, 30d, 2w)")
+	cmd.Flags().BoolVar(&lifetime, "lifetime", false, "grant long-lived access using a far-future expiration")
 	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
 	cmdutil.MustMarkFlagRequired(cmd, "entitlement-id")
-	cmdutil.MustMarkFlagRequired(cmd, "expires-at")
 	return cmd
+}
+
+const lifetimeGrantExpiresAt int64 = 253402300799999 // 9999-12-31T23:59:59.999Z
+
+func resolveGrantExpiresAt(cmd *cobra.Command, expiresAt int64, duration string, lifetime bool, now time.Time) (int64, error) {
+	choices := 0
+	if cmd.Flags().Changed("expires-at") {
+		choices++
+	}
+	if duration != "" {
+		choices++
+	}
+	if lifetime {
+		choices++
+	}
+	if choices == 0 {
+		return 0, fmt.Errorf("one of --expires-at, --duration, or --lifetime is required")
+	}
+	if choices > 1 {
+		return 0, fmt.Errorf("use only one of --expires-at, --duration, or --lifetime")
+	}
+	if lifetime {
+		return lifetimeGrantExpiresAt, nil
+	}
+	if duration != "" {
+		d, err := parseGrantDuration(duration)
+		if err != nil {
+			return 0, err
+		}
+		return now.Add(d).UnixMilli(), nil
+	}
+	if expiresAt <= 0 {
+		return 0, fmt.Errorf("--expires-at must be a positive millisecond timestamp")
+	}
+	return expiresAt, nil
+}
+
+func parseGrantDuration(value string) (time.Duration, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return 0, fmt.Errorf("--duration is required")
+	}
+	if strings.HasSuffix(trimmed, "d") || strings.HasSuffix(trimmed, "w") {
+		multiplier := 24 * time.Hour
+		if strings.HasSuffix(trimmed, "w") {
+			multiplier = 7 * 24 * time.Hour
+		}
+		number := strings.TrimSpace(trimmed[:len(trimmed)-1])
+		amount, err := strconv.ParseFloat(number, 64)
+		if err != nil || amount <= 0 {
+			return 0, fmt.Errorf("invalid --duration %q (expected a positive duration like 12h, 30d, or 2w)", value)
+		}
+		return time.Duration(amount * float64(multiplier)), nil
+	}
+	duration, err := time.ParseDuration(trimmed)
+	if err != nil || duration <= 0 {
+		return 0, fmt.Errorf("invalid --duration %q (expected a positive duration like 12h, 30d, or 2w)", value)
+	}
+	return duration, nil
 }
 
 func newRevokeCmd(projectID *string) *cobra.Command {
