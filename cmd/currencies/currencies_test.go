@@ -41,7 +41,12 @@ func TestCurrenciesCreateJSON(t *testing.T) {
 
 func TestCurrenciesCreateMissingRequiredFlag(t *testing.T) {
 	result := cmdtest.Run(t, []string{"currencies", "create"})
-	cmdtest.AssertErrorContains(t, result, "required flag")
+	cmdtest.AssertErrorContains(t, result, "missing required value: Currency code")
+}
+
+func TestCurrenciesCreateMissingNameFlag(t *testing.T) {
+	result := cmdtest.Run(t, []string{"currencies", "create", "--code", "COIN"})
+	cmdtest.AssertErrorContains(t, result, "missing required value: Display name")
 }
 
 func TestCurrenciesUpdateJSON(t *testing.T) {

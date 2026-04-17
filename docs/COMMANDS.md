@@ -58,7 +58,10 @@ Create a new app
 Create a new platform app in a project.
 
 Supported types: app_store, play_store, amazon, stripe, rc_billing,
-roku, mac_app_store, paddle
+roku, mac_app_store, paddle.
+
+Required flags are prompted interactively when running in a terminal and not
+provided on the command line.
 
 **Flags**
 
@@ -77,6 +80,9 @@ roku, mac_app_store, paddle
 
   # Create a Stripe app
   rc apps create --name "Web Payments" --type stripe
+
+  # Interactive mode (prompts for missing fields)
+  rc apps create
 ```
 
 #### rc apps delete
@@ -505,6 +511,9 @@ Show a customer's virtual currency balances
 
 Create a virtual currency
 
+Create a virtual currency. Required flags are prompted interactively
+when running in a terminal and not provided on the command line.
+
 **Flags**
 
 - `--code`: currency code, e.g. COINS (required)
@@ -515,6 +524,9 @@ Create a virtual currency
 ```bash
 # Create a virtual currency
   rc currencies create --code COINS --name "Gold Coins"
+
+  # Interactive mode (prompts for missing fields)
+  rc currencies create
 ```
 
 #### rc currencies credit
@@ -690,6 +702,9 @@ List attributes for a customer
 
 Create a customer
 
+Create a customer. Required flags are prompted interactively when
+running in a terminal and not provided on the command line.
+
 **Flags**
 
 - `--id`: customer ID (required)
@@ -702,6 +717,9 @@ Create a customer
 
   # Create and output as JSON
   rc customers create --id user-456 -o json
+
+  # Interactive mode (prompts for missing fields)
+  rc customers create
 ```
 
 #### rc customers delete
@@ -1655,6 +1673,9 @@ Eligibility options: all (default), google_sdk_lt_6, google_sdk_ge_6
 
 Create a new package in an offering
 
+Create a new package in an offering. Required flags are prompted
+interactively when running in a terminal and not provided on the command line.
+
 **Flags**
 
 - `--display-name`: display name (required)
@@ -1670,6 +1691,9 @@ Create a new package in an offering
 
   # Create with position
   rc packages create --offering-id ofrnge1a2b3c --lookup-key annual --display-name "Annual" --position 1
+
+  # Interactive mode (prompts for missing fields)
+  rc packages create
 ```
 
 #### rc packages delete
@@ -1785,6 +1809,9 @@ Manage paywalls
 
 Create a paywall
 
+Create a paywall. Required flags are prompted interactively when
+running in a terminal and not provided on the command line.
+
 **Flags**
 
 - `--offering-id`: offering ID for the paywall (required)
@@ -1794,6 +1821,9 @@ Create a paywall
 ```bash
 # Create a paywall
   rc paywalls create --offering-id ofrnge1a2b3c4d5
+
+  # Interactive mode (prompts for missing fields)
+  rc paywalls create
 ```
 
 #### rc paywalls delete
@@ -2094,6 +2124,9 @@ Manage RevenueCat projects
 
 Create a new project
 
+Create a new project. Required flags are prompted interactively when
+running in a terminal and not provided on the command line.
+
 **Flags**
 
 - `--name`: project name (required)
@@ -2106,6 +2139,9 @@ Create a new project
 
   # Create and output as JSON
   rc projects create --name "My App" -o json
+
+  # Interactive mode (prompts for missing fields)
+  rc projects create
 ```
 
 #### rc projects doctor
@@ -2452,6 +2488,9 @@ Manage webhook integrations
 
 Create a new webhook integration
 
+Create a new webhook integration. Required flags are prompted
+interactively when running in a terminal and not provided on the command line.
+
 **Flags**
 
 - `--name`: webhook name (required)
@@ -2462,6 +2501,9 @@ Create a new webhook integration
 ```bash
 # Create a webhook
   rc webhooks create --name "My Webhook" --url https://example.com/webhook
+
+  # Interactive mode (prompts for missing fields)
+  rc webhooks create
 ```
 
 #### rc webhooks delete

@@ -76,6 +76,16 @@ func TestSetupProductDryRunDoesNotMutate(t *testing.T) {
 	}
 }
 
+func TestSetupProductMissingAppID(t *testing.T) {
+	result := cmdtest.Run(t, []string{"setup", "product", "--store-id", "com.example.premium.monthly"})
+	cmdtest.AssertErrorContains(t, result, "missing required value: App ID")
+}
+
+func TestSetupProductMissingStoreID(t *testing.T) {
+	result := cmdtest.Run(t, []string{"setup", "product", "--app-id", "app_cmdtest"})
+	cmdtest.AssertErrorContains(t, result, "missing required value: Store product identifier")
+}
+
 func setupEmptyHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeSetupJSON(w, map[string]any{"object": "error", "type": "unexpected", "message": "unexpected mutation"})

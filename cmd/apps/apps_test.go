@@ -74,7 +74,12 @@ func TestAppsCreateJSON(t *testing.T) {
 
 func TestAppsCreateMissingRequiredFlag(t *testing.T) {
 	result := cmdtest.Run(t, []string{"apps", "create"})
-	cmdtest.AssertErrorContains(t, result, "required flag")
+	cmdtest.AssertErrorContains(t, result, "missing required value: App name")
+}
+
+func TestAppsCreateMissingTypeFlag(t *testing.T) {
+	result := cmdtest.Run(t, []string{"apps", "create", "--name", "iOS App"})
+	cmdtest.AssertErrorContains(t, result, "missing required value: Platform type")
 }
 
 func TestAppsDeleteSuccess(t *testing.T) {

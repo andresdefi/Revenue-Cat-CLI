@@ -105,12 +105,21 @@ func newCreateCmd(outputFormat *string) *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a new project",
+		Long: `Create a new project. Required flags are prompted interactively when
+running in a terminal and not provided on the command line.`,
 		Example: `  # Create a new project
   rc projects create --name "My App"
 
   # Create and output as JSON
-  rc projects create --name "My App" -o json`,
+  rc projects create --name "My App" -o json
+
+  # Interactive mode (prompts for missing fields)
+  rc projects create`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&name, "Project name", "My App"); err != nil {
+				return err
+			}
+
 			client, err := api.NewClient()
 			if err != nil {
 				return err
@@ -141,7 +150,6 @@ func newCreateCmd(outputFormat *string) *cobra.Command {
 	}
 
 	createCmd.Flags().StringVar(&name, "name", "", "project name (required)")
-	cmdutil.MustMarkFlagRequired(createCmd, "name")
 	return createCmd
 }
 

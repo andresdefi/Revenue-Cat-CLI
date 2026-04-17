@@ -63,7 +63,7 @@ func TestProjectsCreateJSON(t *testing.T) {
 
 func TestProjectsCreateMissingRequiredFlag(t *testing.T) {
 	result := cmdtest.Run(t, []string{"projects", "create"})
-	cmdtest.AssertErrorContains(t, result, "required flag")
+	cmdtest.AssertErrorContains(t, result, "missing required value: Project name")
 }
 
 func TestProjectsDoctorJSON(t *testing.T) {

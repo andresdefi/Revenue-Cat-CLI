@@ -82,7 +82,7 @@ func TestPaywallsCreateTable(t *testing.T) {
 
 func TestPaywallsCreateMissingOfferingID(t *testing.T) {
 	result := cmdtest.Run(t, []string{"paywalls", "create"})
-	cmdtest.AssertErrorContains(t, result, "required flag")
+	cmdtest.AssertErrorContains(t, result, "missing required value: Offering ID")
 }
 
 func TestPaywallsDeleteSuccess(t *testing.T) {

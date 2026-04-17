@@ -132,10 +132,20 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 	var offeringID string
 	cmd := &cobra.Command{
-		Use: "create", Short: "Create a paywall",
+		Use:   "create",
+		Short: "Create a paywall",
+		Long: `Create a paywall. Required flags are prompted interactively when
+running in a terminal and not provided on the command line.`,
 		Example: `  # Create a paywall
-  rc paywalls create --offering-id ofrnge1a2b3c4d5`,
+  rc paywalls create --offering-id ofrnge1a2b3c4d5
+
+  # Interactive mode (prompts for missing fields)
+  rc paywalls create`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&offeringID, "Offering ID", "ofrnge1a2b3c4d5"); err != nil {
+				return err
+			}
+
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -162,7 +172,6 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&offeringID, "offering-id", "", "offering ID for the paywall (required)")
-	cmdutil.MustMarkFlagRequired(cmd, "offering-id")
 	return cmd
 }
 

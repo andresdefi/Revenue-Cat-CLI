@@ -55,7 +55,7 @@ func TestCustomersCreateJSON(t *testing.T) {
 
 func TestCustomersCreateMissingRequiredFlag(t *testing.T) {
 	result := cmdtest.Run(t, []string{"customers", "create"})
-	cmdtest.AssertErrorContains(t, result, "required flag")
+	cmdtest.AssertErrorContains(t, result, "missing required value: Customer ID")
 }
 
 func TestCustomersDeleteSuccess(t *testing.T) {

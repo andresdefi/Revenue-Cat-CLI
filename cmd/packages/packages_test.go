@@ -72,7 +72,17 @@ func TestPackagesCreateJSON(t *testing.T) {
 
 func TestPackagesCreateMissingRequiredFlag(t *testing.T) {
 	result := cmdtest.Run(t, []string{"packages", "create"})
-	cmdtest.AssertErrorContains(t, result, "required flag")
+	cmdtest.AssertErrorContains(t, result, "missing required value: Offering ID")
+}
+
+func TestPackagesCreateMissingLookupKeyFlag(t *testing.T) {
+	result := cmdtest.Run(t, []string{"packages", "create", "--offering-id", "ofrnge_cmdtest"})
+	cmdtest.AssertErrorContains(t, result, "missing required value: Lookup key")
+}
+
+func TestPackagesCreateMissingDisplayNameFlag(t *testing.T) {
+	result := cmdtest.Run(t, []string{"packages", "create", "--offering-id", "ofrnge_cmdtest", "--lookup-key", "$rc_monthly"})
+	cmdtest.AssertErrorContains(t, result, "missing required value: Display name")
 }
 
 func TestPackagesDeleteSuccess(t *testing.T) {

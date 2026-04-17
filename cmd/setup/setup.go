@@ -98,6 +98,13 @@ package key.`,
   # Also make the offering current
   rc setup product --app-id app1a2b3c4 --store-id com.example.app.monthly --make-current`,
 		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&opts.AppID, "App ID", "app1a2b3c4d5"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptIfEmpty(&opts.StoreID, "Store product identifier", "com.example.premium.monthly"); err != nil {
+				return err
+			}
+
 			if opts.DisplayName == "" {
 				opts.DisplayName = opts.StoreID
 			}
@@ -144,8 +151,6 @@ package key.`,
 	cmd.Flags().StringVar(&opts.PackageKey, "package-key", opts.PackageKey, "package lookup key")
 	cmd.Flags().StringVar(&opts.PackageName, "package-name", opts.PackageName, "package display name")
 	cmd.Flags().BoolVar(&opts.MakeCurrent, "make-current", false, "make the offering current after setup")
-	cmdutil.MustMarkFlagRequired(cmd, "app-id")
-	cmdutil.MustMarkFlagRequired(cmd, "store-id")
 	return cmd
 }
 
