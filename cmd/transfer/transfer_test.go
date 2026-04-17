@@ -244,6 +244,50 @@ func TestImportProjectConfig_IsIdempotentForExistingResources(t *testing.T) {
 	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/packages/pkge_cmdtest/actions/attach_products")
 }
 
+func TestImportProjectConfig_UpdatesExistingOfferingAndPackageBodies(t *testing.T) {
+	file := writeTransferFixture(t, `{
+  "version": "2",
+  "apps": [
+    {"object": "app", "id": "app_source", "name": "iOS App", "type": "ios", "project_id": "proj_source", "created_at": 1713072000000}
+  ],
+  "products": [
+    {"object": "product", "id": "prod_source", "store_identifier": "com.example.premium.monthly", "type": "subscription", "state": "active", "display_name": "Premium Monthly", "app_id": "app_source", "created_at": 1713072000000}
+  ],
+  "entitlements": [],
+  "offerings": [
+    {"object": "offering", "id": "ofrnge_source", "lookup_key": "default", "display_name": "Default Plus", "is_current": true, "state": "active", "metadata":{"tier":"gold"},"packages": [
+      {"object": "package", "id": "pkge_source", "lookup_key": "$rc_monthly", "display_name": "Monthly Plus", "position": 2, "products": [
+        {"product_id": "prod_source", "eligibility_criteria": "google_sdk_ge_6"}
+      ]}
+    ]}
+  ]
+}`)
+
+	result := cmdtest.Run(t, []string{"import", "--file", file, "--app-map", "app_source=app_cmdtest"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertNotRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings")
+	cmdtest.AssertNotRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings/ofrnge_cmdtest/packages")
+	assertRequestJSONAmong(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings/ofrnge_cmdtest", map[string]any{
+		"display_name": "Default Plus",
+		"metadata":     map[string]any{"tier": "gold"},
+	})
+	assertRequestJSONAmong(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings/ofrnge_cmdtest", map[string]any{
+		"is_current": true,
+	})
+	cmdtest.AssertRequestJSON(t, result, http.MethodPost, "/projects/proj_cmdtest/packages/pkge_cmdtest", map[string]any{
+		"display_name": "Monthly Plus",
+		"position":     float64(2),
+	})
+	cmdtest.AssertRequestJSON(t, result, http.MethodPost, "/projects/proj_cmdtest/packages/pkge_cmdtest/actions/attach_products", map[string]any{
+		"products": []any{
+			map[string]any{
+				"product_id":           "prod_cmdtest",
+				"eligibility_criteria": "google_sdk_ge_6",
+			},
+		},
+	})
+}
+
 func TestImportProjectConfig_ArchivesImportedEntities(t *testing.T) {
 	file := writeTransferFixture(t, `{
   "version": "2",
@@ -266,6 +310,57 @@ func TestImportProjectConfig_ArchivesImportedEntities(t *testing.T) {
 	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings/ofrnge_cmdtest/actions/archive")
 	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/entitlements/entl_cmdtest/actions/archive")
 	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/products/prod_cmdtest/actions/archive")
+}
+
+func TestImportProjectConfig_WarnsWhenAttachmentCallsFail(t *testing.T) {
+	file := writeTransferFixture(t, `{
+  "version": "2",
+  "apps": [
+    {"object": "app", "id": "app_source", "name": "iOS App", "type": "ios", "project_id": "proj_source", "created_at": 1713072000000}
+  ],
+  "products": [
+    {"object": "product", "id": "prod_source", "store_identifier": "com.example.premium.monthly", "type": "subscription", "state": "active", "display_name": "Premium Monthly", "app_id": "app_source", "created_at": 1713072000000}
+  ],
+  "entitlements": [
+    {"object": "entitlement", "id": "entl_source", "lookup_key": "premium", "display_name": "Premium", "state": "active", "product_ids": ["prod_source"]}
+  ],
+  "offerings": [
+    {"object": "offering", "id": "ofrnge_source", "lookup_key": "default", "display_name": "Default Offering", "is_current": false, "state": "active", "packages": [
+      {"object": "package", "id": "pkge_source", "lookup_key": "$rc_monthly", "display_name": "Monthly", "products": [
+        {"product_id": "prod_source", "eligibility_criteria": "all"}
+      ]}
+    ]}
+  ]
+}`)
+
+	result := cmdtest.Run(t, []string{"import", "--file", file, "--app-map", "app_source=app_cmdtest"}, cmdtest.WithHandler(failAttachmentHandler))
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "Failed to attach products to entitlement premium")
+	cmdtest.AssertOutputContains(t, result, "Failed to attach products to package $rc_monthly")
+}
+
+func TestImportProjectConfig_WarnsWhenArchiveCallsFail(t *testing.T) {
+	file := writeTransferFixture(t, `{
+  "version": "2",
+  "apps": [
+    {"object": "app", "id": "app_source", "name": "iOS App", "type": "ios", "project_id": "proj_source", "created_at": 1713072000000}
+  ],
+  "products": [
+    {"object": "product", "id": "prod_source", "store_identifier": "com.example.premium.monthly", "type": "subscription", "state": "archived", "display_name": "Premium Monthly", "app_id": "app_source", "created_at": 1713072000000}
+  ],
+  "entitlements": [
+    {"object": "entitlement", "id": "entl_source", "lookup_key": "premium", "display_name": "Premium", "state": "archived", "product_ids": ["prod_source"]}
+  ],
+  "offerings": [
+    {"object": "offering", "id": "ofrnge_source", "lookup_key": "default", "display_name": "Default Offering", "is_current": false, "state": "archived"}
+  ]
+}`)
+
+	result := cmdtest.Run(t, []string{"import", "--file", file, "--app-map", "app_source=app_cmdtest"}, cmdtest.WithHandler(failArchiveHandler))
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "Failed to archive offering default")
+	cmdtest.AssertOutputContains(t, result, "Failed to archive entitlement premium")
+	cmdtest.AssertOutputContains(t, result, "Failed to archive product com.example.premium.monthly")
 }
 
 func TestImportProjectConfig_ContinuesAfterProductCreateFailure(t *testing.T) {
@@ -351,6 +446,41 @@ func writeTransferFixture(t *testing.T, data string) string {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	return file
+}
+
+func assertRequestJSONAmong(t *testing.T, result cmdtest.Result, method, requestPath string, want map[string]any) {
+	t.Helper()
+	wantRaw, _ := json.Marshal(want)
+	for _, req := range result.Requests {
+		if req.Method != method || req.Path != requestPath {
+			continue
+		}
+		var got map[string]any
+		if err := json.Unmarshal([]byte(req.Body), &got); err != nil {
+			t.Fatalf("request body for %s %s is not JSON: %v\nbody: %s", method, requestPath, err, req.Body)
+		}
+		gotRaw, _ := json.Marshal(got)
+		if string(gotRaw) == string(wantRaw) {
+			return
+		}
+	}
+	t.Fatalf("missing request %s %s with body %s; got %#v", method, requestPath, wantRaw, result.Requests)
+}
+
+func failAttachmentHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/actions/attach_products") {
+		writeTransferJSON(w, http.StatusInternalServerError, transferError("server_error", "temporary attachment failure"))
+		return
+	}
+	cmdtest.DefaultHandler(w, r)
+}
+
+func failArchiveHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/actions/archive") {
+		writeTransferJSON(w, http.StatusInternalServerError, transferError("server_error", "temporary archive failure"))
+		return
+	}
+	cmdtest.DefaultHandler(w, r)
 }
 
 func archivedMigrationFixtureHandler(w http.ResponseWriter, r *http.Request) {
