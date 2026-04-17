@@ -29,13 +29,11 @@ Confirmed and fixed in the CLI:
 - App Store app updates document App Store Connect API-key fields under
   `app_store`; `rc apps update` now exposes the documented
   `--app-store-connect-*` flags.
-
-Known limitation retained:
-
 - `POST /products/{product_id}/create_in_store` allows an omitted body for
   in-app purchase products, but subscription products require
-  `store_information`. `rc products push-to-store` currently sends no body, so
-  subscription store-information support remains a future enhancement.
+  `store_information`. `rc products push-to-store` now keeps the no-body path
+  for in-app purchases and exposes subscription store-information flags for
+  subscriptions.
 
 ## Request Semantics
 
@@ -43,6 +41,10 @@ Known limitation retained:
 - Mutating commands send JSON bodies through `internal/api.Client.Post`.
 - Archive and unarchive operations use action endpoints such as
   `/actions/archive` and `/actions/unarchive`.
+- Product push-to-store can send no body for in-app purchase products, or
+  `store_information.duration`, `store_information.subscription_group_name`,
+  and optionally `store_information.subscription_group_id` for subscription
+  products.
 - Attach and detach operations use action endpoints with explicit ID arrays.
 - Offering unarchive can optionally cascade to archived referenced products via
   `unarchive_referenced_entities`.
