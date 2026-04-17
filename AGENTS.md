@@ -135,14 +135,14 @@ make help           # Show all targets
 - [x] Pre-commit hook
 
 ## Release
-- **v0.2.0** released 2026-04-15
+- **v0.3.0** released 2026-04-17
 - Homebrew: `brew install andresdefi/tap/rc`
 - Install script: `curl -fsSL https://raw.githubusercontent.com/andresdefi/Revenue-Cat-CLI/main/install.sh | sh`
 - Go: `go install github.com/andresdefi/rc@latest`
 
 ## Future Improvements
-- [ ] `--watch` flag for polling commands
 - [ ] More edge-case tests for project transfer and import/export fixtures
+- [ ] Optional App Store Connect CLI integration recipes
 - [ ] Documentation website
 - [ ] Apple code signing for macOS binaries
 - [ ] Set up HOMEBREW_TAP_TOKEN secret for auto formula updates on release
