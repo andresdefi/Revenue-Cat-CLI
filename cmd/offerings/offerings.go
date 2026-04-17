@@ -408,11 +408,15 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 }
 
 func newUnarchiveCmd(projectID *string) *cobra.Command {
-	return &cobra.Command{
+	var unarchiveReferenced bool
+	cmd := &cobra.Command{
 		Use:   "unarchive <offering-id>",
 		Short: "Unarchive an offering",
 		Example: `  # Unarchive an offering
-  rc offerings unarchive ofrnge1a2b3c4d5`,
+  rc offerings unarchive ofrnge1a2b3c4d5
+
+  # Also unarchive archived products referenced by the offering's packages
+  rc offerings unarchive ofrnge1a2b3c4d5 --unarchive-referenced-entities`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
@@ -423,7 +427,11 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_, err = client.Post(fmt.Sprintf("/projects/%s/offerings/%s/actions/unarchive", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			var body any
+			if c.Flags().Changed("unarchive-referenced-entities") {
+				body = map[string]any{"unarchive_referenced_entities": unarchiveReferenced}
+			}
+			_, err = client.Post(fmt.Sprintf("/projects/%s/offerings/%s/actions/unarchive", url.PathEscape(pid), url.PathEscape(args[0])), body)
 			if err != nil {
 				return err
 			}
@@ -431,4 +439,6 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&unarchiveReferenced, "unarchive-referenced-entities", false, "also unarchive archived products referenced by this offering's packages")
+	return cmd
 }

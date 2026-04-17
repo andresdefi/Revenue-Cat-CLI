@@ -335,6 +335,7 @@ func newCreditCmd(projectID *string) *cobra.Command {
 		customerID string
 		code       string
 		amount     int64
+		reference  string
 	)
 	cmd := &cobra.Command{
 		Use: "credit", Short: "Create a virtual currency transaction (credit/debit)",
@@ -354,7 +355,7 @@ func newCreditCmd(projectID *string) *cobra.Command {
 			}
 			_, err = client.Post(
 				fmt.Sprintf("/projects/%s/customers/%s/virtual_currencies/transactions", url.PathEscape(pid), url.PathEscape(customerID)),
-				map[string]any{"currency_code": code, "amount": amount},
+				currencyAdjustmentBody(code, amount, reference),
 			)
 			if err != nil {
 				return err
@@ -366,6 +367,7 @@ func newCreditCmd(projectID *string) *cobra.Command {
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&code, "code", "", "currency code (required)")
 	cmd.Flags().Int64Var(&amount, "amount", 0, "amount (positive=credit, negative=debit) (required)")
+	cmd.Flags().StringVar(&reference, "reference", "", "optional idempotency/reference label")
 	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
 	cmdutil.MustMarkFlagRequired(cmd, "code")
 	cmdutil.MustMarkFlagRequired(cmd, "amount")
@@ -377,6 +379,7 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 		customerID string
 		code       string
 		balance    int64
+		reference  string
 	)
 	cmd := &cobra.Command{
 		Use: "set-balance", Short: "Set a customer's virtual currency balance directly",
@@ -393,7 +396,7 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 			}
 			_, err = client.Post(
 				fmt.Sprintf("/projects/%s/customers/%s/virtual_currencies/update_balance", url.PathEscape(pid), url.PathEscape(customerID)),
-				map[string]any{"currency_code": code, "balance": balance},
+				currencyAdjustmentBody(code, balance, reference),
 			)
 			if err != nil {
 				return err
@@ -405,8 +408,17 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 	cmd.Flags().StringVar(&customerID, "customer-id", "", "customer ID (required)")
 	cmd.Flags().StringVar(&code, "code", "", "currency code (required)")
 	cmd.Flags().Int64Var(&balance, "balance", 0, "new balance value (required)")
+	cmd.Flags().StringVar(&reference, "reference", "", "optional idempotency/reference label")
 	cmdutil.MustMarkFlagRequired(cmd, "customer-id")
 	cmdutil.MustMarkFlagRequired(cmd, "code")
 	cmdutil.MustMarkFlagRequired(cmd, "balance")
 	return cmd
+}
+
+func currencyAdjustmentBody(code string, value int64, reference string) map[string]any {
+	body := map[string]any{"adjustments": map[string]int64{code: value}}
+	if reference != "" {
+		body["reference"] = reference
+	}
+	return body
 }

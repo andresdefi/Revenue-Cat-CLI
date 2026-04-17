@@ -165,12 +165,14 @@ All commands support `--profile <name>` to select the config profile and `--outp
 
 | Command | Description |
 |---------|-------------|
-| `rc subscriptions list/get` | View subscriptions |
+| `rc subscriptions list --store-subscription-id ...` | Search subscriptions by store ID |
+| `rc subscriptions get` | View a subscription |
 | `rc subscriptions transactions/entitlements` | Subscription details |
 | `rc subscriptions cancel/refund` | Cancel or refund |
 | `rc subscriptions refund-transaction` | Refund specific transaction |
 | `rc subscriptions management-url` | Get management portal URL |
-| `rc purchases list/get/entitlements/refund` | View and refund purchases |
+| `rc purchases list --store-purchase-id ...` | Search purchases by store ID |
+| `rc purchases get/entitlements/refund` | View and refund purchases |
 
 ### Integrations & Analytics
 
@@ -180,7 +182,8 @@ All commands support `--profile <name>` to select the config profile and `--outp
 | `rc charts overview` | Metrics overview |
 | `rc charts show <name>` | Chart data (revenue, mrr, etc.) |
 | `rc charts options <name>` | Chart filter options |
-| `rc paywalls list/get/create/delete` | Manage paywalls |
+| `rc paywalls list/get/delete` | Manage paywalls |
+| `rc paywalls create --offering-id ...` | Create a paywall for an offering |
 | `rc paywalls validate` | Validate paywall readiness |
 | `rc audit-logs list` | View audit logs |
 

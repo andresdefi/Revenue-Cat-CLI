@@ -130,10 +130,11 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 }
 
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var offeringID string
+	cmd := &cobra.Command{
 		Use: "create", Short: "Create a paywall",
 		Example: `  # Create a paywall
-  rc paywalls create`,
+  rc paywalls create --offering-id ofrnge1a2b3c4d5`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -143,7 +144,7 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			data, err := client.Post(fmt.Sprintf("/projects/%s/paywalls", url.PathEscape(pid)), map[string]any{})
+			data, err := client.Post(fmt.Sprintf("/projects/%s/paywalls", url.PathEscape(pid)), map[string]any{"offering_id": offeringID})
 			if err != nil {
 				return err
 			}
@@ -160,6 +161,9 @@ func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&offeringID, "offering-id", "", "offering ID for the paywall (required)")
+	cmdutil.MustMarkFlagRequired(cmd, "offering-id")
+	return cmd
 }
 
 func newDeleteCmd(projectID *string) *cobra.Command {

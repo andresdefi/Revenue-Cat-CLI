@@ -75,9 +75,9 @@ func TestGoldenCreateRequestBodies(t *testing.T) {
 		},
 		{
 			name: "paywalls create",
-			args: []string{"paywalls", "create"},
+			args: []string{"paywalls", "create", "--offering-id", "ofrnge_cmdtest"},
 			path: "/projects/proj_cmdtest/paywalls",
-			want: map[string]any{},
+			want: map[string]any{"offering_id": "ofrnge_cmdtest"},
 		},
 		{
 			name: "currencies create",
@@ -158,6 +158,7 @@ func TestGoldenUpdateRequestBodies(t *testing.T) {
 
 func TestGoldenAppStoreCredentialUpdateRequestBody(t *testing.T) {
 	keyFile := writeGoldenFile(t, "SubscriptionKey_ABC123.p8", "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----\n")
+	connectKeyFile := writeGoldenFile(t, "AuthKey_ABC123.p8", "-----BEGIN PRIVATE KEY-----\nconnect123\n-----END PRIVATE KEY-----\n")
 
 	result := cmdtest.Run(t, []string{
 		"apps", "update", "app_cmdtest",
@@ -165,14 +166,22 @@ func TestGoldenAppStoreCredentialUpdateRequestBody(t *testing.T) {
 		"--subscription-key-file", keyFile,
 		"--subscription-key-id", "ABC123",
 		"--subscription-key-issuer", "issuer-123",
+		"--app-store-connect-api-key-file", connectKeyFile,
+		"--app-store-connect-api-key-id", "CONNECT123",
+		"--app-store-connect-api-key-issuer", "connect-issuer-123",
+		"--app-store-connect-vendor-number", "12345678",
 	})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertRequestJSON(t, result, http.MethodPost, "/projects/proj_cmdtest/apps/app_cmdtest", map[string]any{
 		"app_store": map[string]any{
-			"shared_secret":            "shared_secret",
-			"subscription_private_key": "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----\n",
-			"subscription_key_id":      "ABC123",
-			"subscription_key_issuer":  "issuer-123",
+			"shared_secret":                    "shared_secret",
+			"subscription_private_key":         "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----\n",
+			"subscription_key_id":              "ABC123",
+			"subscription_key_issuer":          "issuer-123",
+			"app_store_connect_api_key":        "-----BEGIN PRIVATE KEY-----\nconnect123\n-----END PRIVATE KEY-----\n",
+			"app_store_connect_api_key_id":     "CONNECT123",
+			"app_store_connect_api_key_issuer": "connect-issuer-123",
+			"app_store_connect_vendor_number":  "12345678",
 		},
 	})
 }
@@ -200,6 +209,14 @@ func TestGoldenArchiveActionRequestBodies(t *testing.T) {
 			cmdtest.AssertRequestBody(t, result, http.MethodPost, tt.path, "")
 		})
 	}
+}
+
+func TestGoldenOfferingUnarchiveReferencedEntitiesRequestBody(t *testing.T) {
+	result := cmdtest.Run(t, []string{"offerings", "unarchive", "ofrnge_cmdtest", "--unarchive-referenced-entities"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestJSON(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings/ofrnge_cmdtest/actions/unarchive", map[string]any{
+		"unarchive_referenced_entities": true,
+	})
 }
 
 func TestGoldenAttachDetachRequestBodies(t *testing.T) {

@@ -89,6 +89,9 @@ func TestCurrenciesCreditSuccess(t *testing.T) {
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "Transaction created")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/customers/cust_cmdtest/virtual_currencies/transactions")
+	cmdtest.AssertRequestJSON(t, result, "POST", "/projects/proj_cmdtest/customers/cust_cmdtest/virtual_currencies/transactions", map[string]any{
+		"adjustments": map[string]any{"COIN": float64(100)},
+	})
 }
 
 func TestCurrenciesSetBalanceSuccess(t *testing.T) {
@@ -96,6 +99,9 @@ func TestCurrenciesSetBalanceSuccess(t *testing.T) {
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "Balance set")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/customers/cust_cmdtest/virtual_currencies/update_balance")
+	cmdtest.AssertRequestJSON(t, result, "POST", "/projects/proj_cmdtest/customers/cust_cmdtest/virtual_currencies/update_balance", map[string]any{
+		"adjustments": map[string]any{"COIN": float64(500)},
+	})
 }
 
 func TestCurrenciesListNotLoggedIn(t *testing.T) {

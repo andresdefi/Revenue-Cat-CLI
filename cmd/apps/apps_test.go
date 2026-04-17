@@ -136,10 +136,43 @@ func TestAppsUpdateAppStoreCredentials(t *testing.T) {
 	})
 }
 
+func TestAppsUpdateAppStoreConnectCredentials(t *testing.T) {
+	keyPath := filepath.Join(t.TempDir(), "AuthKey_ABC123.p8")
+	keyContents := "-----BEGIN PRIVATE KEY-----\nconnect-key\n-----END PRIVATE KEY-----\n"
+	if err := os.WriteFile(keyPath, []byte(keyContents), 0o600); err != nil {
+		t.Fatalf("write App Store Connect key fixture: %v", err)
+	}
+
+	result := cmdtest.Run(t, []string{
+		"apps", "update", "app_cmdtest",
+		"--app-store-connect-api-key-file", keyPath,
+		"--app-store-connect-api-key-id", "ABC123",
+		"--app-store-connect-api-key-issuer", "5a049d62-1b9b-453c-b605-1988189d8129",
+		"--app-store-connect-vendor-number", "12345678",
+		"--output", "json",
+	})
+
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestJSON(t, result, "POST", "/projects/proj_cmdtest/apps/app_cmdtest", map[string]any{
+		"app_store": map[string]any{
+			"app_store_connect_api_key":        keyContents,
+			"app_store_connect_api_key_id":     "ABC123",
+			"app_store_connect_api_key_issuer": "5a049d62-1b9b-453c-b605-1988189d8129",
+			"app_store_connect_vendor_number":  "12345678",
+		},
+	})
+}
+
 func TestAppsUpdateSubscriptionKeyFileError(t *testing.T) {
 	missingPath := filepath.Join(t.TempDir(), "missing.p8")
 	result := cmdtest.Run(t, []string{"apps", "update", "app_cmdtest", "--subscription-key-file", missingPath})
 	cmdtest.AssertErrorContains(t, result, "read subscription key file")
+}
+
+func TestAppsUpdateAppStoreConnectKeyFileError(t *testing.T) {
+	missingPath := filepath.Join(t.TempDir(), "missing.p8")
+	result := cmdtest.Run(t, []string{"apps", "update", "app_cmdtest", "--app-store-connect-api-key-file", missingPath})
+	cmdtest.AssertErrorContains(t, result, "read App Store Connect API key file")
 }
 
 func TestAppsUpdatePlayStoreServiceAccountFileUnsupported(t *testing.T) {

@@ -23,7 +23,7 @@ func NewSubscriptionsCmd(projectID, outputFormat *string) *cobra.Command {
 		Long: `View and manage RevenueCat subscriptions.
 
 Examples:
-  rc subscriptions list
+  rc subscriptions list --store-subscription-id 100001234567890
   rc subscriptions get sub1ab2c3d4e5
   rc subscriptions transactions sub1ab2c3d4e5
   rc subscriptions cancel sub1ab2c3d4e5
@@ -44,30 +44,31 @@ Examples:
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	var (
-		fetchAll bool
-		limit    int
+		storeSubscriptionID string
+		fetchAll            bool
+		limit               int
 	)
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List subscriptions in a project",
-		Example: `  # List subscriptions
-  rc subscriptions list
+		Short: "Search subscriptions by store subscription identifier",
+		Example: `  # Search subscriptions by store subscription identifier
+  rc subscriptions list --store-subscription-id 100001234567890
 
-  # List subscriptions for a specific project as JSON
-  rc subscriptions list --project proj1a2b3c4d5 --output json
+  # Search subscriptions for a specific project as JSON
+  rc subscriptions list --store-subscription-id 100001234567890 --project proj1a2b3c4d5 --output json
 
   # Use a production profile
-  rc subscriptions list --profile production
+  rc subscriptions list --store-subscription-id 100001234567890 --profile production
 
   # Extract active subscription IDs
-  rc subscriptions list --output json | jq -r '.items[] | select(.status == "active") | .id'
+  rc subscriptions list --store-subscription-id 100001234567890 --output json | jq -r '.items[] | select(.status == "active") | .id'
 
   # Find a subscription, then inspect transactions
-  rc subscriptions list --output json | jq -r '.items[0].id'
+  rc subscriptions list --store-subscription-id 100001234567890 --output json | jq -r '.items[0].id'
   rc subscriptions transactions sub1ab2c3d4e5
 
   # Fetch every page
-  rc subscriptions list --all --limit 100`,
+  rc subscriptions list --store-subscription-id 100001234567890 --all --limit 100`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -78,7 +79,7 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 				return err
 			}
 			path := fmt.Sprintf("/projects/%s/subscriptions", url.PathEscape(pid))
-			query := url.Values{}
+			query := url.Values{"store_subscription_identifier": []string{storeSubscriptionID}}
 			if limit > 0 {
 				query.Set("limit", fmt.Sprintf("%d", limit))
 			}
@@ -118,8 +119,10 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&storeSubscriptionID, "store-subscription-id", "", "store subscription identifier to search for (required)")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.MustMarkFlagRequired(cmd, "store-subscription-id")
 	return cmd
 }
 
@@ -141,7 +144,7 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
   rc subscriptions get sub1ab2c3d4e5 --profile production
 
   # Extract the authenticated management URL
-  rc subscriptions management-url sub1ab2c3d4e5 --output json | jq -r '.url'
+  rc subscriptions management-url sub1ab2c3d4e5 --output json | jq -r '.management_url'
 
   # Inspect a subscription, then list transactions
   rc subscriptions get sub1ab2c3d4e5
@@ -436,7 +439,7 @@ func newManagementURLCmd(projectID, outputFormat *string) *cobra.Command {
 			format := cmdutil.GetOutputFormat(outputFormat)
 			output.Print(format, mgmt, func(t table.Writer) {
 				t.AppendHeader(table.Row{"Management URL"})
-				t.AppendRow(table.Row{mgmt.URL})
+				t.AppendRow(table.Row{mgmt.ManagementURL})
 			})
 			return nil
 		},

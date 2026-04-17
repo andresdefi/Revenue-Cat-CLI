@@ -1016,8 +1016,8 @@ func TestPaywall_JSONRoundTrip(t *testing.T) {
 
 func TestManagementURL_JSONRoundTrip(t *testing.T) {
 	original := ManagementURL{
-		Object: "management_url",
-		URL:    "https://apps.apple.com/account/subscriptions",
+		Object:        "authenticated_management_url",
+		ManagementURL: "https://apps.apple.com/account/subscriptions",
 	}
 
 	data, err := json.Marshal(original)
@@ -1030,8 +1030,8 @@ func TestManagementURL_JSONRoundTrip(t *testing.T) {
 		t.Fatalf("Unmarshal: %v", err)
 	}
 
-	if decoded.URL != "https://apps.apple.com/account/subscriptions" {
-		t.Errorf("URL = %q, want %q", decoded.URL, "https://apps.apple.com/account/subscriptions")
+	if decoded.ManagementURL != "https://apps.apple.com/account/subscriptions" {
+		t.Errorf("ManagementURL = %q, want %q", decoded.ManagementURL, "https://apps.apple.com/account/subscriptions")
 	}
 }
 

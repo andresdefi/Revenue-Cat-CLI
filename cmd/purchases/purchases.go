@@ -16,7 +16,7 @@ func NewPurchasesCmd(projectID, outputFormat *string) *cobra.Command {
 	root := &cobra.Command{
 		Use:     "purchases",
 		Aliases: []string{"purchase"},
-		Short:   "Manage one-time purchases",
+		Short:   "Search and manage one-time purchases",
 	}
 	root.AddCommand(newListCmd(projectID, outputFormat))
 	root.AddCommand(newGetCmd(projectID, outputFormat))
@@ -27,19 +27,20 @@ func NewPurchasesCmd(projectID, outputFormat *string) *cobra.Command {
 
 func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	var (
-		fetchAll bool
-		limit    int
+		storePurchaseID string
+		fetchAll        bool
+		limit           int
 	)
 	cmd := &cobra.Command{
-		Use: "list", Short: "List purchases in a project",
-		Example: `  # List purchases
-  rc purchases list
+		Use: "list", Short: "Search purchases by store purchase identifier",
+		Example: `  # Search purchases by store purchase identifier
+  rc purchases list --store-purchase-id 100001234567890
 
   # List with JSON output
-  rc purchases list -o json
+  rc purchases list --store-purchase-id 100001234567890 -o json
 
   # Fetch all pages
-  rc purchases list --all`,
+  rc purchases list --store-purchase-id 100001234567890 --all`,
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
@@ -50,7 +51,7 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 				return err
 			}
 			path := fmt.Sprintf("/projects/%s/purchases", url.PathEscape(pid))
-			query := url.Values{}
+			query := url.Values{"store_purchase_identifier": []string{storePurchaseID}}
 			if limit > 0 {
 				query.Set("limit", fmt.Sprintf("%d", limit))
 			}
@@ -90,8 +91,10 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&storePurchaseID, "store-purchase-id", "", "store purchase identifier to search for (required)")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.MustMarkFlagRequired(cmd, "store-purchase-id")
 	return cmd
 }
 
