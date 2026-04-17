@@ -416,17 +416,37 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 }
 
 func newPushToStoreCmd(projectID *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		subscriptionDuration  string
+		subscriptionGroupName string
+		subscriptionGroupID   string
+	)
+
+	cmd := &cobra.Command{
 		Use:   "push-to-store <product-id>",
 		Short: "Push a product to the store (create in the connected store)",
 		Long: `Push a product configuration to the connected app store.
 
 This creates the product in the store (e.g., App Store Connect, Google Play)
-using the product configuration defined in RevenueCat.`,
+using the product configuration defined in RevenueCat.
+
+For in-app purchase products, no request body is required. For subscription
+products, provide the App Store subscription duration and subscription group
+information.`,
 		Example: `  # Push a product to App Store Connect / Google Play
-  rc products push-to-store prod1a2b3c4d5`,
+  rc products push-to-store prod1a2b3c4d5
+
+  # Push an App Store subscription product
+  rc products push-to-store prod1a2b3c4d5 --subscription-duration ONE_MONTH --subscription-group-name "Premium Subscriptions"
+
+  # Add a product to an existing App Store subscription group
+  rc products push-to-store prod1a2b3c4d5 --subscription-duration ONE_YEAR --subscription-group-name "Premium Subscriptions" --subscription-group-id sub_group_123`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
+			body, err := pushToStoreBody(subscriptionDuration, subscriptionGroupName, subscriptionGroupID)
+			if err != nil {
+				return err
+			}
 			pid, err := cmdutil.ResolveProject(projectID)
 			if err != nil {
 				return err
@@ -435,13 +455,51 @@ using the product configuration defined in RevenueCat.`,
 			if err != nil {
 				return err
 			}
-			_, err = client.Post(fmt.Sprintf("/projects/%s/products/%s/create_in_store", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+			_, err = client.Post(fmt.Sprintf("/projects/%s/products/%s/create_in_store", url.PathEscape(pid), url.PathEscape(args[0])), body)
 			if err != nil {
 				return err
 			}
 			output.Success("Product %s pushed to store", args[0])
 			return nil
 		},
+	}
+
+	cmd.Flags().StringVar(&subscriptionDuration, "subscription-duration", "", "App Store subscription duration: ONE_WEEK, ONE_MONTH, TWO_MONTHS, THREE_MONTHS, SIX_MONTHS, ONE_YEAR")
+	cmd.Flags().StringVar(&subscriptionGroupName, "subscription-group-name", "", "App Store subscription group name (required with --subscription-duration)")
+	cmd.Flags().StringVar(&subscriptionGroupID, "subscription-group-id", "", "existing App Store subscription group ID (optional)")
+	return cmd
+}
+
+func pushToStoreBody(duration, groupName, groupID string) (any, error) {
+	if duration == "" && groupName == "" && groupID == "" {
+		return nil, nil
+	}
+	if duration == "" {
+		return nil, fmt.Errorf("--subscription-duration is required when subscription store information is provided")
+	}
+	if groupName == "" {
+		return nil, fmt.Errorf("--subscription-group-name is required when subscription store information is provided")
+	}
+	if !validSubscriptionDuration(duration) {
+		return nil, fmt.Errorf("invalid --subscription-duration %q (expected ONE_WEEK, ONE_MONTH, TWO_MONTHS, THREE_MONTHS, SIX_MONTHS, or ONE_YEAR)", duration)
+	}
+
+	storeInformation := map[string]any{
+		"duration":                duration,
+		"subscription_group_name": groupName,
+	}
+	if groupID != "" {
+		storeInformation["subscription_group_id"] = groupID
+	}
+	return map[string]any{"store_information": storeInformation}, nil
+}
+
+func validSubscriptionDuration(duration string) bool {
+	switch duration {
+	case "ONE_WEEK", "ONE_MONTH", "TWO_MONTHS", "THREE_MONTHS", "SIX_MONTHS", "ONE_YEAR":
+		return true
+	default:
+		return false
 	}
 }
 

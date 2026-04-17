@@ -219,6 +219,23 @@ func TestGoldenOfferingUnarchiveReferencedEntitiesRequestBody(t *testing.T) {
 	})
 }
 
+func TestGoldenProductPushToStoreSubscriptionRequestBody(t *testing.T) {
+	result := cmdtest.Run(t, []string{
+		"products", "push-to-store", "prod_cmdtest",
+		"--subscription-duration", "ONE_MONTH",
+		"--subscription-group-name", "Premium Subscriptions",
+		"--subscription-group-id", "sub_group_123",
+	})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestJSON(t, result, http.MethodPost, "/projects/proj_cmdtest/products/prod_cmdtest/create_in_store", map[string]any{
+		"store_information": map[string]any{
+			"duration":                "ONE_MONTH",
+			"subscription_group_name": "Premium Subscriptions",
+			"subscription_group_id":   "sub_group_123",
+		},
+	})
+}
+
 func TestGoldenAttachDetachRequestBodies(t *testing.T) {
 	tests := []struct {
 		name string

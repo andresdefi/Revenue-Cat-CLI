@@ -1,6 +1,7 @@
 package products_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/andresdefi/rc/internal/cmdtest"
@@ -101,6 +102,49 @@ func TestProductsUnarchiveSuccess(t *testing.T) {
 	result := cmdtest.Run(t, []string{"products", "unarchive", "prod_cmdtest"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "unarchived")
+}
+
+func TestProductsPushToStoreIAPSuccess(t *testing.T) {
+	result := cmdtest.Run(t, []string{"products", "push-to-store", "prod_cmdtest"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "pushed to store")
+	cmdtest.AssertRequestBody(t, result, http.MethodPost, "/projects/proj_cmdtest/products/prod_cmdtest/create_in_store", "")
+}
+
+func TestProductsPushToStoreSubscriptionBody(t *testing.T) {
+	result := cmdtest.Run(t, []string{
+		"products", "push-to-store", "prod_cmdtest",
+		"--subscription-duration", "ONE_MONTH",
+		"--subscription-group-name", "Premium Subscriptions",
+		"--subscription-group-id", "sub_group_123",
+	})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestJSON(t, result, http.MethodPost, "/projects/proj_cmdtest/products/prod_cmdtest/create_in_store", map[string]any{
+		"store_information": map[string]any{
+			"duration":                "ONE_MONTH",
+			"subscription_group_name": "Premium Subscriptions",
+			"subscription_group_id":   "sub_group_123",
+		},
+	})
+}
+
+func TestProductsPushToStoreSubscriptionMissingDuration(t *testing.T) {
+	result := cmdtest.Run(t, []string{
+		"products", "push-to-store", "prod_cmdtest",
+		"--subscription-group-name", "Premium Subscriptions",
+	})
+	cmdtest.AssertErrorContains(t, result, "--subscription-duration is required")
+	cmdtest.AssertNotRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/products/prod_cmdtest/create_in_store")
+}
+
+func TestProductsPushToStoreSubscriptionInvalidDuration(t *testing.T) {
+	result := cmdtest.Run(t, []string{
+		"products", "push-to-store", "prod_cmdtest",
+		"--subscription-duration", "P1M",
+		"--subscription-group-name", "Premium Subscriptions",
+	})
+	cmdtest.AssertErrorContains(t, result, "invalid --subscription-duration")
+	cmdtest.AssertNotRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/products/prod_cmdtest/create_in_store")
 }
 
 func TestProductsInvalidOutputFlag(t *testing.T) {

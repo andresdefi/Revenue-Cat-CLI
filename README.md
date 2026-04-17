@@ -131,7 +131,7 @@ All commands support `--profile <name>` to select the config profile and `--outp
 |---------|-------------|
 | `rc products list/get/create/update/delete` | Manage products |
 | `rc products archive/unarchive` | Archive or restore products |
-| `rc products push-to-store <id>` | Push product to connected store |
+| `rc products push-to-store <id> --subscription-duration ONE_MONTH --subscription-group-name "Premium"` | Push product to connected store |
 | `rc products export --file products.csv` | Export products to CSV or JSON |
 | `rc products import --file products.csv` | Import products from CSV or JSON |
 | `rc entitlements list/get/create/update/delete` | Manage entitlements |

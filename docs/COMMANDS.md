@@ -2037,11 +2037,27 @@ Push a product configuration to the connected app store.
 This creates the product in the store (e.g., App Store Connect, Google Play)
 using the product configuration defined in RevenueCat.
 
+For in-app purchase products, no request body is required. For subscription
+products, provide the App Store subscription duration and subscription group
+information.
+
+**Flags**
+
+- `--subscription-duration`: App Store subscription duration: ONE_WEEK, ONE_MONTH, TWO_MONTHS, THREE_MONTHS, SIX_MONTHS, ONE_YEAR
+- `--subscription-group-id`: existing App Store subscription group ID (optional)
+- `--subscription-group-name`: App Store subscription group name (required with --subscription-duration)
+
 **Examples**
 
 ```bash
 # Push a product to App Store Connect / Google Play
   rc products push-to-store prod1a2b3c4d5
+
+  # Push an App Store subscription product
+  rc products push-to-store prod1a2b3c4d5 --subscription-duration ONE_MONTH --subscription-group-name "Premium Subscriptions"
+
+  # Add a product to an existing App Store subscription group
+  rc products push-to-store prod1a2b3c4d5 --subscription-duration ONE_YEAR --subscription-group-name "Premium Subscriptions" --subscription-group-id sub_group_123
 ```
 
 #### rc products unarchive
