@@ -1,6 +1,7 @@
 package cmd_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -41,6 +42,20 @@ func TestLaunchCheckStrictFailsWhenNotReady(t *testing.T) {
 	result := cmdtest.Run(t, []string{"launch-check", "--strict"}, cmdtest.WithHandler(launchCheckNotReadyHandler))
 
 	cmdtest.AssertErrorContains(t, result, "launch check failed")
+}
+
+func TestLaunchCheckWatchRefreshesUntilContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	result := cmdtest.Run(t,
+		[]string{"launch-check", "--watch", "--interval", "1ns", "--output", "json"},
+		cmdtest.WithContext(ctx),
+		cmdtest.WithCancelOnRepeatedRequest(cancel),
+	)
+
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestCountAtLeast(t, result, "GET", "/projects/proj_cmdtest/apps", 2)
 }
 
 func launchCheckNotReadyHandler(w http.ResponseWriter, r *http.Request) {

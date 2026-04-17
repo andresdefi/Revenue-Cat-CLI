@@ -1,6 +1,7 @@
 package customers_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -118,6 +119,20 @@ func TestCustomersDiagnoseStrictReturnsNonZeroOnFailedChecks(t *testing.T) {
 		})),
 	)
 	cmdtest.AssertErrorContains(t, result, "customer diagnosis found failed checks")
+}
+
+func TestCustomersDiagnoseWatchRefreshesUntilContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	result := cmdtest.Run(t,
+		[]string{"customers", "diagnose", "cust_cmdtest", "--watch", "--interval", "1ns", "--output", "json"},
+		cmdtest.WithContext(ctx),
+		cmdtest.WithCancelOnRepeatedRequest(cancel),
+	)
+
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestCountAtLeast(t, result, "GET", "/projects/proj_cmdtest/customers/cust_cmdtest", 2)
 }
 
 func TestCustomersDiagnoseJSONShape(t *testing.T) {

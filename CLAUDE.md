@@ -137,7 +137,7 @@ make help             # Show all targets
 - [x] Config validation on save (profile name format)
 - [x] Input validation helpers (internal/validate)
 - [x] Stability labels on commands ([experimental], [beta])
-- [x] 603 default tests across 41 test files (607 with integration tag)
+- [x] 608 default tests across 41 test files (612 with integration tag)
 - [x] Integration test framework (//go:build integration, gated on RC_INTEGRATION_KEY)
 - [x] Makefile with tools, security, test-integration targets
 - [x] gofumpt formatting, golangci-lint v2, pre-commit hook

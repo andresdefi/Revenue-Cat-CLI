@@ -404,6 +404,8 @@ func newSubscriptionsCmd(projectID, outputFormat *string) *cobra.Command {
 	var (
 		fetchAll bool
 		limit    int
+		watch    bool
+		interval time.Duration
 	)
 	cmd := &cobra.Command{
 		Use: "subscriptions <customer-id>", Short: "List subscriptions for a customer",
@@ -411,60 +413,72 @@ func newSubscriptionsCmd(projectID, outputFormat *string) *cobra.Command {
   rc customers subscriptions user-123
 
   # Fetch all pages
-  rc customers subscriptions user-123 --all`,
+  rc customers subscriptions user-123 --all
+
+  # Watch for subscription changes
+  rc customers subscriptions user-123 --watch --interval 10s`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-			path := fmt.Sprintf("/projects/%s/customers/%s/subscriptions", url.PathEscape(pid), url.PathEscape(args[0]))
-			query := url.Values{}
-			if limit > 0 {
-				query.Set("limit", fmt.Sprintf("%d", limit))
-			}
-			if fetchAll {
-				items, err := api.PaginateAll[api.Subscription](client, path, query)
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
 				if err != nil {
 					return err
 				}
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				path := fmt.Sprintf("/projects/%s/customers/%s/subscriptions", url.PathEscape(pid), url.PathEscape(args[0]))
+				query := url.Values{}
+				if limit > 0 {
+					query.Set("limit", fmt.Sprintf("%d", limit))
+				}
+				if fetchAll {
+					items, err := api.PaginateAll[api.Subscription](client, path, query)
+					if err != nil {
+						return err
+					}
+					format := cmdutil.GetOutputFormat(outputFormat)
+					output.Print(format, items, func(t table.Writer) {
+						t.AppendHeader(table.Row{"ID", "Product", "Status", "Renewal", "Store", "Env"})
+						for _, s := range items {
+							t.AppendRow(table.Row{s.ID, output.Deref(s.ProductID, "promotional"), s.Status, s.AutoRenewalStatus, s.Store, s.Environment})
+						}
+						t.AppendFooter(table.Row{"", "", "", "", "", fmt.Sprintf("%d total", len(items))})
+					})
+					return nil
+				}
+				data, err := client.Get(path, query)
+				if err != nil {
+					return err
+				}
+				var resp api.ListResponse[api.Subscription]
+				if err := json.Unmarshal(data, &resp); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
 				format := cmdutil.GetOutputFormat(outputFormat)
-				output.Print(format, items, func(t table.Writer) {
+				output.Print(format, resp, func(t table.Writer) {
 					t.AppendHeader(table.Row{"ID", "Product", "Status", "Renewal", "Store", "Env"})
-					for _, s := range items {
+					for _, s := range resp.Items {
 						t.AppendRow(table.Row{s.ID, output.Deref(s.ProductID, "promotional"), s.Status, s.AutoRenewalStatus, s.Store, s.Environment})
 					}
-					t.AppendFooter(table.Row{"", "", "", "", "", fmt.Sprintf("%d total", len(items))})
 				})
+				if resp.NextPage != nil {
+					output.Warn("More results available (use --all for more)")
+				}
 				return nil
 			}
-			data, err := client.Get(path, query)
-			if err != nil {
-				return err
+
+			if watch {
+				return cmdutil.Watch(c.Context(), interval, run)
 			}
-			var resp api.ListResponse[api.Subscription]
-			if err := json.Unmarshal(data, &resp); err != nil {
-				return fmt.Errorf("failed to parse response: %w", err)
-			}
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, resp, func(t table.Writer) {
-				t.AppendHeader(table.Row{"ID", "Product", "Status", "Renewal", "Store", "Env"})
-				for _, s := range resp.Items {
-					t.AppendRow(table.Row{s.ID, output.Deref(s.ProductID, "promotional"), s.Status, s.AutoRenewalStatus, s.Store, s.Environment})
-				}
-			})
-			if resp.NextPage != nil {
-				output.Warn("More results available (use --all for more)")
-			}
-			return nil
+			return run(c.Context())
 		},
 	}
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
 	return cmd
 }
 
@@ -472,6 +486,8 @@ func newPurchasesCmd(projectID, outputFormat *string) *cobra.Command {
 	var (
 		fetchAll bool
 		limit    int
+		watch    bool
+		interval time.Duration
 	)
 	cmd := &cobra.Command{
 		Use: "purchases <customer-id>", Short: "List purchases for a customer",
@@ -479,131 +495,181 @@ func newPurchasesCmd(projectID, outputFormat *string) *cobra.Command {
   rc customers purchases user-123
 
   # Fetch all pages
-  rc customers purchases user-123 --all`,
+  rc customers purchases user-123 --all
+
+  # Watch for purchase changes
+  rc customers purchases user-123 --watch --interval 10s`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-			path := fmt.Sprintf("/projects/%s/customers/%s/purchases", url.PathEscape(pid), url.PathEscape(args[0]))
-			query := url.Values{}
-			if limit > 0 {
-				query.Set("limit", fmt.Sprintf("%d", limit))
-			}
-			if fetchAll {
-				items, err := api.PaginateAll[api.Purchase](client, path, query)
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
 				if err != nil {
 					return err
 				}
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				path := fmt.Sprintf("/projects/%s/customers/%s/purchases", url.PathEscape(pid), url.PathEscape(args[0]))
+				query := url.Values{}
+				if limit > 0 {
+					query.Set("limit", fmt.Sprintf("%d", limit))
+				}
+				if fetchAll {
+					items, err := api.PaginateAll[api.Purchase](client, path, query)
+					if err != nil {
+						return err
+					}
+					format := cmdutil.GetOutputFormat(outputFormat)
+					output.Print(format, items, func(t table.Writer) {
+						t.AppendHeader(table.Row{"ID", "Product", "Status", "Qty", "Store", "Purchased"})
+						for _, p := range items {
+							t.AppendRow(table.Row{p.ID, p.ProductID, p.Status, p.Quantity, p.Store, output.FormatTimestamp(p.PurchasedAt)})
+						}
+						t.AppendFooter(table.Row{"", "", "", "", "", fmt.Sprintf("%d total", len(items))})
+					})
+					return nil
+				}
+				data, err := client.Get(path, query)
+				if err != nil {
+					return err
+				}
+				var resp api.ListResponse[api.Purchase]
+				if err := json.Unmarshal(data, &resp); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
 				format := cmdutil.GetOutputFormat(outputFormat)
-				output.Print(format, items, func(t table.Writer) {
+				output.Print(format, resp, func(t table.Writer) {
 					t.AppendHeader(table.Row{"ID", "Product", "Status", "Qty", "Store", "Purchased"})
-					for _, p := range items {
+					for _, p := range resp.Items {
 						t.AppendRow(table.Row{p.ID, p.ProductID, p.Status, p.Quantity, p.Store, output.FormatTimestamp(p.PurchasedAt)})
 					}
-					t.AppendFooter(table.Row{"", "", "", "", "", fmt.Sprintf("%d total", len(items))})
 				})
+				if resp.NextPage != nil {
+					output.Warn("More results available (use --all for more)")
+				}
 				return nil
 			}
-			data, err := client.Get(path, query)
-			if err != nil {
-				return err
+
+			if watch {
+				return cmdutil.Watch(c.Context(), interval, run)
 			}
-			var resp api.ListResponse[api.Purchase]
-			if err := json.Unmarshal(data, &resp); err != nil {
-				return fmt.Errorf("failed to parse response: %w", err)
-			}
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, resp, func(t table.Writer) {
-				t.AppendHeader(table.Row{"ID", "Product", "Status", "Qty", "Store", "Purchased"})
-				for _, p := range resp.Items {
-					t.AppendRow(table.Row{p.ID, p.ProductID, p.Status, p.Quantity, p.Store, output.FormatTimestamp(p.PurchasedAt)})
-				}
-			})
-			if resp.NextPage != nil {
-				output.Warn("More results available (use --all for more)")
-			}
-			return nil
+			return run(c.Context())
 		},
 	}
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
 	return cmd
 }
 
 func newAliasesCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		watch    bool
+		interval time.Duration
+	)
+
+	cmd := &cobra.Command{
 		Use: "aliases <customer-id>", Short: "List aliases for a customer",
 		Example: `  # List aliases
-  rc customers aliases user-123`,
+  rc customers aliases user-123
+
+  # Watch for alias changes
+  rc customers aliases user-123 --watch --interval 10s`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-			data, err := client.Get(fmt.Sprintf("/projects/%s/customers/%s/aliases", url.PathEscape(pid), url.PathEscape(args[0])), nil)
-			if err != nil {
-				return err
-			}
-			var resp api.ListResponse[api.CustomerAlias]
-			if err := json.Unmarshal(data, &resp); err != nil {
-				return fmt.Errorf("failed to parse response: %w", err)
-			}
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, resp, func(t table.Writer) {
-				t.AppendHeader(table.Row{"Alias ID"})
-				for _, a := range resp.Items {
-					t.AppendRow(table.Row{a.ID})
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
+				if err != nil {
+					return err
 				}
-			})
-			return nil
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				data, err := client.Get(fmt.Sprintf("/projects/%s/customers/%s/aliases", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+				if err != nil {
+					return err
+				}
+				var resp api.ListResponse[api.CustomerAlias]
+				if err := json.Unmarshal(data, &resp); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, resp, func(t table.Writer) {
+					t.AppendHeader(table.Row{"Alias ID"})
+					for _, a := range resp.Items {
+						t.AppendRow(table.Row{a.ID})
+					}
+				})
+				return nil
+			}
+
+			if watch {
+				return cmdutil.Watch(c.Context(), interval, run)
+			}
+			return run(c.Context())
 		},
 	}
+
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	return cmd
 }
 
 func newAttributesCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	var (
+		watch    bool
+		interval time.Duration
+	)
+
+	cmd := &cobra.Command{
 		Use: "attributes <customer-id>", Short: "List attributes for a customer",
 		Example: `  # List customer attributes
-  rc customers attributes user-123`,
+  rc customers attributes user-123
+
+  # Watch for attribute changes
+  rc customers attributes user-123 --watch --interval 10s`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-			data, err := client.Get(fmt.Sprintf("/projects/%s/customers/%s/attributes", url.PathEscape(pid), url.PathEscape(args[0])), nil)
-			if err != nil {
-				return err
-			}
-			var resp api.ListResponse[api.CustomerAttribute]
-			if err := json.Unmarshal(data, &resp); err != nil {
-				return fmt.Errorf("failed to parse response: %w", err)
-			}
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, resp, func(t table.Writer) {
-				t.AppendHeader(table.Row{"Name", "Value"})
-				for _, a := range resp.Items {
-					t.AppendRow(table.Row{a.Name, a.Value})
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
+				if err != nil {
+					return err
 				}
-			})
-			return nil
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				data, err := client.Get(fmt.Sprintf("/projects/%s/customers/%s/attributes", url.PathEscape(pid), url.PathEscape(args[0])), nil)
+				if err != nil {
+					return err
+				}
+				var resp api.ListResponse[api.CustomerAttribute]
+				if err := json.Unmarshal(data, &resp); err != nil {
+					return fmt.Errorf("failed to parse response: %w", err)
+				}
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, resp, func(t table.Writer) {
+					t.AppendHeader(table.Row{"Name", "Value"})
+					for _, a := range resp.Items {
+						t.AppendRow(table.Row{a.Name, a.Value})
+					}
+				})
+				return nil
+			}
+
+			if watch {
+				return cmdutil.Watch(c.Context(), interval, run)
+			}
+			return run(c.Context())
 		},
 	}
+
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	return cmd
 }
 
 func newSetAttributesCmd(projectID *string) *cobra.Command {

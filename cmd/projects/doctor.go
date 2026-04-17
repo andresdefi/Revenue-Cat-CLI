@@ -1,8 +1,10 @@
 package projects
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
@@ -13,7 +15,11 @@ import (
 )
 
 func newDoctorCmd(projectID, outputFormat *string) *cobra.Command {
-	var strict bool
+	var (
+		strict   bool
+		watch    bool
+		interval time.Duration
+	)
 
 	cmd := &cobra.Command{
 		Use:   "doctor",
@@ -29,32 +35,44 @@ mutating the project.`,
   # Check a specific project and emit JSON
   rc project doctor --project proj1a2b3c4d5 --output json
 
+  # Watch readiness while configuring a project
+  rc project doctor --watch --interval 10s
+
   # Fail the command when project health has errors
   rc project doctor --strict`,
 		RunE: func(c *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-			report, err := projecthealth.Analyze(client, pid)
-			if err != nil {
-				return err
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
+				if err != nil {
+					return err
+				}
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				report, err := projecthealth.Analyze(client, pid)
+				if err != nil {
+					return err
+				}
+
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, report, renderDoctorReport(report))
+				if strict && report.Status == projecthealth.StatusFail {
+					return fmt.Errorf("project doctor found errors")
+				}
+				return nil
 			}
 
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, report, renderDoctorReport(report))
-			if strict && report.Status == projecthealth.StatusFail {
-				return fmt.Errorf("project doctor found errors")
+			if watch {
+				return cmdutil.Watch(c.Context(), interval, run)
 			}
-			return nil
+			return run(c.Context())
 		},
 	}
 
 	cmd.Flags().BoolVar(&strict, "strict", false, "return a non-zero exit code when errors are found")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
 	return cmd
 }
 
