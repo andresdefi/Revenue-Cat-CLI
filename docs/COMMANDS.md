@@ -660,11 +660,19 @@ Examples:
 
 List aliases for a customer
 
+**Flags**
+
+- `--interval`: refresh interval for --watch Default: `5s`.
+- `-w, --watch`: continuously refresh Default: `false`.
+
 **Examples**
 
 ```bash
 # List aliases
   rc customers aliases user-123
+
+  # Watch for alias changes
+  rc customers aliases user-123 --watch --interval 10s
 ```
 
 #### rc customers assign-offering
@@ -691,11 +699,19 @@ Assign or clear an offering override for a customer
 
 List attributes for a customer
 
+**Flags**
+
+- `--interval`: refresh interval for --watch Default: `5s`.
+- `-w, --watch`: continuously refresh Default: `false`.
+
 **Examples**
 
 ```bash
 # List customer attributes
   rc customers attributes user-123
+
+  # Watch for attribute changes
+  rc customers attributes user-123 --watch --interval 10s
 ```
 
 #### rc customers create
@@ -745,7 +761,9 @@ issues and follow-up commands for support debugging.
 
 **Flags**
 
+- `--interval`: refresh interval for --watch Default: `5s`.
 - `--strict`: return a non-zero exit code when failed checks are found Default: `false`.
+- `-w, --watch`: continuously refresh Default: `false`.
 
 **Examples**
 
@@ -755,6 +773,9 @@ issues and follow-up commands for support debugging.
 
   # Emit JSON for scripts
   rc customers diagnose user-123 --output json
+
+  # Watch while a customer restores purchases or changes state
+  rc customers diagnose user-123 --watch --interval 10s
 
   # Fail when blocking access findings are found
   rc customers diagnose user-123 --strict
@@ -902,7 +923,9 @@ List purchases for a customer
 **Flags**
 
 - `--all`: fetch all pages Default: `false`.
+- `--interval`: refresh interval for --watch Default: `5s`.
 - `--limit`: max items per page Default: `0`.
+- `-w, --watch`: continuously refresh Default: `false`.
 
 **Examples**
 
@@ -912,6 +935,9 @@ List purchases for a customer
 
   # Fetch all pages
   rc customers purchases user-123 --all
+
+  # Watch for purchase changes
+  rc customers purchases user-123 --watch --interval 10s
 ```
 
 #### rc customers restore-purchase
@@ -974,7 +1000,9 @@ List subscriptions for a customer
 **Flags**
 
 - `--all`: fetch all pages Default: `false`.
+- `--interval`: refresh interval for --watch Default: `5s`.
 - `--limit`: max items per page Default: `0`.
+- `-w, --watch`: continuously refresh Default: `false`.
 
 **Examples**
 
@@ -984,6 +1012,9 @@ List subscriptions for a customer
 
   # Fetch all pages
   rc customers subscriptions user-123 --all
+
+  # Watch for subscription changes
+  rc customers subscriptions user-123 --watch --interval 10s
 ```
 
 #### rc customers transfer
@@ -1371,7 +1402,9 @@ package-product paths needed before shipping.
 
 **Flags**
 
+- `--interval`: refresh interval for --watch Default: `5s`.
 - `--strict`: return a non-zero exit code when launch requirements are missing Default: `false`.
+- `-w, --watch`: continuously refresh Default: `false`.
 
 **Examples**
 
@@ -1381,6 +1414,9 @@ package-product paths needed before shipping.
 
   # Emit JSON for automation
   rc launch-check --output json
+
+  # Watch launch readiness while final setup lands
+  rc launch-check --watch --interval 10s
 
   # Fail when required launch paths are missing
   rc launch-check --strict
@@ -2156,7 +2192,9 @@ mutating the project.
 
 **Flags**
 
+- `--interval`: refresh interval for --watch Default: `5s`.
 - `--strict`: return a non-zero exit code when errors are found Default: `false`.
+- `-w, --watch`: continuously refresh Default: `false`.
 
 **Examples**
 
@@ -2166,6 +2204,9 @@ mutating the project.
 
   # Check a specific project and emit JSON
   rc project doctor --project proj1a2b3c4d5 --output json
+
+  # Watch readiness while configuring a project
+  rc project doctor --watch --interval 10s
 
   # Fail the command when project health has errors
   rc project doctor --strict

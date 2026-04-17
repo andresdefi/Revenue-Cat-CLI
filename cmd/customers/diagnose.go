@@ -1,8 +1,10 @@
 package customers
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
@@ -13,7 +15,11 @@ import (
 )
 
 func newDiagnoseCmd(projectID, outputFormat *string) *cobra.Command {
-	var strict bool
+	var (
+		strict   bool
+		watch    bool
+		interval time.Duration
+	)
 
 	cmd := &cobra.Command{
 		Use:   "diagnose <customer-id>",
@@ -29,33 +35,45 @@ issues and follow-up commands for support debugging.`,
   # Emit JSON for scripts
   rc customers diagnose user-123 --output json
 
+  # Watch while a customer restores purchases or changes state
+  rc customers diagnose user-123 --watch --interval 10s
+
   # Fail when blocking access findings are found
   rc customers diagnose user-123 --strict`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-			report, err := customerdiagnosis.Analyze(client, pid, args[0])
-			if err != nil {
-				return err
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
+				if err != nil {
+					return err
+				}
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				report, err := customerdiagnosis.Analyze(client, pid, args[0])
+				if err != nil {
+					return err
+				}
+
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, report, renderDiagnosisReport(report))
+				if strict && report.Status == customerdiagnosis.StatusFail {
+					return fmt.Errorf("customer diagnosis found failed checks")
+				}
+				return nil
 			}
 
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, report, renderDiagnosisReport(report))
-			if strict && report.Status == customerdiagnosis.StatusFail {
-				return fmt.Errorf("customer diagnosis found failed checks")
+			if watch {
+				return cmdutil.Watch(c.Context(), interval, run)
 			}
-			return nil
+			return run(c.Context())
 		},
 	}
 
 	cmd.Flags().BoolVar(&strict, "strict", false, "return a non-zero exit code when failed checks are found")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
 	return cmd
 }
 

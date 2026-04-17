@@ -1,6 +1,7 @@
 package customers_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/andresdefi/rc/internal/cmdtest"
@@ -98,6 +99,61 @@ func TestCustomersAttributesJSON(t *testing.T) {
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "customer@example.com")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/customers/cust_cmdtest/attributes")
+}
+
+func TestCustomerAccessViewsWatchRefreshUntilContextCanceled(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		path string
+	}{
+		{
+			name: "lookup",
+			args: []string{"customers", "lookup", "cust_cmdtest", "--watch", "--interval", "1ns", "--output", "json"},
+			path: "/projects/proj_cmdtest/customers/cust_cmdtest",
+		},
+		{
+			name: "entitlements",
+			args: []string{"customers", "entitlements", "cust_cmdtest", "--watch", "--interval", "1ns", "--output", "json"},
+			path: "/projects/proj_cmdtest/customers/cust_cmdtest/active_entitlements",
+		},
+		{
+			name: "subscriptions",
+			args: []string{"customers", "subscriptions", "cust_cmdtest", "--watch", "--interval", "1ns", "--output", "json"},
+			path: "/projects/proj_cmdtest/customers/cust_cmdtest/subscriptions",
+		},
+		{
+			name: "purchases",
+			args: []string{"customers", "purchases", "cust_cmdtest", "--watch", "--interval", "1ns", "--output", "json"},
+			path: "/projects/proj_cmdtest/customers/cust_cmdtest/purchases",
+		},
+		{
+			name: "aliases",
+			args: []string{"customers", "aliases", "cust_cmdtest", "--watch", "--interval", "1ns", "--output", "json"},
+			path: "/projects/proj_cmdtest/customers/cust_cmdtest/aliases",
+		},
+		{
+			name: "attributes",
+			args: []string{"customers", "attributes", "cust_cmdtest", "--watch", "--interval", "1ns", "--output", "json"},
+			path: "/projects/proj_cmdtest/customers/cust_cmdtest/attributes",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			result := cmdtest.Run(t,
+				tt.args,
+				cmdtest.WithContext(ctx),
+				cmdtest.WithCancelOnRepeatedRequest(cancel),
+			)
+
+			cmdtest.AssertSuccess(t, result)
+			cmdtest.AssertRequestCountAtLeast(t, result, "GET", tt.path, 2)
+		})
+	}
 }
 
 func TestCustomersSetAttributesSuccess(t *testing.T) {

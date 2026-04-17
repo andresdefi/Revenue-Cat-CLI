@@ -1,6 +1,7 @@
 package projects_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -96,6 +97,37 @@ func TestProjectsDoctorReportsUnhealthyProject(t *testing.T) {
 func TestProjectsDoctorStrictFailsUnhealthyProject(t *testing.T) {
 	result := cmdtest.Run(t, []string{"projects", "doctor", "--strict"}, cmdtest.WithHandler(unhealthyProjectHandler))
 	cmdtest.AssertErrorContains(t, result, "project doctor found errors")
+}
+
+func TestProjectsDoctorWatchRefreshesUntilContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	result := cmdtest.Run(t,
+		[]string{"projects", "doctor", "--watch", "--interval", "1ns", "--output", "json"},
+		cmdtest.WithContext(ctx),
+		cmdtest.WithCancelOnRepeatedRequest(cancel),
+	)
+
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestCountAtLeast(t, result, "GET", "/projects/proj_cmdtest/apps", 2)
+}
+
+func TestProjectsDoctorWatchAllowsNonPositiveInterval(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	result := cmdtest.Run(t,
+		[]string{"projects", "doctor", "--watch", "--interval", "0s", "--output", "json"},
+		cmdtest.WithContext(ctx),
+		cmdtest.WithHandler(func(w http.ResponseWriter, r *http.Request) {
+			cancel()
+			cmdtest.DefaultHandler(w, r)
+		}),
+	)
+
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/apps")
 }
 
 func TestProjectsSetDefaultSuccess(t *testing.T) {

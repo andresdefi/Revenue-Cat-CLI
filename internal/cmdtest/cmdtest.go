@@ -2,6 +2,7 @@ package cmdtest
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,11 +43,13 @@ type Result struct {
 }
 
 type runConfig struct {
-	handler   http.HandlerFunc
-	projectID string
-	token     string
-	profile   string
-	stdin     string
+	handler                 http.HandlerFunc
+	projectID               string
+	token                   string
+	profile                 string
+	stdin                   string
+	context                 context.Context
+	cancelOnRepeatedRequest context.CancelFunc
 }
 
 type Option func(*runConfig)
@@ -85,6 +88,18 @@ func WithStdin(input string) Option {
 	}
 }
 
+func WithContext(ctx context.Context) Option {
+	return func(cfg *runConfig) {
+		cfg.context = ctx
+	}
+}
+
+func WithCancelOnRepeatedRequest(cancel context.CancelFunc) Option {
+	return func(cfg *runConfig) {
+		cfg.cancelOnRepeatedRequest = cancel
+	}
+}
+
 func Run(t *testing.T, args []string, opts ...Option) Result {
 	t.Helper()
 
@@ -99,8 +114,9 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 	}
 
 	var (
-		mu       sync.Mutex
-		requests []Request
+		mu            sync.Mutex
+		requests      []Request
+		requestCounts = map[string]int{}
 	)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
@@ -114,6 +130,11 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 			Query:  r.URL.RawQuery,
 			Body:   string(body),
 		})
+		key := r.Method + " " + r.URL.Path
+		requestCounts[key]++
+		if cfg.cancelOnRepeatedRequest != nil && requestCounts[key] == 2 {
+			cfg.cancelOnRepeatedRequest()
+		}
 		mu.Unlock()
 
 		if got := r.Header.Get("Authorization"); got != "Bearer "+TestToken {
@@ -152,6 +173,9 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 	}
 
 	cmd := rootcmd.NewRootCmd()
+	if cfg.context != nil {
+		cmd.SetContext(cfg.context)
+	}
 	cmd.SetArgs(args)
 	stdout, stderr, err := capture(t, cfg.stdin, func() error {
 		return cmd.Execute()
@@ -199,6 +223,19 @@ func AssertRequested(t *testing.T, result Result, method, requestPath string) {
 		}
 	}
 	t.Fatalf("missing request %s %s; got %#v", method, requestPath, result.Requests)
+}
+
+func AssertRequestCountAtLeast(t *testing.T, result Result, method, requestPath string, want int) {
+	t.Helper()
+	got := 0
+	for _, req := range result.Requests {
+		if req.Method == method && req.Path == requestPath {
+			got++
+		}
+	}
+	if got < want {
+		t.Fatalf("request count for %s %s = %d, want at least %d; got %#v", method, requestPath, got, want, result.Requests)
+	}
 }
 
 func AssertRequestJSON(t *testing.T, result Result, method, requestPath string, want map[string]any) {

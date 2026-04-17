@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/andresdefi/rc/internal/api"
 	"github.com/andresdefi/rc/internal/cmdutil"
@@ -13,7 +15,11 @@ import (
 )
 
 func newLaunchCheckCmd(projectID, outputFormat *string) *cobra.Command {
-	var strict bool
+	var (
+		strict   bool
+		watch    bool
+		interval time.Duration
+	)
 
 	cmd := &cobra.Command{
 		Use:   "launch-check",
@@ -29,33 +35,45 @@ package-product paths needed before shipping.`,
   # Emit JSON for automation
   rc launch-check --output json
 
+  # Watch launch readiness while final setup lands
+  rc launch-check --watch --interval 10s
+
   # Fail when required launch paths are missing
   rc launch-check --strict`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			pid, err := cmdutil.ResolveProject(projectID)
-			if err != nil {
-				return err
-			}
-			client, err := api.NewClient()
-			if err != nil {
-				return err
-			}
-			health, err := projecthealth.Analyze(client, pid)
-			if err != nil {
-				return err
-			}
-			report := projecthealth.AssessLaunch(health)
+			run := func(_ context.Context) error {
+				pid, err := cmdutil.ResolveProject(projectID)
+				if err != nil {
+					return err
+				}
+				client, err := api.NewClient()
+				if err != nil {
+					return err
+				}
+				health, err := projecthealth.Analyze(client, pid)
+				if err != nil {
+					return err
+				}
+				report := projecthealth.AssessLaunch(health)
 
-			format := cmdutil.GetOutputFormat(outputFormat)
-			output.Print(format, report, renderLaunchReport(report))
-			if strict && !report.Ready {
-				return fmt.Errorf("launch check failed")
+				format := cmdutil.GetOutputFormat(outputFormat)
+				output.Print(format, report, renderLaunchReport(report))
+				if strict && !report.Ready {
+					return fmt.Errorf("launch check failed")
+				}
+				return nil
 			}
-			return nil
+
+			if watch {
+				return cmdutil.Watch(cmd.Context(), interval, run)
+			}
+			return run(cmd.Context())
 		},
 	}
 
 	cmd.Flags().BoolVar(&strict, "strict", false, "return a non-zero exit code when launch requirements are missing")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
+	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
 	return cmd
 }
 
