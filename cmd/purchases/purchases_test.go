@@ -7,21 +7,22 @@ import (
 )
 
 func TestPurchasesListTable(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list", "--output", "table"})
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest", "--output", "table"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "purch_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/purchases")
 }
 
 func TestPurchasesListJSON(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list", "--output", "json"})
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "\"object\": \"list\"")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/purchases")
+	cmdtest.AssertRequestedWithQuery(t, result, "GET", "/projects/proj_cmdtest/purchases", "store_purchase_identifier", "store_purchase_cmdtest")
 }
 
 func TestPurchasesListAll(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list", "--all", "--output", "json"})
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest", "--all", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "purch_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/purchases")
@@ -66,36 +67,36 @@ func TestPurchasesRefundMissingArg(t *testing.T) {
 }
 
 func TestPurchasesListWithProfile(t *testing.T) {
-	result := cmdtest.Run(t, []string{"--profile", "cmdtest", "purchases", "list", "--output", "json"})
+	result := cmdtest.Run(t, []string{"--profile", "cmdtest", "purchases", "list", "--store-purchase-id", "store_purchase_cmdtest", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "purch_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/purchases")
 }
 
 func TestPurchasesProjectFlagOverridesDefault(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list", "--project", "proj_override", "--output", "json"})
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest", "--project", "proj_override", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "purch_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_override/purchases")
 }
 
 func TestPurchasesListNotLoggedIn(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list"}, cmdtest.WithoutToken())
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest"}, cmdtest.WithoutToken())
 	cmdtest.AssertErrorContains(t, result, "not logged in")
 }
 
 func TestPurchasesListAPIError(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list"}, cmdtest.WithAPIError(400, "parameter_error", "fixture API error"))
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest"}, cmdtest.WithAPIError(400, "parameter_error", "fixture API error"))
 	cmdtest.AssertErrorContains(t, result, "fixture API error")
 }
 
 func TestPurchasesInvalidOutputFlag(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list", "--output", "yaml"})
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest", "--output", "yaml"})
 	cmdtest.AssertErrorContains(t, result, "invalid output format")
 }
 
 func TestPurchasesHelpExamples(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list", "--help"})
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest", "--help"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "Examples:")
 }
@@ -107,7 +108,7 @@ func TestPurchasesRootHelp(t *testing.T) {
 }
 
 func TestPurchasesListLimit(t *testing.T) {
-	result := cmdtest.Run(t, []string{"purchases", "list", "--limit", "1", "--output", "json"})
+	result := cmdtest.Run(t, []string{"purchases", "list", "--store-purchase-id", "store_purchase_cmdtest", "--limit", "1", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "purch_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/purchases")

@@ -160,6 +160,10 @@ Update an app
 
 **Flags**
 
+- `--app-store-connect-api-key-file`: path to App Store Connect API key .p8 file
+- `--app-store-connect-api-key-id`: App Store Connect API key ID
+- `--app-store-connect-api-key-issuer`: App Store Connect API key issuer ID
+- `--app-store-connect-vendor-number`: App Store Connect vendor number
 - `--name`: new app name
 - `--service-account-file`: path to Google Play service account JSON file (not supported by RevenueCat API v2 app update)
 - `--shared-secret`: App Store shared secret
@@ -181,6 +185,13 @@ Update an app
     --subscription-key-file ./SubscriptionKey_ABC123.p8 \
     --subscription-key-id ABC123 \
     --subscription-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129
+
+  # Configure App Store Connect API credentials
+  rc apps update app1a2b3c4d5 \
+    --app-store-connect-api-key-file ./AuthKey_ABC123.p8 \
+    --app-store-connect-api-key-id ABC123 \
+    --app-store-connect-api-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129 \
+    --app-store-connect-vendor-number 12345678
 ```
 
 ### rc audit-logs
@@ -515,6 +526,7 @@ Create a virtual currency transaction (credit/debit)
 - `--amount`: amount (positive=credit, negative=debit) (required) Default: `0`.
 - `--code`: currency code (required)
 - `--customer-id`: customer ID (required)
+- `--reference`: optional idempotency/reference label
 
 **Examples**
 
@@ -579,6 +591,7 @@ Set a customer's virtual currency balance directly
 - `--balance`: new balance value (required) Default: `0`.
 - `--code`: currency code (required)
 - `--customer-id`: customer ID (required)
+- `--reference`: optional idempotency/reference label
 
 **Examples**
 
@@ -1565,11 +1578,18 @@ has product links before setting it as the current offering.
 
 Unarchive an offering
 
+**Flags**
+
+- `--unarchive-referenced-entities`: also unarchive archived products referenced by this offering's packages Default: `false`.
+
 **Examples**
 
 ```bash
 # Unarchive an offering
   rc offerings unarchive ofrnge1a2b3c4d5
+
+  # Also unarchive archived products referenced by the offering's packages
+  rc offerings unarchive ofrnge1a2b3c4d5 --unarchive-referenced-entities
 ```
 
 #### rc offerings update
@@ -1765,11 +1785,15 @@ Manage paywalls
 
 Create a paywall
 
+**Flags**
+
+- `--offering-id`: offering ID for the paywall (required)
+
 **Examples**
 
 ```bash
 # Create a paywall
-  rc paywalls create
+  rc paywalls create --offering-id ofrnge1a2b3c4d5
 ```
 
 #### rc paywalls delete
@@ -2133,7 +2157,7 @@ Set the default project for all commands
 
 ### rc purchases
 
-Manage one-time purchases
+Search and manage one-time purchases
 
 #### rc purchases entitlements
 
@@ -2162,24 +2186,25 @@ Get a purchase by ID
 
 #### rc purchases list
 
-List purchases in a project
+Search purchases by store purchase identifier
 
 **Flags**
 
 - `--all`: fetch all pages Default: `false`.
 - `--limit`: max items per page Default: `0`.
+- `--store-purchase-id`: store purchase identifier to search for (required)
 
 **Examples**
 
 ```bash
-# List purchases
-  rc purchases list
+# Search purchases by store purchase identifier
+  rc purchases list --store-purchase-id 100001234567890
 
   # List with JSON output
-  rc purchases list -o json
+  rc purchases list --store-purchase-id 100001234567890 -o json
 
   # Fetch all pages
-  rc purchases list --all
+  rc purchases list --store-purchase-id 100001234567890 --all
 ```
 
 #### rc purchases refund
@@ -2250,7 +2275,7 @@ Manage subscriptions
 View and manage RevenueCat subscriptions.
 
 Examples:
-  rc subscriptions list
+  rc subscriptions list --store-subscription-id 100001234567890
   rc subscriptions get sub1ab2c3d4e5
   rc subscriptions transactions sub1ab2c3d4e5
   rc subscriptions cancel sub1ab2c3d4e5
@@ -2300,7 +2325,7 @@ Get a subscription by ID
   rc subscriptions get sub1ab2c3d4e5 --profile production
 
   # Extract the authenticated management URL
-  rc subscriptions management-url sub1ab2c3d4e5 --output json | jq -r '.url'
+  rc subscriptions management-url sub1ab2c3d4e5 --output json | jq -r '.management_url'
 
   # Inspect a subscription, then list transactions
   rc subscriptions get sub1ab2c3d4e5
@@ -2312,34 +2337,35 @@ Get a subscription by ID
 
 #### rc subscriptions list
 
-List subscriptions in a project
+Search subscriptions by store subscription identifier
 
 **Flags**
 
 - `--all`: fetch all pages Default: `false`.
 - `--limit`: max items per page Default: `0`.
+- `--store-subscription-id`: store subscription identifier to search for (required)
 
 **Examples**
 
 ```bash
-# List subscriptions
-  rc subscriptions list
+# Search subscriptions by store subscription identifier
+  rc subscriptions list --store-subscription-id 100001234567890
 
-  # List subscriptions for a specific project as JSON
-  rc subscriptions list --project proj1a2b3c4d5 --output json
+  # Search subscriptions for a specific project as JSON
+  rc subscriptions list --store-subscription-id 100001234567890 --project proj1a2b3c4d5 --output json
 
   # Use a production profile
-  rc subscriptions list --profile production
+  rc subscriptions list --store-subscription-id 100001234567890 --profile production
 
   # Extract active subscription IDs
-  rc subscriptions list --output json | jq -r '.items[] | select(.status == "active") | .id'
+  rc subscriptions list --store-subscription-id 100001234567890 --output json | jq -r '.items[] | select(.status == "active") | .id'
 
   # Find a subscription, then inspect transactions
-  rc subscriptions list --output json | jq -r '.items[0].id'
+  rc subscriptions list --store-subscription-id 100001234567890 --output json | jq -r '.items[0].id'
   rc subscriptions transactions sub1ab2c3d4e5
 
   # Fetch every page
-  rc subscriptions list --all --limit 100
+  rc subscriptions list --store-subscription-id 100001234567890 --all --limit 100
 ```
 
 #### rc subscriptions management-url

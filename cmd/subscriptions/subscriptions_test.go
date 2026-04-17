@@ -7,21 +7,22 @@ import (
 )
 
 func TestSubscriptionsListTable(t *testing.T) {
-	result := cmdtest.Run(t, []string{"subscriptions", "list", "--output", "table"})
+	result := cmdtest.Run(t, []string{"subscriptions", "list", "--store-subscription-id", "store_sub_cmdtest", "--output", "table"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "sub_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/subscriptions")
 }
 
 func TestSubscriptionsListJSON(t *testing.T) {
-	result := cmdtest.Run(t, []string{"subscriptions", "list", "--output", "json"})
+	result := cmdtest.Run(t, []string{"subscriptions", "list", "--store-subscription-id", "store_sub_cmdtest", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "\"object\": \"list\"")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/subscriptions")
+	cmdtest.AssertRequestedWithQuery(t, result, "GET", "/projects/proj_cmdtest/subscriptions", "store_subscription_identifier", "store_sub_cmdtest")
 }
 
 func TestSubscriptionsListAll(t *testing.T) {
-	result := cmdtest.Run(t, []string{"subscriptions", "list", "--all", "--output", "json"})
+	result := cmdtest.Run(t, []string{"subscriptions", "list", "--store-subscription-id", "store_sub_cmdtest", "--all", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "sub_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/subscriptions")
@@ -89,27 +90,28 @@ func TestSubscriptionsRefundTransactionMissingFlag(t *testing.T) {
 func TestSubscriptionsManagementURLJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"subscriptions", "management-url", "sub_cmdtest", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "management_url")
 	cmdtest.AssertOutputContains(t, result, "https://pay.rev.cat/manage")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/subscriptions/sub_cmdtest/authenticated_management_url")
 }
 
 func TestSubscriptionsListNotLoggedIn(t *testing.T) {
-	result := cmdtest.Run(t, []string{"subscriptions", "list"}, cmdtest.WithoutToken())
+	result := cmdtest.Run(t, []string{"subscriptions", "list", "--store-subscription-id", "store_sub_cmdtest"}, cmdtest.WithoutToken())
 	cmdtest.AssertErrorContains(t, result, "not logged in")
 }
 
 func TestSubscriptionsListAPIError(t *testing.T) {
-	result := cmdtest.Run(t, []string{"subscriptions", "list"}, cmdtest.WithAPIError(400, "parameter_error", "fixture API error"))
+	result := cmdtest.Run(t, []string{"subscriptions", "list", "--store-subscription-id", "store_sub_cmdtest"}, cmdtest.WithAPIError(400, "parameter_error", "fixture API error"))
 	cmdtest.AssertErrorContains(t, result, "fixture API error")
 }
 
 func TestSubscriptionsInvalidOutputFlag(t *testing.T) {
-	result := cmdtest.Run(t, []string{"subscriptions", "list", "--output", "yaml"})
+	result := cmdtest.Run(t, []string{"subscriptions", "list", "--store-subscription-id", "store_sub_cmdtest", "--output", "yaml"})
 	cmdtest.AssertErrorContains(t, result, "invalid output format")
 }
 
 func TestSubscriptionsHelpExamples(t *testing.T) {
-	result := cmdtest.Run(t, []string{"subscriptions", "list", "--help"})
+	result := cmdtest.Run(t, []string{"subscriptions", "list", "--store-subscription-id", "store_sub_cmdtest", "--help"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "Examples:")
 }

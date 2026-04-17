@@ -287,8 +287,8 @@ type Invoice struct {
 
 // ManagementURL represents an authenticated management URL response.
 type ManagementURL struct {
-	Object string `json:"object"`
-	URL    string `json:"url"`
+	Object        string `json:"object"`
+	ManagementURL string `json:"management_url"`
 }
 
 // PublicAPIKey represents a public API key for an app.

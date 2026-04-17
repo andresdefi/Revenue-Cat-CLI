@@ -67,17 +67,22 @@ func TestPaywallsGetMissingArg(t *testing.T) {
 }
 
 func TestPaywallsCreateJSON(t *testing.T) {
-	result := cmdtest.Run(t, []string{"paywalls", "create", "--output", "json"})
+	result := cmdtest.Run(t, []string{"paywalls", "create", "--offering-id", "ofrnge_cmdtest", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "paywall_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/paywalls")
 }
 
 func TestPaywallsCreateTable(t *testing.T) {
-	result := cmdtest.Run(t, []string{"paywalls", "create"})
+	result := cmdtest.Run(t, []string{"paywalls", "create", "--offering-id", "ofrnge_cmdtest"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "paywall_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/paywalls")
+}
+
+func TestPaywallsCreateMissingOfferingID(t *testing.T) {
+	result := cmdtest.Run(t, []string{"paywalls", "create"})
+	cmdtest.AssertErrorContains(t, result, "required flag")
 }
 
 func TestPaywallsDeleteSuccess(t *testing.T) {
@@ -104,7 +109,7 @@ func TestPaywallsHelpExamples(t *testing.T) {
 }
 
 func TestPaywallsCreateAPIError(t *testing.T) {
-	result := cmdtest.Run(t, []string{"paywalls", "create", "--output", "json"}, cmdtest.WithAPIError(400, "parameter_error", "fixture API error"))
+	result := cmdtest.Run(t, []string{"paywalls", "create", "--offering-id", "ofrnge_cmdtest", "--output", "json"}, cmdtest.WithAPIError(400, "parameter_error", "fixture API error"))
 	cmdtest.AssertErrorContains(t, result, "fixture API error")
 }
 

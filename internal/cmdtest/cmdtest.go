@@ -417,7 +417,7 @@ func handleGET(w http.ResponseWriter, r *http.Request) {
 	case strings.Contains(p, "/subscriptions/") && strings.HasSuffix(p, "/entitlements"):
 		writeJSON(w, http.StatusOK, list(activeEntitlement()))
 	case strings.Contains(p, "/subscriptions/") && strings.HasSuffix(p, "/authenticated_management_url"):
-		writeJSON(w, http.StatusOK, map[string]any{"object": "management_url", "url": "https://pay.rev.cat/manage"})
+		writeJSON(w, http.StatusOK, map[string]any{"object": "authenticated_management_url", "management_url": "https://pay.rev.cat/manage"})
 	case strings.Contains(p, "/subscriptions/"):
 		writeJSON(w, http.StatusOK, subscription())
 	case strings.HasSuffix(p, "/purchases"):
@@ -487,7 +487,7 @@ func handlePOST(w http.ResponseWriter, r *http.Request) {
 	case strings.Contains(p, "/customers/"):
 		writeJSON(w, http.StatusOK, customer())
 	case strings.Contains(p, "/subscriptions/") && strings.HasSuffix(p, "/authenticated_management_url"):
-		writeJSON(w, http.StatusOK, map[string]any{"object": "management_url", "url": "https://pay.rev.cat/manage"})
+		writeJSON(w, http.StatusOK, map[string]any{"object": "authenticated_management_url", "management_url": "https://pay.rev.cat/manage"})
 	case strings.Contains(p, "/subscriptions/"):
 		writeJSON(w, http.StatusOK, subscription())
 	case strings.Contains(p, "/purchases/"):

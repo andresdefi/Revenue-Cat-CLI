@@ -253,6 +253,10 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 		subscriptionKeyFile string
 		subscriptionKeyID   string
 		subscriptionIssuer  string
+		connectKeyFile      string
+		connectKeyID        string
+		connectIssuer       string
+		connectVendorNumber string
 		serviceAccountFile  string
 	)
 
@@ -269,7 +273,14 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
   rc apps update app1a2b3c4d5 \
     --subscription-key-file ./SubscriptionKey_ABC123.p8 \
     --subscription-key-id ABC123 \
-    --subscription-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129`,
+    --subscription-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129
+
+  # Configure App Store Connect API credentials
+  rc apps update app1a2b3c4d5 \
+    --app-store-connect-api-key-file ./AuthKey_ABC123.p8 \
+    --app-store-connect-api-key-id ABC123 \
+    --app-store-connect-api-key-issuer 5a049d62-1b9b-453c-b605-1988189d8129 \
+    --app-store-connect-vendor-number 12345678`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(c *cobra.Command, args []string) error {
 			pid, err := cmdutil.ResolveProject(projectID)
@@ -306,6 +317,22 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 			if c.Flags().Changed("subscription-key-issuer") {
 				appStore["subscription_key_issuer"] = subscriptionIssuer
 			}
+			if c.Flags().Changed("app-store-connect-api-key-file") {
+				contents, err := os.ReadFile(connectKeyFile)
+				if err != nil {
+					return fmt.Errorf("read App Store Connect API key file: %w", err)
+				}
+				appStore["app_store_connect_api_key"] = string(contents)
+			}
+			if c.Flags().Changed("app-store-connect-api-key-id") {
+				appStore["app_store_connect_api_key_id"] = connectKeyID
+			}
+			if c.Flags().Changed("app-store-connect-api-key-issuer") {
+				appStore["app_store_connect_api_key_issuer"] = connectIssuer
+			}
+			if c.Flags().Changed("app-store-connect-vendor-number") {
+				appStore["app_store_connect_vendor_number"] = connectVendorNumber
+			}
 			if len(appStore) > 0 {
 				body["app_store"] = appStore
 			}
@@ -339,6 +366,10 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&subscriptionKeyFile, "subscription-key-file", "", "path to App Store in-app purchase key .p8 file")
 	cmd.Flags().StringVar(&subscriptionKeyID, "subscription-key-id", "", "App Store in-app purchase key ID")
 	cmd.Flags().StringVar(&subscriptionIssuer, "subscription-key-issuer", "", "App Store in-app purchase key issuer ID")
+	cmd.Flags().StringVar(&connectKeyFile, "app-store-connect-api-key-file", "", "path to App Store Connect API key .p8 file")
+	cmd.Flags().StringVar(&connectKeyID, "app-store-connect-api-key-id", "", "App Store Connect API key ID")
+	cmd.Flags().StringVar(&connectIssuer, "app-store-connect-api-key-issuer", "", "App Store Connect API key issuer ID")
+	cmd.Flags().StringVar(&connectVendorNumber, "app-store-connect-vendor-number", "", "App Store Connect vendor number")
 	cmd.Flags().StringVar(&serviceAccountFile, "service-account-file", "", "path to Google Play service account JSON file (not supported by RevenueCat API v2 app update)")
 	return cmd
 }
