@@ -150,6 +150,7 @@ make help             # Show all targets
 ## Release
 - **v0.1.0** released 2026-04-13 - initial release, 100% API coverage
 - **v0.2.0** - MCP server, pagination, multi-profile, watch, bulk ops, interactive mode
+- **v0.3.0** - workflow commands, launch diagnostics, customer diagnosis, app credentials, watch expansion, correctness hardening
 - Homebrew: `brew install andresdefi/tap/rc`
 - Install script: `curl -fsSL https://raw.githubusercontent.com/andresdefi/Revenue-Cat-CLI/main/install.sh | sh`
 - Go: `go install github.com/andresdefi/rc@latest`
