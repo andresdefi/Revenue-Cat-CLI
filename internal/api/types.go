@@ -12,12 +12,26 @@ type Project struct {
 
 // App represents a RevenueCat app.
 type App struct {
-	Object    string `json:"object"`
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Type      string `json:"type"`
-	CreatedAt int64  `json:"created_at"`
-	ProjectID string `json:"project_id"`
+	Object      string        `json:"object"`
+	ID          string        `json:"id"`
+	Name        string        `json:"name"`
+	Type        string        `json:"type"`
+	CreatedAt   int64         `json:"created_at"`
+	ProjectID   string        `json:"project_id"`
+	AppStore    *AppStoreApp  `json:"app_store,omitempty"`
+	MacAppStore *AppStoreApp  `json:"mac_app_store,omitempty"`
+	PlayStore   *PlayStoreApp `json:"play_store,omitempty"`
+}
+
+type AppStoreApp struct {
+	BundleID                        string `json:"bundle_id,omitempty"`
+	AppStoreConnectAPIKeyConfigured *bool  `json:"app_store_connect_api_key_configured,omitempty"`
+	SubscriptionKeyConfigured       *bool  `json:"subscription_key_configured,omitempty"`
+	SharedSecretConfigured          *bool  `json:"shared_secret_configured,omitempty"`
+}
+
+type PlayStoreApp struct {
+	PackageName string `json:"package_name,omitempty"`
 }
 
 // Product represents a RevenueCat product.

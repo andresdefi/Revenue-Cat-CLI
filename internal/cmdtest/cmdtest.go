@@ -574,7 +574,19 @@ func project() map[string]any {
 }
 
 func app() map[string]any {
-	return map[string]any{"object": "app", "id": "app_cmdtest", "name": "iOS App", "type": "ios", "project_id": TestProjectID, "created_at": 1713072000000}
+	return map[string]any{
+		"object":     "app",
+		"id":         "app_cmdtest",
+		"name":       "iOS App",
+		"type":       "app_store",
+		"project_id": TestProjectID,
+		"created_at": 1713072000000,
+		"app_store": map[string]any{
+			"bundle_id":                            "com.example.app",
+			"app_store_connect_api_key_configured": true,
+			"subscription_key_configured":          true,
+		},
+	}
 }
 
 func publicKey() map[string]any {

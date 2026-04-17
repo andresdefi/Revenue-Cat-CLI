@@ -122,7 +122,7 @@ make help           # Show all targets
 - [x] Version command with ldflags injection (rc version)
 - [x] "Did you mean?" fuzzy command suggestions
 - [x] Structured exit codes (1=general, 3=auth, 4=API)
-- [x] 608 default tests across 41 test files (612 with integration tag)
+- [x] 616 default tests across 41 test files (620 with integration tag)
 - [x] Request golden tests, pagination contract tests, generated docs drift test, opt-in integration tests
 - [x] Makefile with build/test/lint/fmt/docs/check targets
 - [x] .golangci.yml config

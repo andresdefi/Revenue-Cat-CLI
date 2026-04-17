@@ -28,7 +28,7 @@ Confirmed and fixed in the CLI:
   `--unarchive-referenced-entities`.
 - App Store app updates document App Store Connect API-key fields under
   `app_store`; `rc apps update` now exposes the documented
-  `--app-store-connect-*` flags.
+  `--app-store-connect-*` flags and shorter `--asc-*` aliases.
 - `POST /products/{product_id}/create_in_store` allows an omitted body for
   in-app purchase products, but subscription products require
   `store_information`. `rc products push-to-store` now keeps the no-body path
@@ -58,6 +58,10 @@ Confirmed and fixed in the CLI:
 - The current RevenueCat v2 OpenAPI describes `subscription_private_key` as the
   `.p8` PEM file contents. The CLI reads `--subscription-key-file` and sends the
   file contents as-is.
+- `rc apps creds status` reports credential configuration booleans returned by
+  RevenueCat, such as `subscription_key_configured` and
+  `app_store_connect_api_key_configured`. It does not verify credential validity
+  with Apple.
 - The current RevenueCat v2 OpenAPI does not document a Google Play service
   account credential field on app updates, and `play_store` disallows extra
   fields. `--service-account-file` returns a clear error instead of sending an

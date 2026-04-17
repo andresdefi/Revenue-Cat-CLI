@@ -57,7 +57,15 @@ func TestAppsGetJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"apps", "get", "app_cmdtest", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "\"id\": \"app_cmdtest\"")
+	cmdtest.AssertOutputContains(t, result, "\"subscription_key_configured\": true")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/apps/app_cmdtest")
+}
+
+func TestAppsGetTableShowsCredentialStatus(t *testing.T) {
+	result := cmdtest.Run(t, []string{"apps", "get", "app_cmdtest", "--output", "table"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "In-App Purchase Key")
+	cmdtest.AssertOutputContains(t, result, "configured")
 }
 
 func TestAppsGetMissingArg(t *testing.T) {
@@ -166,6 +174,42 @@ func TestAppsUpdateAppStoreConnectCredentials(t *testing.T) {
 			"app_store_connect_vendor_number":  "12345678",
 		},
 	})
+}
+
+func TestAppsUpdateAppStoreConnectCredentialAliases(t *testing.T) {
+	keyPath := filepath.Join(t.TempDir(), "AuthKey_ALIAS123.p8")
+	keyContents := "-----BEGIN PRIVATE KEY-----\nalias-key\n-----END PRIVATE KEY-----\n"
+	if err := os.WriteFile(keyPath, []byte(keyContents), 0o600); err != nil {
+		t.Fatalf("write App Store Connect key fixture: %v", err)
+	}
+
+	result := cmdtest.Run(t, []string{
+		"apps", "update", "app_cmdtest",
+		"--asc-api-key-file", keyPath,
+		"--asc-api-key-id", "ALIAS123",
+		"--asc-api-key-issuer", "alias-issuer-123",
+		"--asc-vendor-number", "87654321",
+		"--output", "json",
+	})
+
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertRequestJSON(t, result, "POST", "/projects/proj_cmdtest/apps/app_cmdtest", map[string]any{
+		"app_store": map[string]any{
+			"app_store_connect_api_key":        keyContents,
+			"app_store_connect_api_key_id":     "ALIAS123",
+			"app_store_connect_api_key_issuer": "alias-issuer-123",
+			"app_store_connect_vendor_number":  "87654321",
+		},
+	})
+}
+
+func TestAppsCredsStatusJSON(t *testing.T) {
+	result := cmdtest.Run(t, []string{"apps", "creds", "status", "app_cmdtest", "--output", "json"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"object": "app_credentials_status"`)
+	cmdtest.AssertOutputContains(t, result, `"subscription_key_configured": true`)
+	cmdtest.AssertOutputContains(t, result, `"app_store_connect_api_key_configured": true`)
+	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/apps/app_cmdtest")
 }
 
 func TestAppsUpdateSubscriptionKeyFileError(t *testing.T) {

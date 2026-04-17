@@ -85,6 +85,30 @@ provided on the command line.
   rc apps create
 ```
 
+#### rc apps creds
+
+Inspect app credential configuration
+
+Inspect app credential configuration.
+
+RevenueCat API v2 exposes whether App Store keys are configured. This status
+does not validate the credentials against Apple; it reports the configured
+state returned by RevenueCat.
+
+##### rc apps creds status
+
+Show app credential configuration status
+
+**Examples**
+
+```bash
+# Show App Store credential configuration
+  rc apps creds status app1a2b3c4d5
+
+  # Emit JSON for automation
+  rc apps creds status app1a2b3c4d5 --output json
+```
+
 #### rc apps delete
 
 Delete an app
@@ -170,6 +194,10 @@ Update an app
 - `--app-store-connect-api-key-id`: App Store Connect API key ID
 - `--app-store-connect-api-key-issuer`: App Store Connect API key issuer ID
 - `--app-store-connect-vendor-number`: App Store Connect vendor number
+- `--asc-api-key-file`: alias for --app-store-connect-api-key-file
+- `--asc-api-key-id`: alias for --app-store-connect-api-key-id
+- `--asc-api-key-issuer`: alias for --app-store-connect-api-key-issuer
+- `--asc-vendor-number`: alias for --app-store-connect-vendor-number
 - `--name`: new app name
 - `--service-account-file`: path to Google Play service account JSON file (not supported by RevenueCat API v2 app update)
 - `--shared-secret`: App Store shared secret
@@ -820,14 +848,22 @@ Grant an entitlement to a customer
 **Flags**
 
 - `--customer-id`: customer ID (required)
+- `--duration`: grant duration (for example 12h, 30d, 2w)
 - `--entitlement-id`: entitlement ID to grant (required)
-- `--expires-at`: expiration timestamp in ms since epoch (required) Default: `0`.
+- `--expires-at`: expiration timestamp in ms since epoch Default: `0`.
+- `--lifetime`: grant long-lived access using a far-future expiration Default: `false`.
 
 **Examples**
 
 ```bash
 # Grant an entitlement with expiration
   rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --expires-at 1735689600000
+
+  # Grant access for 30 days
+  rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --duration 30d
+
+  # Grant long-lived access
+  rc customers grant --customer-id user-123 --entitlement-id entla1b2c3 --lifetime
 ```
 
 #### rc customers invoice-file

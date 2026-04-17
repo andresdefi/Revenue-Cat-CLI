@@ -126,7 +126,7 @@ make help             # Show all targets
 - [x] Shell completions: bash/zsh/fish/powershell with dynamic resource ID completion
 - [x] Update checking (non-blocking, 24h cache, GitHub releases)
 - [x] Local response caching (~/.rc/cache/, 5min TTL)
-- [x] MCP server (rc mcp serve) - 16 tools via official Go MCP SDK [experimental]
+- [x] MCP server (rc mcp serve) - 15 tools via official Go MCP SDK [experimental]
 - [x] Pagination: --all and --limit on all 14 list commands
 - [x] Multi-profile auth: --profile flag, RC_PROFILE env, TOML config with migration
 - [x] Watch mode: --watch on customers lookup/entitlements, subscriptions get, charts overview
@@ -137,7 +137,7 @@ make help             # Show all targets
 - [x] Config validation on save (profile name format)
 - [x] Input validation helpers (internal/validate)
 - [x] Stability labels on commands ([experimental], [beta])
-- [x] 608 default tests across 41 test files (612 with integration tag)
+- [x] 616 default tests across 41 test files (620 with integration tag)
 - [x] Integration test framework (//go:build integration, gated on RC_INTEGRATION_KEY)
 - [x] Makefile with tools, security, test-integration targets
 - [x] gofumpt formatting, golangci-lint v2, pre-commit hook
