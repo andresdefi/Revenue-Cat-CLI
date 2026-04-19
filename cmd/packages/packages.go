@@ -129,11 +129,12 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmdutil.MustMarkFlagRequired(cmd, "offering-id")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "lookup_key", "display_name", "position"})
 	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "get <package-id>",
 		Short: "Get a package by ID",
 		Example: `  # Get package details
@@ -177,6 +178,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "lookup_key", "display_name", "position"})
+	return cmd
 }
 
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {

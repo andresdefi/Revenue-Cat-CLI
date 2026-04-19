@@ -80,7 +80,7 @@ func TestNewRootCmd_SubcommandCount(t *testing.T) {
 func TestNewRootCmd_HasPersistentFlags(t *testing.T) {
 	root := NewRootCmd()
 
-	flags := []string{"project", "output", "no-hints"}
+	flags := []string{"project", "output", "no-hints", "agent"}
 	for _, name := range flags {
 		f := root.PersistentFlags().Lookup(name)
 		if f == nil {

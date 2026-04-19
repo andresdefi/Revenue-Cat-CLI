@@ -19,6 +19,13 @@ For commands in scripts, prefer explicit profile and output flags:
 rc products list --profile ci --project "$RC_PROJECT_ID" --output json
 ```
 
+For compact, agent-friendly JSON in non-interactive jobs, use `--agent` or `RC_AGENT=1`. Agent mode applies compact JSON, the command's default field preset, and suppresses next-step hints unless an explicit flag overrides the output or fields.
+
+```bash
+rc --agent products list --profile ci --project "$RC_PROJECT_ID"
+RC_AGENT=1 rc products list --profile ci --project "$RC_PROJECT_ID"
+```
+
 ## GitHub Actions Example
 
 ```yaml
@@ -52,3 +59,4 @@ jobs:
 - Use `--pretty` when storing JSON logs for humans.
 - Use `--quiet` to suppress progress and success messages.
 - Use `--fields` to trim JSON output to the fields a job needs.
+- Use `--fields default` to apply the command's preset from [AGENT_FIELDS.md](AGENT_FIELDS.md).

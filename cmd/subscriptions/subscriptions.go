@@ -123,6 +123,7 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
 	cmdutil.MustMarkFlagRequired(cmd, "store-subscription-id")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "customer_id", "status", "current_period_ends_at", "product_id", "store"})
 	return cmd
 }
 
@@ -205,6 +206,7 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
 	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "customer_id", "status", "current_period_ends_at", "product_id", "store"})
 	return cmd
 }
 

@@ -128,11 +128,12 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&appID, "app-id", "", "filter by app ID")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "store_identifier", "type", "state", "display_name", "app_id"})
 	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "get <product-id>",
 		Short: "Get a product by ID",
 		Example: `  # Get product details
@@ -187,6 +188,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "store_identifier", "type", "state", "display_name", "app_id"})
+	return cmd
 }
 
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {

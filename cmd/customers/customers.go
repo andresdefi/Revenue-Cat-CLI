@@ -149,6 +149,7 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&search, "search", "", "search by email (exact match)")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "project_id", "last_seen_at", "last_seen_platform"})
 	return cmd
 }
 
@@ -238,6 +239,7 @@ func newLookupCmd(projectID, outputFormat *string) *cobra.Command {
 
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
 	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "project_id", "last_seen_at", "last_seen_platform"})
 	return cmd
 }
 
@@ -400,6 +402,7 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
 	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	cmdutil.SetFieldsPreset(cmd, []string{"entitlement_id", "expires_at"})
 	return cmd
 }
 

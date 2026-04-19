@@ -364,6 +364,7 @@ rc import --file project-config.json --project proj_target --app-map app_source=
 | Document | Purpose |
 |----------|---------|
 | [docs/COMMANDS.md](docs/COMMANDS.md) | Generated command reference from Cobra help |
+| [docs/AGENT_FIELDS.md](docs/AGENT_FIELDS.md) | Default field presets and available JSON fields for agent/script use |
 | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) | Copyable RevenueCat workflow recipes |
 | [docs/API_NOTES.md](docs/API_NOTES.md) | API semantics, pagination, transfer, and error notes |
 | [docs/CI_CD.md](docs/CI_CD.md) | CI/CD setup and non-interactive usage |
@@ -417,6 +418,12 @@ rc products list -o markdown
 # Select specific fields in JSON output
 rc products list -o json --fields id,store_identifier,state
 
+# Use the default field preset for the command
+rc products list -o json --fields default
+
+# Agent/script mode: compact JSON, default fields, no hints
+rc --agent products list
+
 # Pretty-print JSON even when piping
 rc products list -o json --pretty | less
 ```
@@ -430,7 +437,8 @@ These flags work on all commands:
 | `--output` | `-o` | Output format: `table`, `json`, `markdown` (default: table for TTY, json for pipes) |
 | `--project` | `-p` | Project ID (overrides default) |
 | `--profile` | | Config profile to use |
-| `--fields` | | Comma-separated field selection for JSON output |
+| `--fields` | | Comma-separated field selection for JSON output, or `default` for the command preset |
+| `--agent` | | Compact JSON + `--fields default` + no hints for agent/script use (also respects `RC_AGENT`) |
 | `--pretty` | | Pretty-print JSON (default for TTY, compact for pipes) |
 | `--verbose` | `-v` | Shorthand for `--log-level debug` |
 | `--log-level` | | Log verbosity: `error`, `warn`, `info`, `debug` (default: `warn`) |

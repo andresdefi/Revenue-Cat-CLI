@@ -107,5 +107,6 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&endDate, "end-date", "", "filter to date (YYYY-MM-DD)")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "created_at", "actor", "action"})
 	return cmd
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/andresdefi/rc/cmd/apps"
 	"github.com/andresdefi/rc/cmd/auditlogs"
@@ -32,6 +33,7 @@ import (
 	"github.com/andresdefi/rc/internal/update"
 	"github.com/andresdefi/rc/internal/version"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -44,6 +46,7 @@ var (
 	logLevelFlag string
 	quietFlag    bool
 	noHintsFlag  bool
+	agentFlag    bool
 	dryRunFlag   bool
 	forceFlag    bool
 	fieldsFlag   string
@@ -73,6 +76,23 @@ audit logs, collaborators, and virtual currencies.`,
 		SilenceErrors:              true,
 		SuggestionsMinimumDistance: 2,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			agentMode := agentFlag || agentEnvEnabled()
+			fieldsPreset := cmdutil.FieldsPreset(cmd)
+			if agentMode {
+				if !persistentFlagChanged(cmd, "output") {
+					outputFormat = "json"
+				}
+				if !persistentFlagChanged(cmd, "fields") {
+					if fieldsPreset != "" {
+						fieldsFlag = "default"
+					} else {
+						fieldsFlag = ""
+					}
+				}
+				if !persistentFlagChanged(cmd, "pretty") {
+					output.PrettyJSON = false
+				}
+			}
 			switch outputFormat {
 			case "", "table", "json", "markdown", "md":
 			default:
@@ -99,7 +119,7 @@ audit logs, collaborators, and virtual currencies.`,
 			if quietFlag {
 				output.Quiet = true
 			}
-			cmdutil.NoHints = noHintsFlag
+			cmdutil.NoHints = noHintsFlag || agentMode
 			output.HintsDisabled = cmdutil.NoHints
 			if dryRunFlag {
 				api.DryRun = true
@@ -110,6 +130,7 @@ audit logs, collaborators, and virtual currencies.`,
 			}
 			cmdutil.FieldsFlag = fieldsFlag
 			output.FieldsFilter = fieldsFlag
+			output.DefaultFieldsPreset = fieldsPreset
 			return nil
 		},
 	}
@@ -125,6 +146,7 @@ audit logs, collaborators, and virtual currencies.`,
 	root.PersistentFlags().StringVar(&logLevelFlag, "log-level", "", "log verbosity: error, warn, info, debug (default: warn)")
 	root.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (success messages, warnings, progress)")
 	root.PersistentFlags().BoolVar(&noHintsFlag, "no-hints", false, "suppress post-mutation next-step hints (also respects RC_NO_HINTS)")
+	root.PersistentFlags().BoolVar(&agentFlag, "agent", false, "optimize output for agents: compact JSON, default fields, no hints (also respects RC_AGENT)")
 	root.PersistentFlags().BoolVar(&dryRunFlag, "dry-run", false, "show what would be done without executing mutations")
 	root.PersistentFlags().BoolVarP(&forceFlag, "yes", "y", false, "skip confirmation prompts for destructive operations")
 	root.PersistentFlags().StringVar(&fieldsFlag, "fields", "", "comma-separated list of fields to include in JSON output")
@@ -174,6 +196,23 @@ audit logs, collaborators, and virtual currencies.`,
 	root.AddCommand(transfer.NewMigrateCmd(&projectID, &outputFormat))
 
 	return root
+}
+
+func agentEnvEnabled() bool {
+	value := strings.TrimSpace(os.Getenv("RC_AGENT"))
+	return value != "" && value != "0" && strings.ToLower(value) != "false"
+}
+
+func persistentFlagChanged(cmd *cobra.Command, name string) bool {
+	for _, flags := range []*pflag.FlagSet{cmd.Flags(), cmd.InheritedFlags(), cmd.Root().PersistentFlags()} {
+		if flags == nil {
+			continue
+		}
+		if flag := flags.Lookup(name); flag != nil && flag.Changed {
+			return true
+		}
+	}
+	return false
 }
 
 func Execute() {
