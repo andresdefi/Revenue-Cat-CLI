@@ -70,6 +70,7 @@ func TestOfferingsCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"offerings", "create", "--lookup-key", "default", "--display-name", "Default", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "ofrnge_cmdtest")
+	cmdtest.AssertOutputContains(t, result, "next: rc packages create --offering-id ofrnge_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/offerings")
 }
 

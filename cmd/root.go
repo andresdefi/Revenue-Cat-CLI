@@ -43,6 +43,7 @@ var (
 	verboseFlag  bool
 	logLevelFlag string
 	quietFlag    bool
+	noHintsFlag  bool
 	dryRunFlag   bool
 	forceFlag    bool
 	fieldsFlag   string
@@ -98,6 +99,8 @@ audit logs, collaborators, and virtual currencies.`,
 			if quietFlag {
 				output.Quiet = true
 			}
+			cmdutil.NoHints = noHintsFlag
+			output.HintsDisabled = cmdutil.NoHints
 			if dryRunFlag {
 				api.DryRun = true
 			}
@@ -121,6 +124,7 @@ audit logs, collaborators, and virtual currencies.`,
 	root.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "shorthand for --log-level debug")
 	root.PersistentFlags().StringVar(&logLevelFlag, "log-level", "", "log verbosity: error, warn, info, debug (default: warn)")
 	root.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "suppress non-essential output (success messages, warnings, progress)")
+	root.PersistentFlags().BoolVar(&noHintsFlag, "no-hints", false, "suppress post-mutation next-step hints (also respects RC_NO_HINTS)")
 	root.PersistentFlags().BoolVar(&dryRunFlag, "dry-run", false, "show what would be done without executing mutations")
 	root.PersistentFlags().BoolVarP(&forceFlag, "yes", "y", false, "skip confirmation prompts for destructive operations")
 	root.PersistentFlags().StringVar(&fieldsFlag, "fields", "", "comma-separated list of fields to include in JSON output")

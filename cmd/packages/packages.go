@@ -241,6 +241,7 @@ interactively when running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Package created successfully")
+			output.Next("rc packages attach --package-id %s --product-id <product-id>", pkg.ID)
 			return nil
 		},
 	}
@@ -295,6 +296,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 				t.AppendRows([]table.Row{{"ID", pkg.ID}, {"Display Name", pkg.DisplayName}})
 			})
 			output.Success("Package updated")
+			output.Next("rc packages get %s", pkg.ID)
 			return nil
 		},
 	}
@@ -435,6 +437,7 @@ Eligibility options: all (default), google_sdk_lt_6, google_sdk_ge_6`,
 				return err
 			}
 			output.Success("Product %s attached to package %s", productID, packageID)
+			output.Next("rc packages products %s", packageID)
 			return nil
 		},
 	}
@@ -475,6 +478,7 @@ func newDetachCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Detached %d product(s) from package %s", len(productIDs), packageID)
+			output.Next("rc packages products %s", packageID)
 			return nil
 		},
 	}

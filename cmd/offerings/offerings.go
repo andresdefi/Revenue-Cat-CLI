@@ -280,6 +280,7 @@ running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Offering created successfully")
+			output.Next("rc packages create --offering-id %s --lookup-key monthly", offering.ID)
 			return nil
 		},
 	}
@@ -343,6 +344,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 				})
 			})
 			output.Success("Offering updated")
+			output.Next("rc offerings get %s", offering.ID)
 			return nil
 		},
 	}
@@ -402,6 +404,7 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Offering %s archived", args[0])
+			output.Next("rc offerings unarchive %s", args[0])
 			return nil
 		},
 	}
@@ -436,6 +439,7 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Offering %s unarchived", args[0])
+			output.Next("rc offerings get %s", args[0])
 			return nil
 		},
 	}

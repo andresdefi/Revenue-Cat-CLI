@@ -255,6 +255,7 @@ running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Entitlement created successfully")
+			output.Next("rc entitlements attach --entitlement-id %s --product-id <product-id>", ent.ID)
 			return nil
 		},
 	}
@@ -304,6 +305,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 				})
 			})
 			output.Success("Entitlement updated")
+			output.Next("rc entitlements get %s", ent.ID)
 			return nil
 		},
 	}
@@ -363,6 +365,7 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Entitlement %s archived", args[0])
+			output.Next("rc entitlements unarchive %s", args[0])
 			return nil
 		},
 	}
@@ -389,6 +392,7 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Entitlement %s unarchived", args[0])
+			output.Next("rc entitlements get %s", args[0])
 			return nil
 		},
 	}
@@ -514,6 +518,7 @@ func newAttachCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Attached %d product(s) to entitlement %s", len(productIDs), entitlementID)
+			output.Next("rc entitlements products %s", entitlementID)
 			return nil
 		},
 	}
@@ -557,6 +562,7 @@ func newDetachCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Detached %d product(s) from entitlement %s", len(productIDs), entitlementID)
+			output.Next("rc entitlements products %s", entitlementID)
 			return nil
 		},
 	}
@@ -725,6 +731,7 @@ Each row/entry creates a new entitlement in the project.`,
 			}
 
 			output.Success("Imported %d/%d entitlements", created, len(rows))
+			output.Next("rc entitlements list")
 			return nil
 		},
 	}

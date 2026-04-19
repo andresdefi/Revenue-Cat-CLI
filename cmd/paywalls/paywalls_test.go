@@ -70,6 +70,7 @@ func TestPaywallsCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"paywalls", "create", "--offering-id", "ofrnge_cmdtest", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "paywall_cmdtest")
+	cmdtest.AssertOutputContains(t, result, "next: rc paywalls get paywall_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/paywalls")
 }
 

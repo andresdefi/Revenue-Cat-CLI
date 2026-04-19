@@ -435,6 +435,7 @@ These flags work on all commands:
 | `--verbose` | `-v` | Shorthand for `--log-level debug` |
 | `--log-level` | | Log verbosity: `error`, `warn`, `info`, `debug` (default: `warn`) |
 | `--quiet` | `-q` | Suppress success messages, warnings, and progress output |
+| `--no-hints` | | Suppress post-mutation next-step hints |
 | `--dry-run` | | Preview mutations without executing (shows method, path, body) |
 | `--yes` | `-y` | Skip confirmation prompts on destructive operations |
 | `--no-color` | | Disable color output (also respects `NO_COLOR` env var) |

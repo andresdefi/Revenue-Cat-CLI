@@ -152,16 +152,25 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 	oldBaseURL := api.BaseURL
 	oldDryRun := api.DryRun
 	oldPrettyJSON := output.PrettyJSON
+	oldQuiet := output.Quiet
+	oldHintsDisabled := output.HintsDisabled
 	oldForceYes := cmdutil.ForceYes
+	oldNoHints := cmdutil.NoHints
 	api.BaseURL = server.URL
 	api.DryRun = false
 	output.PrettyJSON = true
+	output.Quiet = false
+	output.HintsDisabled = false
 	cmdutil.ForceYes = true
+	cmdutil.NoHints = false
 	t.Cleanup(func() {
 		api.BaseURL = oldBaseURL
 		api.DryRun = oldDryRun
 		output.PrettyJSON = oldPrettyJSON
+		output.Quiet = oldQuiet
+		output.HintsDisabled = oldHintsDisabled
 		cmdutil.ForceYes = oldForceYes
+		cmdutil.NoHints = oldNoHints
 		cmdutil.ActiveProfile = ""
 	})
 

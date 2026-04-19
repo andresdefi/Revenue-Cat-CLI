@@ -290,6 +290,7 @@ running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Customer created")
+			output.Next("rc customers lookup %s", customer.ID)
 			return nil
 		},
 	}
@@ -714,6 +715,7 @@ func newSetAttributesCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Attributes set on customer %s", customerID)
+			output.Next("rc customers attributes %s", customerID)
 			return nil
 		},
 	}
@@ -763,6 +765,7 @@ func newGrantCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Entitlement %s granted to customer %s", entitlementID, customerID)
+			output.Next("rc customers entitlements %s", customerID)
 			return nil
 		},
 	}
@@ -864,6 +867,7 @@ func newRevokeCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Entitlement %s revoked from customer %s", entitlementID, customerID)
+			output.Next("rc customers entitlements %s", customerID)
 			return nil
 		},
 	}
@@ -911,8 +915,10 @@ func newAssignOfferingCmd(projectID *string) *cobra.Command {
 			}
 			if clear {
 				output.Success("Offering override cleared for customer %s", customerID)
+				output.Next("rc customers lookup %s", customerID)
 			} else {
 				output.Success("Offering %s assigned to customer %s", offeringID, customerID)
+				output.Next("rc customers lookup %s", customerID)
 			}
 			return nil
 		},
@@ -950,6 +956,7 @@ func newTransferCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Transferred from %s to %s", customerID, targetCustomerID)
+			output.Next("rc customers lookup %s", targetCustomerID)
 			return nil
 		},
 	}
@@ -986,6 +993,7 @@ func newRestorePurchaseCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Purchase restored for customer %s (order: %s)", customerID, orderID)
+			output.Next("rc customers purchases %s", customerID)
 			return nil
 		},
 	}

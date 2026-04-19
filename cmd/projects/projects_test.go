@@ -59,6 +59,7 @@ func TestProjectsCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"projects", "create", "--name", "Command Test Project", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "proj_cmdtest")
+	cmdtest.AssertOutputContains(t, result, "next: rc projects set-default proj_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects")
 }
 

@@ -28,6 +28,7 @@ audit logs, collaborators, and virtual currencies.
 - `--fields`: comma-separated list of fields to include in JSON output
 - `--log-level`: log verbosity: error, warn, info, debug (default: warn)
 - `--no-color`: disable color output (also respects NO_COLOR env var) Default: `false`.
+- `--no-hints`: suppress post-mutation next-step hints (also respects RC_NO_HINTS) Default: `false`.
 - `-o, --output`: output format: table, json, markdown (default: table for TTY, json for pipes)
 - `--pretty`: pretty-print JSON output (default for TTY, compact for pipes) Default: `false`.
 - `--profile`: config profile to use (overrides RC_PROFILE and current_profile)

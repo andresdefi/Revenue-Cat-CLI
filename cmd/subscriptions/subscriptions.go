@@ -342,6 +342,7 @@ func newCancelCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Subscription %s canceled", args[0])
+			output.Next("rc subscriptions get %s to verify", args[0])
 			return nil
 		},
 	}

@@ -362,6 +362,60 @@ func TestSuccess_NoArgs(t *testing.T) {
 	}
 }
 
+func TestNext_WritesToStderr(t *testing.T) {
+	output := captureStderr(t, func() {
+		Next("rc products get %s", "prod_test")
+	})
+
+	if !strings.Contains(output, "next: rc products get prod_test") {
+		t.Errorf("Next() output = %q, want next-step hint", output)
+	}
+}
+
+func TestNext_SuppressedByQuietNoHintsAndEnv(t *testing.T) {
+	tests := []struct {
+		name       string
+		quiet      bool
+		noHints    bool
+		envNoHints string
+		wantOutput bool
+	}{
+		{name: "enabled", wantOutput: true},
+		{name: "quiet", quiet: true},
+		{name: "no hints", noHints: true},
+		{name: "env no hints", envNoHints: "1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldQuiet := Quiet
+			oldHintsDisabled := HintsDisabled
+			Quiet = tt.quiet
+			HintsDisabled = tt.noHints
+			t.Cleanup(func() {
+				Quiet = oldQuiet
+				HintsDisabled = oldHintsDisabled
+			})
+			if tt.envNoHints != "" {
+				t.Setenv("RC_NO_HINTS", tt.envNoHints)
+			} else {
+				t.Setenv("RC_NO_HINTS", "")
+			}
+
+			output := captureStderr(t, func() {
+				Next("rc products get prod_test")
+			})
+
+			if tt.wantOutput && !strings.Contains(output, "next: rc products get prod_test") {
+				t.Errorf("Next() output = %q, want hint", output)
+			}
+			if !tt.wantOutput && output != "" {
+				t.Errorf("Next() output = %q, want empty", output)
+			}
+		})
+	}
+}
+
 func TestWarn_NoArgs(t *testing.T) {
 	output := captureStderr(t, func() {
 		Warn("simple warning")

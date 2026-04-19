@@ -65,6 +65,7 @@ func TestSubscriptionsCancelSuccess(t *testing.T) {
 	result := cmdtest.Run(t, []string{"subscriptions", "cancel", "sub_cmdtest"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "canceled")
+	cmdtest.AssertOutputContains(t, result, "next: rc subscriptions get sub_cmdtest to verify")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/subscriptions/sub_cmdtest/actions/cancel")
 }
 

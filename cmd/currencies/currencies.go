@@ -179,6 +179,7 @@ when running in a terminal and not provided on the command line.`,
 				t.AppendRows([]table.Row{{"Code", vc.Code}, {"Name", vc.Name}, {"State", vc.State}})
 			})
 			output.Success("Virtual currency created")
+			output.Next("rc currencies get %s", vc.Code)
 			return nil
 		},
 	}
@@ -217,6 +218,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 				t.AppendRows([]table.Row{{"Code", vc.Code}, {"Name", vc.Name}})
 			})
 			output.Success("Virtual currency updated")
+			output.Next("rc currencies get %s", vc.Code)
 			return nil
 		},
 	}
@@ -273,6 +275,7 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Virtual currency %s archived", args[0])
+			output.Next("rc currencies unarchive %s", args[0])
 			return nil
 		},
 	}
@@ -298,6 +301,7 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Virtual currency %s unarchived", args[0])
+			output.Next("rc currencies get %s", args[0])
 			return nil
 		},
 	}
@@ -372,6 +376,7 @@ func newCreditCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Transaction created: %+d %s for customer %s", amount, code, customerID)
+			output.Next("rc currencies balance --customer-id %s", customerID)
 			return nil
 		},
 	}
@@ -413,6 +418,7 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Balance set to %d %s for customer %s", balance, code, customerID)
+			output.Next("rc currencies balance --customer-id %s", customerID)
 			return nil
 		},
 	}

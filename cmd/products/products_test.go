@@ -63,6 +63,7 @@ func TestProductsCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"products", "create", "--store-id", "com.example.premium.monthly", "--app-id", "app_cmdtest", "--type", "subscription", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "Product created successfully")
+	cmdtest.AssertOutputContains(t, result, "next: rc products push-to-store prod_cmdtest")
 }
 
 func TestProductsCreateMissingRequiredFlag(t *testing.T) {

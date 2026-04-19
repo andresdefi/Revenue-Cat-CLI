@@ -168,6 +168,7 @@ running in a terminal and not provided on the command line.`,
 				t.AppendRows([]table.Row{{"ID", pw.ID}, {"Created", output.FormatTimestamp(pw.CreatedAt)}})
 			})
 			output.Success("Paywall created")
+			output.Next("rc paywalls get %s", pw.ID)
 			return nil
 		},
 	}

@@ -19,6 +19,9 @@ var ForceYes bool
 // FieldsFlag is the comma-separated list of fields from --fields.
 var FieldsFlag string
 
+// NoHints suppresses post-mutation next-step hints when set via --no-hints.
+var NoHints bool
+
 // ResolveProfile returns the effective profile name.
 // Priority: --profile flag > RC_PROFILE env var > config current_profile > default.
 func ResolveProfile() string {

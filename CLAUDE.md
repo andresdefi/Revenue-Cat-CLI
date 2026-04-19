@@ -61,6 +61,7 @@ internal/
 - **Project resolution:** `--project` flag > config default > error with guidance
 - **Output:** `--output table|json|markdown`. Table uses go-pretty, JSON uses encoding/json, Markdown uses go-pretty RenderMarkdown. Auto-detects: table for TTY, JSON for pipes
 - **Field selection:** `--fields id,name` filters JSON output to specified fields (works on objects and lists)
+- **Next-step hints:** Successful mutations can print a stderr-only `next:` hint; suppress with `--no-hints`, `RC_NO_HINTS`, or `--quiet`
 - **API client:** All requests go through `internal/api/client.go`. Retries with Retry-After header + backoff_ms + exponential fallback. Verbose HTTP logging, dry-run mode, response caching
 - **Error handling:** API errors parsed into `api.Error` struct with type, message, doc_url, StatusCode. Exit codes map HTTP status granularly
 - **Confirmation prompts:** All 13 destructive ops (delete/refund/cancel/revoke) require confirmation. `--yes` skips, non-TTY without `--yes` errors safely

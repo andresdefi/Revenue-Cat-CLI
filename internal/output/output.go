@@ -34,6 +34,9 @@ var PrettyJSON bool
 // Only data output and errors pass through.
 var Quiet bool
 
+// HintsDisabled suppresses post-mutation next-step hints.
+var HintsDisabled bool
+
 // FieldsFilter is the comma-separated list of fields to include in JSON output.
 // Set by cmdutil.FieldsFlag from --fields flag.
 var FieldsFilter string
@@ -194,6 +197,18 @@ func Success(msg string, args ...any) {
 		fmt.Fprintf(os.Stderr, colorGreen+"  "+msg+colorReset+"\n", args...)
 	} else {
 		fmt.Fprintf(os.Stderr, "  "+msg+"\n", args...)
+	}
+}
+
+// Next prints a post-mutation next-step hint to stderr.
+func Next(msg string, args ...any) {
+	if Quiet || HintsDisabled || os.Getenv("RC_NO_HINTS") != "" {
+		return
+	}
+	if colorEnabled() {
+		fmt.Fprintf(os.Stderr, colorYellow+"  next: "+msg+colorReset+"\n", args...)
+	} else {
+		fmt.Fprintf(os.Stderr, "  next: "+msg+"\n", args...)
 	}
 }
 

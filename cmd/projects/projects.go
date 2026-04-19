@@ -145,6 +145,7 @@ running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Project created successfully")
+			output.Next("rc projects set-default %s", project.ID)
 			return nil
 		},
 	}
@@ -179,6 +180,7 @@ func newSetDefaultCmd() *cobra.Command {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
 			output.Success("Default project set to %s [profile: %s]", args[0], profile)
+			output.Next("rc apps list")
 			return nil
 		},
 	}
