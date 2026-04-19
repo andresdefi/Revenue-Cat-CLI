@@ -149,6 +149,7 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&search, "search", "", "search by email (exact match)")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "project_id", "last_seen_at", "last_seen_platform"})
 	return cmd
 }
 
@@ -238,6 +239,7 @@ func newLookupCmd(projectID, outputFormat *string) *cobra.Command {
 
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
 	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "project_id", "last_seen_at", "last_seen_platform"})
 	return cmd
 }
 
@@ -290,6 +292,7 @@ running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Customer created")
+			output.Next("rc customers lookup %s", customer.ID)
 			return nil
 		},
 	}
@@ -399,6 +402,7 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "continuously refresh")
 	cmd.Flags().DurationVar(&interval, "interval", cmdutil.DefaultWatchInterval, "refresh interval for --watch")
+	cmdutil.SetFieldsPreset(cmd, []string{"entitlement_id", "expires_at"})
 	return cmd
 }
 
@@ -714,6 +718,7 @@ func newSetAttributesCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Attributes set on customer %s", customerID)
+			output.Next("rc customers attributes %s", customerID)
 			return nil
 		},
 	}
@@ -763,6 +768,7 @@ func newGrantCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Entitlement %s granted to customer %s", entitlementID, customerID)
+			output.Next("rc customers entitlements %s", customerID)
 			return nil
 		},
 	}
@@ -864,6 +870,7 @@ func newRevokeCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Entitlement %s revoked from customer %s", entitlementID, customerID)
+			output.Next("rc customers entitlements %s", customerID)
 			return nil
 		},
 	}
@@ -911,8 +918,10 @@ func newAssignOfferingCmd(projectID *string) *cobra.Command {
 			}
 			if clear {
 				output.Success("Offering override cleared for customer %s", customerID)
+				output.Next("rc customers lookup %s", customerID)
 			} else {
 				output.Success("Offering %s assigned to customer %s", offeringID, customerID)
+				output.Next("rc customers lookup %s", customerID)
 			}
 			return nil
 		},
@@ -950,6 +959,7 @@ func newTransferCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Transferred from %s to %s", customerID, targetCustomerID)
+			output.Next("rc customers lookup %s", targetCustomerID)
 			return nil
 		},
 	}
@@ -986,6 +996,7 @@ func newRestorePurchaseCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Purchase restored for customer %s (order: %s)", customerID, orderID)
+			output.Next("rc customers purchases %s", customerID)
 			return nil
 		},
 	}

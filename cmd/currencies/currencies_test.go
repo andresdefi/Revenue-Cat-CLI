@@ -36,6 +36,7 @@ func TestCurrenciesCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"currencies", "create", "--code", "COIN", "--name", "Coins", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "COIN")
+	cmdtest.AssertOutputContains(t, result, "next: rc currencies get COIN")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/virtual_currencies")
 }
 

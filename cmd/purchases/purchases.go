@@ -95,11 +95,12 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
 	cmdutil.MustMarkFlagRequired(cmd, "store-purchase-id")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "customer_id", "purchased_at", "product_id", "store"})
 	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use: "get <purchase-id>", Short: "Get a purchase by ID",
 		Example: `  # Get purchase details
   rc purchases get purch1a2b3c4d5
@@ -147,6 +148,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "customer_id", "purchased_at", "product_id", "store"})
+	return cmd
 }
 
 func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {

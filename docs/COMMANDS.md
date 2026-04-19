@@ -24,10 +24,12 @@ audit logs, collaborators, and virtual currencies.
 
 **Flags**
 
+- `--agent`: optimize output for agents: compact JSON, default fields, no hints (also respects RC_AGENT) Default: `false`.
 - `--dry-run`: show what would be done without executing mutations Default: `false`.
 - `--fields`: comma-separated list of fields to include in JSON output
 - `--log-level`: log verbosity: error, warn, info, debug (default: warn)
 - `--no-color`: disable color output (also respects NO_COLOR env var) Default: `false`.
+- `--no-hints`: suppress post-mutation next-step hints (also respects RC_NO_HINTS) Default: `false`.
 - `-o, --output`: output format: table, json, markdown (default: table for TTY, json for pipes)
 - `--pretty`: pretty-print JSON output (default for TTY, compact for pipes) Default: `false`.
 - `--profile`: config profile to use (overrides RC_PROFILE and current_profile)
@@ -124,6 +126,10 @@ Delete an app
 
 Get an app by ID
 
+Get an app by ID
+
+Default fields preset: id,name,type,project_id
+
 **Examples**
 
 ```bash
@@ -137,6 +143,10 @@ Get an app by ID
 #### rc apps list
 
 List apps in a project
+
+List apps in a project
+
+Default fields preset: id,name,type,project_id
 
 **Flags**
 
@@ -235,6 +245,10 @@ View audit logs
 #### rc audit-logs list
 
 List audit log entries
+
+List audit log entries
+
+Default fields preset: id,created_at,actor,action
 
 **Flags**
 
@@ -436,6 +450,10 @@ View project collaborators
 
 List project collaborators
 
+List project collaborators
+
+Default fields preset: id,email,role
+
 **Flags**
 
 - `--all`: fetch all pages Default: `false`.
@@ -593,6 +611,10 @@ Delete a virtual currency
 
 Get a virtual currency by code
 
+Get a virtual currency by code
+
+Default fields preset: code,name,state
+
 **Examples**
 
 ```bash
@@ -606,6 +628,10 @@ Get a virtual currency by code
 #### rc currencies list
 
 List virtual currencies
+
+List virtual currencies
+
+Default fields preset: code,name,state
 
 **Flags**
 
@@ -813,6 +839,10 @@ issues and follow-up commands for support debugging.
 
 List active entitlements for a customer
 
+List active entitlements for a customer
+
+Default fields preset: entitlement_id,expires_at
+
 **Flags**
 
 - `--interval`: refresh interval for --watch Default: `5s`.
@@ -901,6 +931,10 @@ List invoices for a customer
 
 List customers in a project
 
+List customers in a project
+
+Default fields preset: id,project_id,last_seen_at,last_seen_platform
+
 **Flags**
 
 - `--all`: fetch all pages Default: `false`.
@@ -923,6 +957,10 @@ List customers in a project
 #### rc customers lookup
 
 Look up a customer by ID
+
+Look up a customer by ID
+
+Default fields preset: id,project_id,last_seen_at,last_seen_platform
 
 **Flags**
 
@@ -1234,6 +1272,10 @@ Export entitlements to a CSV or JSON file. Format is detected from the file exte
 
 Get an entitlement by ID
 
+Get an entitlement by ID
+
+Default fields preset: id,lookup_key,display_name,state
+
 **Examples**
 
 ```bash
@@ -1268,6 +1310,10 @@ Each row/entry creates a new entitlement in the project.
 #### rc entitlements list
 
 List entitlements in a project
+
+List entitlements in a project
+
+Default fields preset: id,lookup_key,display_name,state
 
 **Flags**
 
@@ -1603,6 +1649,10 @@ Delete an offering and its packages
 
 Get an offering by ID
 
+Get an offering by ID
+
+Default fields preset: id,lookup_key,display_name,is_current,state
+
 **Examples**
 
 ```bash
@@ -1616,6 +1666,10 @@ Get an offering by ID
 #### rc offerings list
 
 List offerings in a project
+
+List offerings in a project
+
+Default fields preset: id,lookup_key,display_name,is_current,state
 
 **Flags**
 
@@ -1802,6 +1856,10 @@ Detach products from a package
 
 Get a package by ID
 
+Get a package by ID
+
+Default fields preset: id,lookup_key,display_name,position
+
 **Examples**
 
 ```bash
@@ -1815,6 +1873,10 @@ Get a package by ID
 #### rc packages list
 
 List packages in an offering
+
+List packages in an offering
+
+Default fields preset: id,lookup_key,display_name,position
 
 **Flags**
 
@@ -1913,6 +1975,10 @@ Delete a paywall
 
 Get a paywall by ID
 
+Get a paywall by ID
+
+Default fields preset: id
+
 **Examples**
 
 ```bash
@@ -1926,6 +1992,10 @@ Get a paywall by ID
 #### rc paywalls list
 
 List paywalls
+
+List paywalls
+
+Default fields preset: id
 
 **Flags**
 
@@ -2056,6 +2126,10 @@ Export products to a CSV or JSON file. Format is detected from the file extensio
 
 Get a product by ID
 
+Get a product by ID
+
+Default fields preset: id,store_identifier,type,state,display_name,app_id
+
 **Examples**
 
 ```bash
@@ -2100,6 +2174,10 @@ Each row/entry creates a new product in the project.
 #### rc products list
 
 List products in a project
+
+List products in a project
+
+Default fields preset: id,store_identifier,type,state,display_name,app_id
 
 **Flags**
 
@@ -2252,6 +2330,10 @@ mutating the project.
 
 List all projects
 
+List all projects
+
+Default fields preset: id,name,created_at
+
 **Flags**
 
 - `--all`: fetch all pages Default: `false`.
@@ -2303,6 +2385,10 @@ List entitlements for a purchase
 
 Get a purchase by ID
 
+Get a purchase by ID
+
+Default fields preset: id,customer_id,purchased_at,product_id,store
+
 **Examples**
 
 ```bash
@@ -2316,6 +2402,10 @@ Get a purchase by ID
 #### rc purchases list
 
 Search purchases by store purchase identifier
+
+Search purchases by store purchase identifier
+
+Default fields preset: id,customer_id,purchased_at,product_id,store
 
 **Flags**
 
@@ -2436,6 +2526,10 @@ List entitlements for a subscription
 
 Get a subscription by ID
 
+Get a subscription by ID
+
+Default fields preset: id,customer_id,status,current_period_ends_at,product_id,store
+
 **Flags**
 
 - `--interval`: refresh interval for --watch Default: `5s`.
@@ -2467,6 +2561,10 @@ Get a subscription by ID
 #### rc subscriptions list
 
 Search subscriptions by store subscription identifier
+
+Search subscriptions by store subscription identifier
+
+Default fields preset: id,customer_id,status,current_period_ends_at,product_id,store
 
 **Flags**
 
@@ -2598,6 +2696,10 @@ Delete a webhook integration
 
 Get a webhook by ID
 
+Get a webhook by ID
+
+Default fields preset: id,url
+
 **Examples**
 
 ```bash
@@ -2608,6 +2710,10 @@ Get a webhook by ID
 #### rc webhooks list
 
 List webhook integrations
+
+List webhook integrations
+
+Default fields preset: id,url
 
 **Flags**
 

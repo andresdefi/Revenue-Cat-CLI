@@ -67,6 +67,7 @@ func TestPackagesCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"packages", "create", "--offering-id", "ofrnge_cmdtest", "--lookup-key", "$rc_monthly", "--display-name", "Monthly", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "pkge_cmdtest")
+	cmdtest.AssertOutputContains(t, result, "next: rc packages attach --package-id pkge_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/offerings/ofrnge_cmdtest/packages")
 }
 

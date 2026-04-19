@@ -34,9 +34,15 @@ var PrettyJSON bool
 // Only data output and errors pass through.
 var Quiet bool
 
+// HintsDisabled suppresses post-mutation next-step hints.
+var HintsDisabled bool
+
 // FieldsFilter is the comma-separated list of fields to include in JSON output.
 // Set by cmdutil.FieldsFlag from --fields flag.
 var FieldsFilter string
+
+// DefaultFieldsPreset is the active command's preset for --fields default.
+var DefaultFieldsPreset string
 
 func init() {
 	if os.Getenv("NO_COLOR") != "" {
@@ -100,14 +106,11 @@ func printMarkdown(renderer func(t table.Writer)) {
 }
 
 // filterFields reduces JSON data to only the requested fields.
-// Works on objects and lists (filters each item's "items" array).
+// Works on objects, list envelopes, and raw slices.
 func filterFields(data any) any {
-	if FieldsFilter == "" {
+	fields, ok := resolveFieldsFilter()
+	if !ok {
 		return data
-	}
-	fields := strings.Split(FieldsFilter, ",")
-	for i := range fields {
-		fields[i] = strings.TrimSpace(fields[i])
 	}
 
 	raw, err := json.Marshal(data)
@@ -115,27 +118,62 @@ func filterFields(data any) any {
 		return data
 	}
 
-	var obj map[string]any
-	if err := json.Unmarshal(raw, &obj); err != nil {
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
 		return data
 	}
+	return filterValue(value, fields)
+}
 
-	// If it's a list response, filter each item
+func resolveFieldsFilter() ([]string, bool) {
+	if FieldsFilter == "" {
+		return nil, false
+	}
+	filter := FieldsFilter
+	if filter == "default" {
+		filter = DefaultFieldsPreset
+		if filter == "" {
+			if LogLevel >= LogLevelWarn {
+				Warn("no default preset for this command, returning full output")
+			}
+			return nil, false
+		}
+	}
+	fields := strings.Split(filter, ",")
+	result := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if trimmed := strings.TrimSpace(field); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result, len(result) > 0
+}
+
+func filterValue(value any, fields []string) any {
+	obj, ok := value.(map[string]any)
+	if !ok {
+		if arr, ok := value.([]any); ok {
+			return filterItems(arr, fields)
+		}
+		return value
+	}
 	if items, ok := obj["items"]; ok {
 		if arr, ok := items.([]any); ok {
-			filtered := make([]any, 0, len(arr))
-			for _, item := range arr {
-				if m, ok := item.(map[string]any); ok {
-					filtered = append(filtered, pickFields(m, fields))
-				}
-			}
-			obj["items"] = filtered
+			obj["items"] = filterItems(arr, fields)
 			return obj
 		}
 	}
-
-	// Otherwise filter the object itself
 	return pickFields(obj, fields)
+}
+
+func filterItems(items []any, fields []string) []any {
+	filtered := make([]any, 0, len(items))
+	for _, item := range items {
+		if m, ok := item.(map[string]any); ok {
+			filtered = append(filtered, pickFields(m, fields))
+		}
+	}
+	return filtered
 }
 
 func pickFields(obj map[string]any, fields []string) map[string]any {
@@ -194,6 +232,18 @@ func Success(msg string, args ...any) {
 		fmt.Fprintf(os.Stderr, colorGreen+"  "+msg+colorReset+"\n", args...)
 	} else {
 		fmt.Fprintf(os.Stderr, "  "+msg+"\n", args...)
+	}
+}
+
+// Next prints a post-mutation next-step hint to stderr.
+func Next(msg string, args ...any) {
+	if Quiet || HintsDisabled || os.Getenv("RC_NO_HINTS") != "" {
+		return
+	}
+	if colorEnabled() {
+		fmt.Fprintf(os.Stderr, colorYellow+"  next: "+msg+colorReset+"\n", args...)
+	} else {
+		fmt.Fprintf(os.Stderr, "  next: "+msg+"\n", args...)
 	}
 }
 

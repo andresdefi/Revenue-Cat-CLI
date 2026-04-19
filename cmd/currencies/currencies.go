@@ -95,11 +95,12 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"code", "name", "state"})
 	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use: "get <currency-code>", Short: "Get a virtual currency by code",
 		Example: `  # Get currency details
   rc currencies get COINS
@@ -132,6 +133,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.SetFieldsPreset(cmd, []string{"code", "name", "state"})
+	return cmd
 }
 
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
@@ -179,6 +182,7 @@ when running in a terminal and not provided on the command line.`,
 				t.AppendRows([]table.Row{{"Code", vc.Code}, {"Name", vc.Name}, {"State", vc.State}})
 			})
 			output.Success("Virtual currency created")
+			output.Next("rc currencies get %s", vc.Code)
 			return nil
 		},
 	}
@@ -217,6 +221,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 				t.AppendRows([]table.Row{{"Code", vc.Code}, {"Name", vc.Name}})
 			})
 			output.Success("Virtual currency updated")
+			output.Next("rc currencies get %s", vc.Code)
 			return nil
 		},
 	}
@@ -273,6 +278,7 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Virtual currency %s archived", args[0])
+			output.Next("rc currencies unarchive %s", args[0])
 			return nil
 		},
 	}
@@ -298,6 +304,7 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Virtual currency %s unarchived", args[0])
+			output.Next("rc currencies get %s", args[0])
 			return nil
 		},
 	}
@@ -372,6 +379,7 @@ func newCreditCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Transaction created: %+d %s for customer %s", amount, code, customerID)
+			output.Next("rc currencies balance --customer-id %s", customerID)
 			return nil
 		},
 	}
@@ -413,6 +421,7 @@ func newUpdateBalanceCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Balance set to %d %s for customer %s", balance, code, customerID)
+			output.Next("rc currencies balance --customer-id %s", customerID)
 			return nil
 		},
 	}

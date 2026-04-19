@@ -67,6 +67,7 @@ func TestEntitlementsCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"entitlements", "create", "--lookup-key", "premium", "--display-name", "Premium", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "entl_cmdtest")
+	cmdtest.AssertOutputContains(t, result, "next: rc entitlements attach --entitlement-id entl_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/entitlements")
 }
 

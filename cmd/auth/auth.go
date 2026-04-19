@@ -85,6 +85,7 @@ Keys are prefixed with sk_ and must have v2 API permissions.`,
 			}
 
 			output.Success("Logged in successfully [profile: %s] (stored in %s)", profile, internalAuth.TokenSource(profile))
+			output.Next("rc projects list")
 			return nil
 		},
 	}

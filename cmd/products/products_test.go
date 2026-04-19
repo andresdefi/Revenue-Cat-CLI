@@ -2,9 +2,12 @@ package products_test
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
+	productcmd "github.com/andresdefi/rc/cmd/products"
 	"github.com/andresdefi/rc/internal/cmdtest"
+	"github.com/andresdefi/rc/internal/cmdutil"
 )
 
 func TestProductsListTable(t *testing.T) {
@@ -18,6 +21,62 @@ func TestProductsListJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"products", "list", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, `"object": "list"`)
+}
+
+func TestProductsAgentModeUsesCompactJSONDefaultFields(t *testing.T) {
+	result := cmdtest.Run(t, []string{"--agent", "products", "list"})
+	cmdtest.AssertSuccess(t, result)
+	if !strings.Contains(result.Stdout, `"items":[`) {
+		t.Fatalf("agent output should be compact JSON, got stdout:\n%s", result.Stdout)
+	}
+	cmdtest.AssertOutputContains(t, result, `"store_identifier":"com.example.premium.monthly"`)
+	if strings.Contains(result.Stdout, "created_at") {
+		t.Fatalf("agent output should use the default product preset, got stdout:\n%s", result.Stdout)
+	}
+	if strings.Contains(result.Stderr, "next:") {
+		t.Fatalf("agent output should suppress hints, got stderr:\n%s", result.Stderr)
+	}
+}
+
+func TestProductsAgentEnvUsesCompactJSONDefaultFields(t *testing.T) {
+	t.Setenv("RC_AGENT", "1")
+	result := cmdtest.Run(t, []string{"products", "list"})
+	cmdtest.AssertSuccess(t, result)
+	if !strings.Contains(result.Stdout, `"items":[`) {
+		t.Fatalf("RC_AGENT output should be compact JSON, got stdout:\n%s", result.Stdout)
+	}
+	if strings.Contains(result.Stdout, "created_at") {
+		t.Fatalf("RC_AGENT output should use the default product preset, got stdout:\n%s", result.Stdout)
+	}
+}
+
+func TestProductsAgentModeExplicitOutputWins(t *testing.T) {
+	result := cmdtest.Run(t, []string{"--agent", "--output", "table", "products", "list"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "STORE ID")
+	if strings.Contains(result.Stdout, `"items"`) {
+		t.Fatalf("explicit table output should beat --agent, got stdout:\n%s", result.Stdout)
+	}
+}
+
+func TestProductsAgentModeExplicitFieldsWin(t *testing.T) {
+	result := cmdtest.Run(t, []string{"--agent", "--fields", "id", "products", "list"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"id":"prod_cmdtest"`)
+	if strings.Contains(result.Stdout, "store_identifier") {
+		t.Fatalf("explicit --fields should beat --agent default preset, got stdout:\n%s", result.Stdout)
+	}
+}
+
+func TestProductsAgentModeDoesNotWarnWhenMutationHasNoPreset(t *testing.T) {
+	result := cmdtest.Run(t, []string{"--agent", "products", "create", "--store-id", "com.example.premium.monthly", "--app-id", "app_cmdtest", "--type", "subscription"})
+	cmdtest.AssertSuccess(t, result)
+	if strings.Contains(result.Stderr, "no default preset") {
+		t.Fatalf("agent mutation should not warn about missing presets, got stderr:\n%s", result.Stderr)
+	}
+	if strings.Contains(result.Stderr, "next:") {
+		t.Fatalf("agent mutation should suppress hints, got stderr:\n%s", result.Stderr)
+	}
 }
 
 func TestProductsListWithProfile(t *testing.T) {
@@ -63,6 +122,26 @@ func TestProductsCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"products", "create", "--store-id", "com.example.premium.monthly", "--app-id", "app_cmdtest", "--type", "subscription", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "Product created successfully")
+	cmdtest.AssertOutputContains(t, result, "next: rc products push-to-store prod_cmdtest")
+}
+
+func TestProductsFieldsPresetRegistration(t *testing.T) {
+	projectID := "proj_cmdtest"
+	outputFormat := ""
+	root := productcmd.NewProductsCmd(&projectID, &outputFormat)
+	want := "id,store_identifier,type,state,display_name,app_id"
+
+	for _, name := range []string{"list", "get"} {
+		t.Run(name, func(t *testing.T) {
+			cmd, _, err := root.Find([]string{name})
+			if err != nil {
+				t.Fatalf("find %s: %v", name, err)
+			}
+			if got := cmdutil.FieldsPreset(cmd); got != want {
+				t.Fatalf("preset for %s = %q, want %q", name, got, want)
+			}
+		})
+	}
 }
 
 func TestProductsCreateMissingRequiredFlag(t *testing.T) {

@@ -3,11 +3,14 @@ package cmdutil
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/andresdefi/rc/internal/config"
 	"github.com/andresdefi/rc/internal/output"
 	"github.com/spf13/cobra"
 )
+
+const fieldsPresetAnnotation = "fields_preset"
 
 // ActiveProfile is set by the root command's --profile flag.
 // Empty string means use the config's current_profile.
@@ -18,6 +21,34 @@ var ForceYes bool
 
 // FieldsFlag is the comma-separated list of fields from --fields.
 var FieldsFlag string
+
+// NoHints suppresses post-mutation next-step hints when set via --no-hints.
+var NoHints bool
+
+// SetFieldsPreset registers the command's default field preset for --fields default.
+func SetFieldsPreset(cmd *cobra.Command, fields []string) {
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
+	}
+	preset := strings.Join(fields, ",")
+	cmd.Annotations[fieldsPresetAnnotation] = preset
+
+	helpLine := fmt.Sprintf("Default fields preset: %s", preset)
+	if cmd.Long == "" {
+		cmd.Long = cmd.Short
+	}
+	if !strings.Contains(cmd.Long, helpLine) {
+		cmd.Long += "\n\n" + helpLine
+	}
+}
+
+// FieldsPreset returns the registered default field preset for a command.
+func FieldsPreset(cmd *cobra.Command) string {
+	if cmd == nil || cmd.Annotations == nil {
+		return ""
+	}
+	return cmd.Annotations[fieldsPresetAnnotation]
+}
 
 // ResolveProfile returns the effective profile name.
 // Priority: --profile flag > RC_PROFILE env var > config current_profile > default.

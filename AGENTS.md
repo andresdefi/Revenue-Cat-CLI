@@ -53,6 +53,7 @@ internal/
   projecthealth/projecthealth.go Read-only project setup analyzer for workflow commands
 docs/
   COMMANDS.md                    Generated command reference
+  AGENT_FIELDS.md                Default field presets and available JSON fields for agents/scripts
   WORKFLOWS.md                   Copyable setup, offering, customer, and migration recipes
   API_NOTES.md                   RevenueCat semantics and import/export notes
   CI_CD.md                       Automation examples and auth guidance
@@ -78,6 +79,11 @@ docs/
 - **Interactive create flows:** Create/setup commands prompt for missing required values when stdout is a TTY and return `missing required value` errors in non-interactive scripts
 - **Generated docs:** `docs/COMMANDS.md` is generated from Cobra. Run `make docs` after command changes
 - **Correctness harness:** Request-body golden tests, pagination contract tests, and opt-in integration tests guard API semantics
+
+## Field Selection
+Use `--fields default` for a preset tuned to agent use, or `--fields <csv>` to pick specific fields. See `docs/AGENT_FIELDS.md` for the full menu per command.
+
+Use `--agent` or `RC_AGENT=1` to auto-apply compact JSON, the default field preset, and no next-step hints.
 
 ## RevenueCat API v2 Reference
 - **Base URL:** `https://api.revenuecat.com/v2`

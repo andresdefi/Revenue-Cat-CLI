@@ -67,6 +67,7 @@ func TestWebhooksCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"webhooks", "create", "--name", "Events", "--url", "https://example.com/revenuecat", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "wh_cmdtest")
+	cmdtest.AssertOutputContains(t, result, "next: rc webhooks get wh_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/integrations/webhooks")
 }
 

@@ -145,11 +145,12 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "lookup_key", "display_name", "is_current", "state"})
 	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "get <offering-id>",
 		Short: "Get an offering by ID",
 		Example: `  # Get offering details with packages
@@ -207,6 +208,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "lookup_key", "display_name", "is_current", "state"})
+	return cmd
 }
 
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
@@ -280,6 +283,7 @@ running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Offering created successfully")
+			output.Next("rc packages create --offering-id %s --lookup-key monthly", offering.ID)
 			return nil
 		},
 	}
@@ -343,6 +347,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 				})
 			})
 			output.Success("Offering updated")
+			output.Next("rc offerings get %s", offering.ID)
 			return nil
 		},
 	}
@@ -402,6 +407,7 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Offering %s archived", args[0])
+			output.Next("rc offerings unarchive %s", args[0])
 			return nil
 		},
 	}
@@ -436,6 +442,7 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Offering %s unarchived", args[0])
+			output.Next("rc offerings get %s", args[0])
 			return nil
 		},
 	}

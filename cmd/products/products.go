@@ -128,11 +128,12 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	cmd.Flags().StringVar(&appID, "app-id", "", "filter by app ID")
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "store_identifier", "type", "state", "display_name", "app_id"})
 	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "get <product-id>",
 		Short: "Get a product by ID",
 		Example: `  # Get product details
@@ -187,6 +188,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "store_identifier", "type", "state", "display_name", "app_id"})
+	return cmd
 }
 
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
@@ -274,6 +277,7 @@ running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Product created successfully")
+			output.Next("rc products push-to-store %s", product.ID)
 			return nil
 		},
 	}
@@ -325,6 +329,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 				})
 			})
 			output.Success("Product updated")
+			output.Next("rc products get %s", product.ID)
 			return nil
 		},
 	}
@@ -384,6 +389,7 @@ func newArchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Product %s archived", args[0])
+			output.Next("rc products unarchive %s", args[0])
 			return nil
 		},
 	}
@@ -410,6 +416,7 @@ func newUnarchiveCmd(projectID *string) *cobra.Command {
 				return err
 			}
 			output.Success("Product %s unarchived", args[0])
+			output.Next("rc products get %s", args[0])
 			return nil
 		},
 	}
@@ -460,6 +467,7 @@ information.`,
 				return err
 			}
 			output.Success("Product %s pushed to store", args[0])
+			output.Next("rc products get %s", args[0])
 			return nil
 		},
 	}
@@ -668,6 +676,7 @@ Each row/entry creates a new product in the project.`,
 			}
 
 			output.Success("Imported %d/%d products", created, len(rows))
+			output.Next("rc products list")
 			return nil
 		},
 	}

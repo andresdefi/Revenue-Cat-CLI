@@ -53,6 +53,7 @@ func TestCustomersCreateJSON(t *testing.T) {
 	result := cmdtest.Run(t, []string{"customers", "create", "--id", "cust_cmdtest", "--output", "json"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "cust_cmdtest")
+	cmdtest.AssertOutputContains(t, result, "next: rc customers lookup cust_cmdtest")
 	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/customers")
 }
 

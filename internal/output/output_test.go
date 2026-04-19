@@ -293,6 +293,87 @@ func TestPrint_DefaultFormat_FallsBackToJSON(t *testing.T) {
 	}
 }
 
+func TestFilterFields_DefaultUsesPreset(t *testing.T) {
+	oldFields := FieldsFilter
+	oldPreset := DefaultFieldsPreset
+	FieldsFilter = "default"
+	DefaultFieldsPreset = "id,name"
+	t.Cleanup(func() {
+		FieldsFilter = oldFields
+		DefaultFieldsPreset = oldPreset
+	})
+
+	got := filterFields(map[string]any{"id": "prod_test", "name": "Monthly", "state": "active"})
+	obj, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("filterFields() = %T, want map[string]any", got)
+	}
+	if obj["id"] != "prod_test" || obj["name"] != "Monthly" {
+		t.Fatalf("filterFields() = %#v, want id and name", obj)
+	}
+	if _, ok := obj["state"]; ok {
+		t.Fatalf("filterFields() kept state, got %#v", obj)
+	}
+}
+
+func TestFilterFields_DefaultWithoutPresetWarnsAndReturnsFullOutput(t *testing.T) {
+	oldFields := FieldsFilter
+	oldPreset := DefaultFieldsPreset
+	oldLogLevel := LogLevel
+	oldQuiet := Quiet
+	FieldsFilter = "default"
+	DefaultFieldsPreset = ""
+	LogLevel = LogLevelWarn
+	Quiet = false
+	t.Cleanup(func() {
+		FieldsFilter = oldFields
+		DefaultFieldsPreset = oldPreset
+		LogLevel = oldLogLevel
+		Quiet = oldQuiet
+	})
+
+	data := map[string]any{"id": "prod_test", "state": "active"}
+	var got any
+	stderr := captureStderr(t, func() {
+		got = filterFields(data)
+	})
+
+	if !strings.Contains(stderr, "no default preset for this command, returning full output") {
+		t.Fatalf("stderr = %q, want missing preset warning", stderr)
+	}
+	obj, ok := got.(map[string]any)
+	if !ok {
+		t.Fatalf("filterFields() = %T, want map[string]any", got)
+	}
+	if obj["id"] != "prod_test" || obj["state"] != "active" {
+		t.Fatalf("filterFields() = %#v, want full output", obj)
+	}
+}
+
+func TestFilterFields_AppliesToRawSlices(t *testing.T) {
+	oldFields := FieldsFilter
+	FieldsFilter = "id"
+	t.Cleanup(func() {
+		FieldsFilter = oldFields
+	})
+
+	got := filterFields([]map[string]any{{"id": "prod_test", "state": "active"}})
+	items, ok := got.([]any)
+	if !ok || len(items) != 1 {
+		t.Fatalf("filterFields() = %#v, want one filtered item", got)
+	}
+	obj, ok := items[0].(map[string]any)
+	if !ok {
+		t.Fatalf("item = %T, want map[string]any", items[0])
+	}
+	if obj["id"] != "prod_test" {
+		t.Fatalf("item = %#v, want id", obj)
+	}
+	if _, ok := obj["state"]; ok {
+		t.Fatalf("item kept state: %#v", obj)
+	}
+}
+
 func TestPrint_UnknownFormat_FallsBackToJSON(t *testing.T) {
 	data := map[string]string{"test": "value"}
 
@@ -359,6 +440,60 @@ func TestSuccess_NoArgs(t *testing.T) {
 
 	if !strings.Contains(output, "simple message") {
 		t.Errorf("Success() output = %q, want to contain 'simple message'", output)
+	}
+}
+
+func TestNext_WritesToStderr(t *testing.T) {
+	output := captureStderr(t, func() {
+		Next("rc products get %s", "prod_test")
+	})
+
+	if !strings.Contains(output, "next: rc products get prod_test") {
+		t.Errorf("Next() output = %q, want next-step hint", output)
+	}
+}
+
+func TestNext_SuppressedByQuietNoHintsAndEnv(t *testing.T) {
+	tests := []struct {
+		name       string
+		quiet      bool
+		noHints    bool
+		envNoHints string
+		wantOutput bool
+	}{
+		{name: "enabled", wantOutput: true},
+		{name: "quiet", quiet: true},
+		{name: "no hints", noHints: true},
+		{name: "env no hints", envNoHints: "1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldQuiet := Quiet
+			oldHintsDisabled := HintsDisabled
+			Quiet = tt.quiet
+			HintsDisabled = tt.noHints
+			t.Cleanup(func() {
+				Quiet = oldQuiet
+				HintsDisabled = oldHintsDisabled
+			})
+			if tt.envNoHints != "" {
+				t.Setenv("RC_NO_HINTS", tt.envNoHints)
+			} else {
+				t.Setenv("RC_NO_HINTS", "")
+			}
+
+			output := captureStderr(t, func() {
+				Next("rc products get prod_test")
+			})
+
+			if tt.wantOutput && !strings.Contains(output, "next: rc products get prod_test") {
+				t.Errorf("Next() output = %q, want hint", output)
+			}
+			if !tt.wantOutput && output != "" {
+				t.Errorf("Next() output = %q, want empty", output)
+			}
+		})
 	}
 }
 

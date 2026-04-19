@@ -92,11 +92,12 @@ func newListCmd(projectID, outputFormat *string) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "url"})
 	return cmd
 }
 
 func newGetCmd(projectID, outputFormat *string) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use: "get <webhook-id>", Short: "Get a webhook by ID",
 		Example: `  # Get webhook details
   rc webhooks get wh1a2b3c4d5`,
@@ -126,6 +127,8 @@ func newGetCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "url"})
+	return cmd
 }
 
 func newCreateCmd(projectID, outputFormat *string) *cobra.Command {
@@ -173,6 +176,7 @@ interactively when running in a terminal and not provided on the command line.`,
 				t.AppendRows([]table.Row{{"ID", wh.ID}, {"Name", wh.Name}, {"URL", wh.URL}, {"Created", output.FormatTimestamp(wh.CreatedAt)}})
 			})
 			output.Success("Webhook created successfully")
+			output.Next("rc webhooks get %s", wh.ID)
 			return nil
 		},
 	}
@@ -224,6 +228,7 @@ func newUpdateCmd(projectID, outputFormat *string) *cobra.Command {
 				t.AppendRows([]table.Row{{"ID", wh.ID}, {"Name", wh.Name}, {"URL", wh.URL}})
 			})
 			output.Success("Webhook updated")
+			output.Next("rc webhooks get %s", wh.ID)
 			return nil
 		},
 	}

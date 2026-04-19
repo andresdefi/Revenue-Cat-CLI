@@ -96,6 +96,7 @@ func newListCmd(outputFormat *string) *cobra.Command {
 
 	cmd.Flags().BoolVar(&fetchAll, "all", false, "fetch all pages")
 	cmd.Flags().IntVar(&limit, "limit", 0, "max items per page")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "name", "created_at"})
 	return cmd
 }
 
@@ -145,6 +146,7 @@ running in a terminal and not provided on the command line.`,
 				})
 			})
 			output.Success("Project created successfully")
+			output.Next("rc projects set-default %s", project.ID)
 			return nil
 		},
 	}
@@ -179,6 +181,7 @@ func newSetDefaultCmd() *cobra.Command {
 				return fmt.Errorf("failed to save config: %w", err)
 			}
 			output.Success("Default project set to %s [profile: %s]", args[0], profile)
+			output.Next("rc apps list")
 			return nil
 		},
 	}
