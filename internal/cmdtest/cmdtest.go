@@ -47,9 +47,16 @@ type runConfig struct {
 	projectID               string
 	token                   string
 	profile                 string
+	profiles                map[string]ProfileConfig
+	acceptedTokens          map[string]struct{}
 	stdin                   string
 	context                 context.Context
 	cancelOnRepeatedRequest context.CancelFunc
+}
+
+type ProfileConfig struct {
+	ProjectID string
+	Token     string
 }
 
 type Option func(*runConfig)
@@ -79,6 +86,23 @@ func WithoutToken() Option {
 func WithoutProject() Option {
 	return func(cfg *runConfig) {
 		cfg.projectID = ""
+	}
+}
+
+func WithProfiles(profiles map[string]ProfileConfig) Option {
+	return func(cfg *runConfig) {
+		cfg.profiles = profiles
+	}
+}
+
+func WithAcceptedTokens(tokens ...string) Option {
+	return func(cfg *runConfig) {
+		cfg.acceptedTokens = make(map[string]struct{}, len(tokens))
+		for _, token := range tokens {
+			if token != "" {
+				cfg.acceptedTokens[token] = struct{}{}
+			}
+		}
 	}
 }
 
@@ -137,7 +161,7 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 		}
 		mu.Unlock()
 
-		if got := r.Header.Get("Authorization"); got != "Bearer "+TestToken {
+		if !cfg.acceptsToken(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")) {
 			writeJSON(w, http.StatusUnauthorized, map[string]any{
 				"object":  "error",
 				"type":    "authentication_error",
@@ -186,7 +210,13 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("RC_BYPASS_KEYCHAIN", "1")
-	if err := writeConfig(cfg.profile, cfg.projectID, cfg.token); err != nil {
+	var err error
+	if cfg.profiles != nil {
+		err = writeProfilesConfig(cfg.profile, cfg.profiles)
+	} else {
+		err = writeConfig(cfg.profile, cfg.projectID, cfg.token)
+	}
+	if err != nil {
 		t.Fatalf("failed to write test config: %v", err)
 	}
 
@@ -207,6 +237,17 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 		Err:      err,
 		Requests: append([]Request(nil), requests...),
 	}
+}
+
+func (cfg runConfig) acceptsToken(token string) bool {
+	if token == "" {
+		return false
+	}
+	if cfg.acceptedTokens != nil {
+		_, ok := cfg.acceptedTokens[token]
+		return ok
+	}
+	return cfg.token != "" && token == cfg.token
 }
 
 func AssertSuccess(t *testing.T, result Result) {
@@ -327,6 +368,20 @@ func writeConfig(profile, projectID, token string) error {
 			profile: p,
 		},
 	})
+}
+
+func writeProfilesConfig(currentProfile string, profiles map[string]ProfileConfig) error {
+	cfg := &config.Config{
+		CurrentProfile: currentProfile,
+		Profiles:       make(map[string]*config.Profile, len(profiles)),
+	}
+	for name, profile := range profiles {
+		cfg.Profiles[name] = &config.Profile{
+			APIKey:    profile.Token,
+			ProjectID: profile.ProjectID,
+		}
+	}
+	return config.Save(cfg)
 }
 
 func capture(t *testing.T, stdin string, fn func() error) (string, string, error) {

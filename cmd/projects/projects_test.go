@@ -45,6 +45,61 @@ func TestProjectsListWithProfile(t *testing.T) {
 	cmdtest.AssertRequested(t, result, "GET", "/projects")
 }
 
+func TestProjectsListAllProfilesJSON(t *testing.T) {
+	result := cmdtest.Run(t,
+		[]string{"projects", "list", "--all-profiles", "--output", "json"},
+		cmdtest.WithProfiles(map[string]cmdtest.ProfileConfig{
+			"cmdtest":  {ProjectID: cmdtest.TestProjectID, Token: "sk_cmdtest_token"},
+			"impostor": {ProjectID: "proj_impostor", Token: "sk_impostor_token"},
+		}),
+		cmdtest.WithAcceptedTokens("sk_cmdtest_token", "sk_impostor_token"),
+		cmdtest.WithHandler(func(w http.ResponseWriter, r *http.Request) {
+			switch r.Header.Get("Authorization") {
+			case "Bearer sk_impostor_token":
+				writeProjectTestJSON(w, http.StatusOK, map[string]any{
+					"object":    "list",
+					"items":     []any{map[string]any{"object": "project", "id": "proj_impostor", "name": "Impostor", "created_at": 1776240000000}},
+					"next_page": nil,
+				})
+			default:
+				cmdtest.DefaultHandler(w, r)
+			}
+		}),
+	)
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"profile": "cmdtest"`)
+	cmdtest.AssertOutputContains(t, result, `"profile": "impostor"`)
+	cmdtest.AssertOutputContains(t, result, "proj_impostor")
+	cmdtest.AssertRequestCountAtLeast(t, result, "GET", "/projects", 2)
+}
+
+func TestProjectsListAllProfilesSkipsInvalidProfile(t *testing.T) {
+	result := cmdtest.Run(t,
+		[]string{"projects", "list", "--all-profiles", "--output", "json"},
+		cmdtest.WithProfiles(map[string]cmdtest.ProfileConfig{
+			"cmdtest": {ProjectID: cmdtest.TestProjectID, Token: "sk_cmdtest_token"},
+			"expired": {ProjectID: "proj_expired", Token: "sk_expired_token"},
+		}),
+		cmdtest.WithAcceptedTokens("sk_cmdtest_token"),
+	)
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"profile": "cmdtest"`)
+	cmdtest.AssertOutputContains(t, result, "Warning: profile expired skipped")
+	cmdtest.AssertRequestCountAtLeast(t, result, "GET", "/projects", 2)
+}
+
+func TestProjectsListShowsAllProfilesTip(t *testing.T) {
+	result := cmdtest.Run(t,
+		[]string{"projects", "list", "--output", "json"},
+		cmdtest.WithProfiles(map[string]cmdtest.ProfileConfig{
+			"cmdtest": {ProjectID: cmdtest.TestProjectID, Token: cmdtest.TestToken},
+			"staging": {ProjectID: "proj_staging", Token: cmdtest.TestToken},
+		}),
+	)
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "Tip: you have 2 profiles stored. Use --all-profiles to query all of them.")
+}
+
 func TestProjectsListNotLoggedIn(t *testing.T) {
 	result := cmdtest.Run(t, []string{"projects", "list"}, cmdtest.WithoutToken())
 	cmdtest.AssertErrorContains(t, result, "not logged in")
