@@ -1,6 +1,8 @@
 package auth_test
 
 import (
+	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/andresdefi/rc/internal/cmdtest"
@@ -16,6 +18,18 @@ func TestAuthStatusProfile(t *testing.T) {
 	result := cmdtest.Run(t, []string{"--profile", "cmdtest", "auth", "status"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "cmdtest")
+}
+
+func TestAuthStatusShowsProfileCount(t *testing.T) {
+	result := cmdtest.Run(t,
+		[]string{"auth", "status"},
+		cmdtest.WithProfiles(map[string]cmdtest.ProfileConfig{
+			"cmdtest": {ProjectID: cmdtest.TestProjectID, Token: cmdtest.TestToken},
+			"staging": {ProjectID: "proj_staging", Token: "sk_staging_token"},
+		}),
+	)
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "Profiles: 2 stored")
 }
 
 func TestAuthStatusNotLoggedIn(t *testing.T) {
@@ -91,6 +105,41 @@ func TestAuthLoginProfile(t *testing.T) {
 	cmdtest.AssertOutputContains(t, result, "cmdtest")
 }
 
+func TestAuthAddProjectInfersProfileName(t *testing.T) {
+	result := cmdtest.Run(t,
+		[]string{"auth", "add-project", "--key", "sk_impostor_token"},
+		cmdtest.WithAcceptedTokens("sk_impostor_token"),
+		cmdtest.WithHandler(func(w http.ResponseWriter, r *http.Request) {
+			writeAuthTestJSON(w, http.StatusOK, map[string]any{
+				"object":    "list",
+				"items":     []any{map[string]any{"object": "project", "id": "projb26c2f72", "name": "Impostor", "created_at": 1776240000000}},
+				"next_page": nil,
+			})
+		}),
+	)
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "Added project 'Impostor' (projb26c2f72) under profile 'impostor'")
+	cmdtest.AssertRequested(t, result, "GET", "/projects")
+}
+
+func TestAuthAddProjectRequiresNameForMultipleProjects(t *testing.T) {
+	result := cmdtest.Run(t,
+		[]string{"auth", "add-project", "--key", "sk_multi_token"},
+		cmdtest.WithAcceptedTokens("sk_multi_token"),
+		cmdtest.WithHandler(func(w http.ResponseWriter, r *http.Request) {
+			writeAuthTestJSON(w, http.StatusOK, map[string]any{
+				"object": "list",
+				"items": []any{
+					map[string]any{"object": "project", "id": "proj_one", "name": "One", "created_at": 1776240000000},
+					map[string]any{"object": "project", "id": "proj_two", "name": "Two", "created_at": 1776240000000},
+				},
+				"next_page": nil,
+			})
+		}),
+	)
+	cmdtest.AssertErrorContains(t, result, "pass --name")
+}
+
 func TestAuthStatusHelpExamples(t *testing.T) {
 	result := cmdtest.Run(t, []string{"auth", "status", "--help"})
 	cmdtest.AssertSuccess(t, result)
@@ -119,4 +168,10 @@ func TestAuthUnknownSubcommand(t *testing.T) {
 	result := cmdtest.Run(t, []string{"auth", "nope"})
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "Log in, check status")
+}
+
+func writeAuthTestJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
 }

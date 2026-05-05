@@ -111,6 +111,7 @@ Create/setup commands prompt for missing required values when run in a terminal.
 | Command | Description |
 |---------|-------------|
 | `rc auth login` | Authenticate with API key |
+| `rc auth add-project` | Add a project-scoped key as a named profile |
 | `rc auth status` | Show authentication status |
 | `rc auth doctor` | Check authentication health and API connectivity |
 | `rc auth validate` | Alias-style validation for auth health |
@@ -312,18 +313,19 @@ rc charts overview -o json | jq '.metrics[] | {name, value}'
 rc products delete prod1a2b3c --yes --quiet
 ```
 
-### Multi-profile workflow
+### Working with multiple projects
 
 ```bash
-# Set up profiles for different environments
-rc auth login --profile prod
-rc auth login --profile staging
+# RevenueCat API v2 secret keys are project-scoped.
+# Add one key/profile per project.
+rc auth add-project --key sk_xxx --name spentio
+rc auth add-project --key sk_yyy --name impostor
 
-# Use staging profile for testing
-rc products list --profile staging
+# See all projects visible across stored profiles
+rc projects list --all-profiles
 
-# Switch back to production
-rc products list --profile prod
+# Use a specific profile for project work
+rc products list --profile impostor
 
 # Set the default profile in config
 # (edit ~/.rc/config.toml and set current_profile)
@@ -488,18 +490,21 @@ rc auth logout    # Remove stored key
 
 ## Profiles
 
-rc supports multiple profiles for different environments (production, staging, development, etc.):
+rc supports multiple profiles for different environments and projects. RevenueCat API v2 secret keys are project-scoped, so accounts with multiple projects should store one key per project profile.
 
 ```bash
-# Log in with a named profile
-rc auth login --profile prod
-rc auth login --profile staging
+# Add project-scoped keys as named profiles
+rc auth add-project --key sk_xxx --name spentio
+rc auth add-project --key sk_yyy --name impostor
+
+# Or use the lower-level login command
+rc auth login --profile spentio
+
+# List every project visible through stored profiles
+rc projects list --all-profiles
 
 # Use a specific profile for any command
-rc products list --profile staging
-
-# Check auth status for a profile
-rc auth status --profile staging
+rc products list --profile impostor
 ```
 
 ### Profile resolution order

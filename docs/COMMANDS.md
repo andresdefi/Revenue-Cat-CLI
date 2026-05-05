@@ -276,6 +276,42 @@ Manage authentication
 
 Log in, check status, or log out of the RevenueCat API.
 
+Working with multiple projects:
+RevenueCat API v2 secret keys are project-scoped, so each project needs its
+own profile. Add keys with:
+  rc auth add-project --key sk_xxx --name my-project
+
+Then query every stored profile at once:
+  rc projects list --all-profiles
+
+#### rc auth add-project
+
+Add a project-scoped API key as a named profile
+
+Add a project-scoped RevenueCat API v2 key as a profile.
+
+RevenueCat API v2 secret keys are scoped to one project. Use one profile per
+project, then query all configured project keys with:
+  rc projects list --all-profiles
+
+**Flags**
+
+- `--key`: RevenueCat API v2 secret key (required)
+- `--name`: profile name to store the key under
+
+**Examples**
+
+```bash
+# Add a key under an explicit profile name
+  rc auth add-project --key sk_xxx --name impostor
+
+  # Infer the profile name from the project visible to the key
+  rc auth add-project --key sk_xxx
+
+  # List projects visible across every stored profile
+  rc projects list --all-profiles
+```
+
 #### rc auth doctor
 
 Check authentication health and API connectivity
@@ -2337,6 +2373,7 @@ Default fields preset: id,name,created_at
 **Flags**
 
 - `--all`: fetch all pages Default: `false`.
+- `--all-profiles`: query every stored profile and include the source profile in results Default: `false`.
 - `--limit`: max items per page Default: `0`.
 
 **Examples**
@@ -2350,6 +2387,9 @@ Default fields preset: id,name,created_at
 
   # Fetch all pages
   rc projects list --all
+
+  # Query every stored profile
+  rc projects list --all-profiles
 ```
 
 #### rc projects set-default

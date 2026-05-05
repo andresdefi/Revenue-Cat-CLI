@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/andresdefi/rc/internal/cache"
@@ -16,6 +17,13 @@ const (
 )
 
 var ErrNoToken = errors.New("not logged in - run `rc auth login` to authenticate")
+
+// StoredProfile is a configured profile with a resolvable token.
+type StoredProfile struct {
+	Name   string
+	Token  string
+	Source string
+}
 
 // resolveProfile returns the effective profile name.
 func resolveProfile(profile string) string {
@@ -40,15 +48,16 @@ func SaveToken(profile, token string) error {
 	if !bypassKeychain() {
 		err := keyring.Set(keychainService, keychainUser(profile), token)
 		if err == nil {
-			// Clear any config file token since keychain is preferred
+			// Keep a config profile entry so keychain-backed profiles are discoverable.
 			cfg, _ := config.Load()
 			if cfg != nil {
 				p := cfg.GetProfile(profile)
-				if p != nil && p.APIKey != "" {
-					p.APIKey = ""
-					cfg.SetProfile(profile, p)
-					_ = config.Save(cfg)
+				if p == nil {
+					p = &config.Profile{}
 				}
+				p.APIKey = ""
+				cfg.SetProfile(profile, p)
+				_ = config.Save(cfg)
 			}
 			_ = cache.Clear()
 			return nil
@@ -130,6 +139,56 @@ func TokenSource(profile string) string {
 		}
 	}
 	return "config file"
+}
+
+// StoredProfiles returns configured profiles that have a token in the keychain
+// or config fallback. Profiles are sorted by name for stable output.
+func StoredProfiles() ([]StoredProfile, error) {
+	cfg, err := config.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]struct{}, len(cfg.Profiles)+1)
+	names := make([]string, 0, len(cfg.Profiles)+1)
+	addName := func(name string) {
+		if name == "" {
+			name = config.DefaultProfileName
+		}
+		if _, ok := seen[name]; ok {
+			return
+		}
+		seen[name] = struct{}{}
+		names = append(names, name)
+	}
+	for name := range cfg.Profiles {
+		addName(name)
+	}
+	addName(cfg.CurrentProfile)
+	sort.Strings(names)
+
+	profiles := make([]StoredProfile, 0, len(names))
+	for _, name := range names {
+		token, err := GetToken(name)
+		if err != nil {
+			continue
+		}
+		profiles = append(profiles, StoredProfile{
+			Name:   name,
+			Token:  token,
+			Source: TokenSource(name),
+		})
+	}
+	return profiles, nil
+}
+
+// StoredProfileCount returns the number of configured profiles with tokens.
+func StoredProfileCount() (int, error) {
+	profiles, err := StoredProfiles()
+	if err != nil {
+		return 0, err
+	}
+	return len(profiles), nil
 }
 
 // MaskToken returns a masked version of the token for display.
