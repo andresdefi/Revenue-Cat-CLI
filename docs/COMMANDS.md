@@ -1479,6 +1479,55 @@ Apps are matched to existing target apps by ID or by name and type. Use
   rc import --file config.json --app-map app_source=app_target
 ```
 
+#### rc import apply
+
+Apply a saved import plan
+
+Apply a saved import plan produced by 'rc import plan --out'.
+
+The plan includes the export config, target project, and app mappings used
+when the diff was produced. Applying it uses the same idempotent import path
+as 'rc import --file'.
+
+**Flags**
+
+- `--plan`: import plan file path (required)
+
+**Examples**
+
+```bash
+rc import apply --plan import-plan.json
+```
+
+#### rc import plan
+
+Plan an import without mutating the target project
+
+Plan an import without mutating the target project.
+
+The plan compares an exported project config with the target project and
+reports what apply would create, reuse, update, attach, archive, or skip.
+Use --out to save a plan that can later be applied with 'rc import apply'.
+
+**Flags**
+
+- `--app-map`: map source app ID to target app ID (source=target, repeatable) Default: `[]`.
+- `--file`: input file path (required)
+- `--out`: write replayable import plan to this file
+
+**Examples**
+
+```bash
+# Print a human-readable import plan
+  rc import plan --file config.json --project proj_target123
+
+  # Save a replayable plan artifact
+  rc import plan --file config.json --project proj_target123 --out import-plan.json
+
+  # Include explicit app ID mappings
+  rc import plan --file config.json --app-map app_source=app_target --out import-plan.json
+```
+
 ### rc init
 
 Initialize rc configuration for a profile

@@ -204,6 +204,8 @@ Create/setup commands prompt for missing required values when run in a terminal.
 | Command | Description |
 |---------|-------------|
 | `rc export --file config.json` | Export full project config (apps, products, entitlements, offerings, packages, attachments) |
+| `rc import plan --file config.json --out plan.json` | Diff an import against the target project without writes |
+| `rc import apply --plan plan.json` | Apply a saved import plan |
 | `rc import --file config.json` | Import project config into another project |
 | `rc migrate project --dry-run` | Plan project migration without writes |
 
@@ -352,14 +354,17 @@ rc migrate project --source-project proj_source --target-project proj_target --d
 # Export full project config, including relationships and attachments
 rc export --file project-config.json --project proj_source
 
-# Import into a different project
-rc import --file project-config.json --project proj_target
+# Save a replayable import plan with a human-readable diff
+rc import plan --file project-config.json --project proj_target --out import-plan.json
+
+# Apply the reviewed plan
+rc import apply --plan import-plan.json
 
 # Map source apps to target apps when automatic matching is not enough
-rc import --file project-config.json --project proj_target --app-map app_source=app_target
+rc import plan --file project-config.json --project proj_target --app-map app_source=app_target --out import-plan.json
 ```
 
-`rc export` and `rc import` are beta. Run with `--dry-run` before applying a migration to another project.
+`rc export` and `rc import` are beta. Prefer `rc import plan --out ...` and review the diff before `rc import apply`.
 
 ## Documentation
 

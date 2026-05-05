@@ -96,6 +96,19 @@ type MigrationAction struct {
 	Message  string `json:"message"`
 }
 
+type ImportPlan struct {
+	Object          string            `json:"object"`
+	Version         string            `json:"version"`
+	CreatedAt       string            `json:"created_at"`
+	TargetProjectID string            `json:"target_project_id"`
+	AppMaps         []string          `json:"app_maps,omitempty"`
+	Config          ProjectConfig     `json:"config"`
+	Status          string            `json:"status"`
+	Counts          MigrationCounts   `json:"counts"`
+	Warnings        []string          `json:"warnings,omitempty"`
+	Actions         []MigrationAction `json:"actions"`
+}
+
 // NewExportCmd creates the `rc export` command.
 func NewExportCmd(projectID, outputFormat *string) *cobra.Command {
 	var file string
@@ -188,14 +201,9 @@ Apps are matched to existing target apps by ID or by name and type. Use
 				return err
 			}
 
-			data, err := os.ReadFile(file)
+			config, err := readProjectConfigFile(file)
 			if err != nil {
-				return fmt.Errorf("failed to read file: %w", err)
-			}
-
-			var config ProjectConfig
-			if err := json.Unmarshal(data, &config); err != nil {
-				return fmt.Errorf("failed to parse config file: %w", err)
+				return err
 			}
 
 			result, err := importProjectConfig(client, pid, config, appMaps)
@@ -214,7 +222,148 @@ Apps are matched to existing target apps by ID or by name and type. Use
 
 	cmd.Flags().StringVar(&file, "file", "", "input file path (required)")
 	cmd.Flags().StringArrayVar(&appMaps, "app-map", nil, "map source app ID to target app ID (source=target, repeatable)")
+	cmd.AddCommand(newImportPlanCmd(projectID, outputFormat))
+	cmd.AddCommand(newImportApplyCmd())
 	cmdutil.MarkBeta(cmd)
+	return cmd
+}
+
+func readProjectConfigFile(file string) (ProjectConfig, error) {
+	var config ProjectConfig
+	data, err := os.ReadFile(file) //nolint:gosec // user-specified import path
+	if err != nil {
+		return config, fmt.Errorf("failed to read file: %w", err)
+	}
+	if err := json.Unmarshal(data, &config); err != nil {
+		return config, fmt.Errorf("failed to parse config file: %w", err)
+	}
+	return config, nil
+}
+
+func writeImportPlanFile(file string, plan *ImportPlan) error {
+	data, err := json.MarshalIndent(plan, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal import plan: %w", err)
+	}
+	if err := os.WriteFile(file, data, 0o600); err != nil { //nolint:gosec // user-specified plan path
+		return fmt.Errorf("failed to write import plan: %w", err)
+	}
+	return nil
+}
+
+func readImportPlanFile(file string) (*ImportPlan, error) {
+	data, err := os.ReadFile(file) //nolint:gosec // user-specified plan path
+	if err != nil {
+		return nil, fmt.Errorf("failed to read import plan: %w", err)
+	}
+	var plan ImportPlan
+	if err := json.Unmarshal(data, &plan); err != nil {
+		return nil, fmt.Errorf("failed to parse import plan: %w", err)
+	}
+	if plan.Object != "project_import_plan" {
+		return nil, fmt.Errorf("invalid import plan object %q", plan.Object)
+	}
+	if plan.TargetProjectID == "" {
+		return nil, fmt.Errorf("invalid import plan: missing target_project_id")
+	}
+	return &plan, nil
+}
+
+func newImportPlanCmd(projectID, outputFormat *string) *cobra.Command {
+	var (
+		file    string
+		outFile string
+		appMaps []string
+	)
+	cmd := &cobra.Command{
+		Use:   "plan",
+		Short: "Plan an import without mutating the target project",
+		Long: `Plan an import without mutating the target project.
+
+The plan compares an exported project config with the target project and
+reports what apply would create, reuse, update, attach, archive, or skip.
+Use --out to save a plan that can later be applied with 'rc import apply'.`,
+		Example: `  # Print a human-readable import plan
+  rc import plan --file config.json --project proj_target123
+
+  # Save a replayable plan artifact
+  rc import plan --file config.json --project proj_target123 --out import-plan.json
+
+  # Include explicit app ID mappings
+  rc import plan --file config.json --app-map app_source=app_target --out import-plan.json`,
+		RunE: func(c *cobra.Command, args []string) error {
+			if file == "" {
+				return fmt.Errorf("--file is required")
+			}
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+			config, err := readProjectConfigFile(file)
+			if err != nil {
+				return err
+			}
+			plan, err := planImportConfig(client, pid, config, appMaps)
+			if err != nil {
+				return err
+			}
+			if outFile != "" {
+				if err := writeImportPlanFile(outFile, plan); err != nil {
+					return err
+				}
+				output.Success("Wrote import plan to %s", outFile)
+			}
+			format := cmdutil.GetOutputFormat(outputFormat)
+			output.Print(format, plan, renderMigrationPlan(importPlanAsMigrationPlan(plan)))
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&file, "file", "", "input file path (required)")
+	cmd.Flags().StringVar(&outFile, "out", "", "write replayable import plan to this file")
+	cmd.Flags().StringArrayVar(&appMaps, "app-map", nil, "map source app ID to target app ID (source=target, repeatable)")
+	return cmd
+}
+
+func newImportApplyCmd() *cobra.Command {
+	var planFile string
+	cmd := &cobra.Command{
+		Use:   "apply",
+		Short: "Apply a saved import plan",
+		Long: `Apply a saved import plan produced by 'rc import plan --out'.
+
+The plan includes the export config, target project, and app mappings used
+when the diff was produced. Applying it uses the same idempotent import path
+as 'rc import --file'.`,
+		Example: `  rc import apply --plan import-plan.json`,
+		RunE: func(c *cobra.Command, args []string) error {
+			if planFile == "" {
+				return fmt.Errorf("--plan is required")
+			}
+			plan, err := readImportPlanFile(planFile)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+			result, err := importProjectConfig(client, plan.TargetProjectID, plan.Config, plan.AppMaps)
+			if err != nil {
+				return err
+			}
+			output.Success("Applied plan: imported %d/%d products, %d/%d entitlements, %d/%d offerings, %d/%d packages",
+				result.Products, len(plan.Config.Products),
+				result.Entitlements, len(plan.Config.Entitlements),
+				result.Offerings, len(plan.Config.Offerings),
+				result.Packages, countPackages(plan.Config.Offerings))
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&planFile, "plan", "", "import plan file path (required)")
 	return cmd
 }
 
@@ -297,6 +446,29 @@ func dryRunProjectMigration(client *api.Client, sourceProjectID, targetProjectID
 	if err != nil {
 		return nil, err
 	}
+	return buildMigrationPlan(client, config, sourceProjectID, targetProjectID, appMaps)
+}
+
+func planImportConfig(client *api.Client, targetProjectID string, config ProjectConfig, appMaps []string) (*ImportPlan, error) {
+	migrationPlan, err := buildMigrationPlan(client, &config, sourceProjectIDFromConfig(config), targetProjectID, appMaps)
+	if err != nil {
+		return nil, err
+	}
+	return &ImportPlan{
+		Object:          "project_import_plan",
+		Version:         "1",
+		CreatedAt:       time.Now().UTC().Format(time.RFC3339),
+		TargetProjectID: targetProjectID,
+		AppMaps:         append([]string(nil), appMaps...),
+		Config:          config,
+		Status:          migrationPlan.Status,
+		Counts:          migrationPlan.Counts,
+		Warnings:        migrationPlan.Warnings,
+		Actions:         migrationPlan.Actions,
+	}, nil
+}
+
+func buildMigrationPlan(client *api.Client, config *ProjectConfig, sourceProjectID, targetProjectID string, appMaps []string) (*MigrationPlan, error) {
 	targetApps, err := api.PaginateAll[api.App](client, fmt.Sprintf("/projects/%s/apps", url.PathEscape(targetProjectID)), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch target apps: %w", err)
@@ -333,6 +505,32 @@ func dryRunProjectMigration(client *api.Client, sourceProjectID, targetProjectID
 		plan.Status = "warn"
 	}
 	return plan, nil
+}
+
+func sourceProjectIDFromConfig(config ProjectConfig) string {
+	if len(config.Apps) > 0 && config.Apps[0].ProjectID != "" {
+		return config.Apps[0].ProjectID
+	}
+	if len(config.Entitlements) > 0 && config.Entitlements[0].ProjectID != "" {
+		return config.Entitlements[0].ProjectID
+	}
+	if len(config.Offerings) > 0 && config.Offerings[0].ProjectID != "" {
+		return config.Offerings[0].ProjectID
+	}
+	return "(export file)"
+}
+
+func importPlanAsMigrationPlan(plan *ImportPlan) *MigrationPlan {
+	return &MigrationPlan{
+		Object:          "project_migration_plan",
+		SourceProjectID: sourceProjectIDFromConfig(plan.Config),
+		TargetProjectID: plan.TargetProjectID,
+		DryRun:          true,
+		Status:          plan.Status,
+		Counts:          plan.Counts,
+		Warnings:        plan.Warnings,
+		Actions:         plan.Actions,
+	}
 }
 
 func planProducts(plan *MigrationPlan, products, targetProducts []api.Product, appMap map[string]string) map[string]string {

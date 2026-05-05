@@ -173,18 +173,15 @@ rc migrate project \
 
 rc export --project proj_source --file project-config.json
 
-rc import \
+rc import plan \
   --project proj_target \
   --file project-config.json \
   --app-map app_source_ios=app_target_ios \
-  --dry-run
+  --out import-plan.json
 
-rc import \
-  --project proj_target \
-  --file project-config.json \
-  --app-map app_source_ios=app_target_ios
+rc import apply --plan import-plan.json
 ```
 
 `rc migrate project --dry-run`, `rc export`, and `rc import` are beta. Start
-with the migration dry-run plan to inspect creates, reuses, skips, and required
-app mappings before applying an export/import migration.
+with the migration dry-run or `rc import plan` to inspect creates, reuses,
+skips, and required app mappings before applying an export/import migration.
