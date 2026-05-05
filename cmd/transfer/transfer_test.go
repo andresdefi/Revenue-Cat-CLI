@@ -102,6 +102,18 @@ func TestNewImportCmd_HasAppMapFlag(t *testing.T) {
 	}
 }
 
+func TestNewImportCmd_HasPlanAndApplySubcommands(t *testing.T) {
+	projectID := ""
+	outputFormat := ""
+	cmd := transfercmd.NewImportCmd(&projectID, &outputFormat)
+	if found, _, err := cmd.Find([]string{"plan"}); err != nil || found.Use != "plan" {
+		t.Fatalf("missing import plan subcommand: found=%v err=%v", found, err)
+	}
+	if found, _, err := cmd.Find([]string{"apply"}); err != nil || found.Use != "apply" {
+		t.Fatalf("missing import apply subcommand: found=%v err=%v", found, err)
+	}
+}
+
 func TestNewExportCmd_Long(t *testing.T) {
 	projectID := ""
 	outputFormat := ""
@@ -211,6 +223,60 @@ func TestImportProjectConfig_AttachesMappedProducts(t *testing.T) {
 	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/entitlements/entl_cmdtest/actions/attach_products")
 	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/packages/pkge_cmdtest/actions/attach_products")
 	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings/ofrnge_cmdtest")
+}
+
+func TestImportPlanWritesReplayableReadOnlyPlan(t *testing.T) {
+	file := writeTransferFixture(t, importPlanFixture())
+	planFile := filepath.Join(t.TempDir(), "import-plan.json")
+
+	result := cmdtest.Run(t, []string{"import", "plan", "--file", file, "--app-map", "app_source=app_cmdtest", "--out", planFile, "--output", "json"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"object": "project_import_plan"`)
+	cmdtest.AssertOutputContains(t, result, `"target_project_id": "proj_cmdtest"`)
+	cmdtest.AssertOutputContains(t, result, `"action": "attach-product"`)
+	for _, req := range result.Requests {
+		if req.Method == http.MethodPost || req.Method == http.MethodDelete {
+			t.Fatalf("import plan should not mutate, got %s %s", req.Method, req.Path)
+		}
+	}
+
+	data, err := os.ReadFile(planFile)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	var plan transfercmd.ImportPlan
+	if err := json.Unmarshal(data, &plan); err != nil {
+		t.Fatalf("Unmarshal import plan: %v", err)
+	}
+	if plan.Object != "project_import_plan" {
+		t.Fatalf("plan object = %q, want project_import_plan", plan.Object)
+	}
+	if plan.TargetProjectID != "proj_cmdtest" {
+		t.Fatalf("target project = %q, want proj_cmdtest", plan.TargetProjectID)
+	}
+	if len(plan.Config.Products) != 1 {
+		t.Fatalf("plan products = %d, want 1", len(plan.Config.Products))
+	}
+}
+
+func TestImportApplyUsesSavedPlan(t *testing.T) {
+	planFile := writeTransferFixture(t, `{
+  "object": "project_import_plan",
+  "version": "1",
+  "created_at": "2026-05-05T00:00:00Z",
+  "target_project_id": "proj_cmdtest",
+  "app_maps": ["app_source=app_cmdtest"],
+  "config": `+importPlanFixture()+`,
+  "status": "ok",
+  "counts": {},
+  "actions": []
+}`)
+
+	result := cmdtest.Run(t, []string{"import", "apply", "--plan", planFile})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "Applied plan")
+	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/entitlements/entl_cmdtest/actions/attach_products")
+	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/packages/pkge_cmdtest/actions/attach_products")
 }
 
 func TestImportProjectConfig_IsIdempotentForExistingResources(t *testing.T) {
@@ -446,6 +512,28 @@ func writeTransferFixture(t *testing.T, data string) string {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	return file
+}
+
+func importPlanFixture() string {
+	return `{
+  "version": "2",
+  "apps": [
+    {"object": "app", "id": "app_source", "name": "iOS App", "type": "ios", "project_id": "proj_source", "created_at": 1713072000000}
+  ],
+  "products": [
+    {"object": "product", "id": "prod_source", "store_identifier": "com.example.premium.monthly", "type": "subscription", "state": "active", "display_name": "Premium Monthly", "app_id": "app_source", "created_at": 1713072000000}
+  ],
+  "entitlements": [
+    {"object": "entitlement", "id": "entl_source", "project_id": "proj_source", "lookup_key": "premium", "display_name": "Premium", "state": "active", "product_ids": ["prod_source"]}
+  ],
+  "offerings": [
+    {"object": "offering", "id": "ofrnge_source", "project_id": "proj_source", "lookup_key": "default", "display_name": "Default Offering", "is_current": true, "state": "active", "packages": [
+      {"object": "package", "id": "pkge_source", "lookup_key": "$rc_monthly", "display_name": "Monthly", "products": [
+        {"product_id": "prod_source", "eligibility_criteria": "all"}
+      ]}
+    ]}
+  ]
+}`
 }
 
 func assertRequestJSONAmong(t *testing.T, result cmdtest.Result, method, requestPath string, want map[string]any) {

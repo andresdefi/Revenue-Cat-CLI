@@ -83,14 +83,17 @@ Confirmed and fixed in the CLI:
   archive state where the API exposes it.
 - Import maps source apps to target apps by ID, then by name/type, then by
   explicit `--app-map source=target` overrides.
+- `rc import plan --file ... --out ...` writes a replayable plan containing the
+  export config, target project, app mappings, and planned actions. Review the
+  plan before applying it with `rc import apply --plan ...`.
 - Import warns and skips dependent links when a source product cannot be mapped
   into the target project.
 - Fixture tests cover archived state export/import, idempotent re-imports,
   offering/package update bodies, partial product create failures, failed
   attachment/archive calls, attachment restoration, and migration dry-run
   archive planning.
-- Always run `rc migrate project --dry-run` before applying an export/import
-  migration.
+- Always run `rc migrate project --dry-run` or `rc import plan` before applying
+  an export/import migration.
 
 ## Error Handling
 
