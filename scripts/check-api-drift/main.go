@@ -87,11 +87,11 @@ func main() {
 
 func readSpec(spec string) ([]byte, error) {
 	if strings.HasPrefix(spec, "http://") || strings.HasPrefix(spec, "https://") {
-		resp, err := http.Get(spec) //nolint:gosec // user-controlled CI utility URL
+		resp, err := http.Get(spec) // #nosec G107 -- intentional CI utility fetch for RevenueCat's OpenAPI URL.
 		if err != nil {
 			return nil, err
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
 		}
@@ -199,7 +199,7 @@ func discoverCodeEndpoints(includeTests bool) (map[string]struct{}, error) {
 			if includeTests != isTest {
 				return nil
 			}
-			data, err := os.ReadFile(path)
+			data, err := os.ReadFile(path) // #nosec G304,G122 -- static repo scan over command/internal source files.
 			if err != nil {
 				return err
 			}
@@ -572,7 +572,7 @@ func writeReport(path, specSource string, rows []coverageRow, fieldWarnings []st
 			fmt.Fprintf(&b, "- %s\n", warning)
 		}
 	}
-	return os.WriteFile(path, []byte(b.String()), 0o644)
+	return os.WriteFile(path, []byte(b.String()), 0o644) // #nosec G306 -- generated markdown report should be world-readable.
 }
 
 func mark(ok bool) string {
