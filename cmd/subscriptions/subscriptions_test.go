@@ -1,6 +1,7 @@
 package subscriptions_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/andresdefi/rc/internal/cmdtest"
@@ -59,6 +60,35 @@ func TestSubscriptionsEntitlementsJSON(t *testing.T) {
 	cmdtest.AssertSuccess(t, result)
 	cmdtest.AssertOutputContains(t, result, "entl_cmdtest")
 	cmdtest.AssertRequested(t, result, "GET", "/projects/proj_cmdtest/subscriptions/sub_cmdtest/entitlements")
+}
+
+func TestSubscriptionsExtendByDays(t *testing.T) {
+	result := cmdtest.Run(t, []string{"subscriptions", "extend", "sub_cmdtest", "--days", "14", "--reason", "customer_satisfaction"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "sub_cmdtest")
+	cmdtest.AssertOutputContains(t, result, "extended")
+	cmdtest.AssertRequested(t, result, "POST", "/projects/proj_cmdtest/subscriptions/sub_cmdtest/actions/extend")
+	cmdtest.AssertRequestJSON(t, result, http.MethodPost, "/projects/proj_cmdtest/subscriptions/sub_cmdtest/actions/extend", map[string]any{
+		"extend_by_days":     float64(14),
+		"extend_reason_code": "customer_satisfaction",
+	})
+}
+
+func TestSubscriptionsExtendUntilMS(t *testing.T) {
+	result := cmdtest.Run(t, []string{"subscriptions", "extend", "sub_cmdtest", "--until-ms", "1735689600000", "--output", "json"})
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, "\"id\": \"sub_cmdtest\"")
+	cmdtest.AssertRequestJSON(t, result, http.MethodPost, "/projects/proj_cmdtest/subscriptions/sub_cmdtest/actions/extend", map[string]any{
+		"extend_until_ms": float64(1735689600000),
+	})
+}
+
+func TestSubscriptionsExtendRequiresOneExtensionMode(t *testing.T) {
+	result := cmdtest.Run(t, []string{"subscriptions", "extend", "sub_cmdtest"})
+	cmdtest.AssertErrorContains(t, result, "exactly one")
+
+	result = cmdtest.Run(t, []string{"subscriptions", "extend", "sub_cmdtest", "--days", "14", "--until-ms", "1735689600000"})
+	cmdtest.AssertErrorContains(t, result, "exactly one")
 }
 
 func TestSubscriptionsCancelSuccess(t *testing.T) {

@@ -5,7 +5,7 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS := -s -w -X $(MODULE)/internal/version.Version=$(VERSION) -X $(MODULE)/internal/version.Commit=$(COMMIT) -X $(MODULE)/internal/version.Date=$(DATE)
 
-.PHONY: build test test-integration lint vet fmt docs clean install check tools security help
+.PHONY: build test test-integration lint vet fmt docs api-coverage api-drift clean install check tools security help
 
 ## build: Build the rc binary
 build:
@@ -26,6 +26,14 @@ test-integration:
 ## docs: Generate command reference docs
 docs:
 	go run ./scripts/generate-commands-docs
+
+## api-coverage: Generate RevenueCat OpenAPI coverage report
+api-coverage:
+	go run ./scripts/check-api-drift --out docs/API_COVERAGE.md
+
+## api-drift: Check RevenueCat OpenAPI coverage against the live spec
+api-drift:
+	go run ./scripts/check-api-drift --check --out docs/API_COVERAGE.md
 
 ## lint: Run golangci-lint
 lint:
