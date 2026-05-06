@@ -26,6 +26,7 @@ audit logs, collaborators, and virtual currencies.
 
 - `--agent`: optimize output for agents: compact JSON, default fields, no hints (also respects RC_AGENT) Default: `false`.
 - `--dry-run`: show what would be done without executing mutations Default: `false`.
+- `--fail-if-project-name-not`: fail unless the resolved project name exactly matches this value
 - `--fields`: comma-separated list of fields to include in JSON output
 - `--log-level`: log verbosity: error, warn, info, debug (default: warn)
 - `--no-color`: disable color output (also respects NO_COLOR env var) Default: `false`.
@@ -35,6 +36,7 @@ audit logs, collaborators, and virtual currencies.
 - `--profile`: config profile to use (overrides RC_PROFILE and current_profile)
 - `-p, --project`: project ID (overrides default project)
 - `-q, --quiet`: suppress non-essential output (success messages, warnings, progress) Default: `false`.
+- `--require-profile`: fail unless the resolved profile name matches this value
 - `-v, --verbose`: shorthand for --log-level debug Default: `false`.
 - `-y, --yes`: skip confirmation prompts for destructive operations Default: `false`.
 

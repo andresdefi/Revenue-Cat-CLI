@@ -216,7 +216,7 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 
 	output.Debug("%s %s", method, u)
 	if len(bodyData) > 0 {
-		output.Debug("Request body: %s", string(bodyData))
+		output.Debug("Request body: %s", string(redactJSONForLog(bodyData)))
 	}
 
 	if DryRun && method != "GET" {
@@ -224,11 +224,18 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 		fmt.Fprintf(os.Stderr, "[dry-run] Would %s %s\n", method, path)
 		if len(bodyData) > 0 {
 			var pretty bytes.Buffer
-			if json.Indent(&pretty, bodyData, "  ", "  ") == nil {
+			if json.Indent(&pretty, redactJSONForLog(bodyData), "  ", "  ") == nil {
 				fmt.Fprintf(os.Stderr, "  Body:\n  %s\n", pretty.String())
 			}
 		}
 		return []byte(`{}`), nil
+	}
+
+	if method != "GET" {
+		output.Info("mutation start: %s %s", method, path)
+		if len(bodyData) > 0 {
+			output.Info("mutation payload: %s", string(redactJSONForLog(bodyData)))
+		}
 	}
 
 	var lastErr error
@@ -259,6 +266,7 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 		if err != nil {
 			return nil, err
 		}
+		requestID := responseRequestID(resp)
 
 		output.Debug("Response: %d (%d bytes)", resp.StatusCode, len(respBody))
 		if output.Verbose && len(respBody) > 0 && len(respBody) < 4096 {
@@ -266,6 +274,9 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 		}
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			if method != "GET" {
+				output.Info("mutation complete: %s %s -> HTTP %d%s", method, path, resp.StatusCode, formatRequestID(requestID))
+			}
 			return respBody, nil
 		}
 
@@ -279,13 +290,75 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 				lastErr = &apiErr
 				continue
 			}
+			if method != "GET" {
+				output.Info("mutation failed: %s %s -> HTTP %d%s", method, path, resp.StatusCode, formatRequestID(requestID))
+			}
 			return nil, &apiErr
 		}
 
+		if method != "GET" {
+			output.Info("mutation failed: %s %s -> HTTP %d%s", method, path, resp.StatusCode, formatRequestID(requestID))
+		}
 		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	return nil, fmt.Errorf("request failed after %d attempts: %w", MaxRetries, lastErr)
+}
+
+func responseRequestID(resp *http.Response) string {
+	for _, name := range []string{"X-Request-Id", "X-Request-ID", "Request-Id", "Request-ID"} {
+		if value := resp.Header.Get(name); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func formatRequestID(requestID string) string {
+	if requestID == "" {
+		return ""
+	}
+	return " request_id=" + requestID
+}
+
+func redactJSONForLog(data []byte) []byte {
+	var value any
+	if err := json.Unmarshal(data, &value); err != nil {
+		return data
+	}
+	redactValue(value)
+	redacted, err := json.Marshal(value)
+	if err != nil {
+		return data
+	}
+	return redacted
+}
+
+func redactValue(value any) {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, child := range typed {
+			if isSensitiveKey(key) {
+				typed[key] = "[redacted]"
+				continue
+			}
+			redactValue(child)
+		}
+	case []any:
+		for _, child := range typed {
+			redactValue(child)
+		}
+	}
+}
+
+func isSensitiveKey(key string) bool {
+	key = strings.ToLower(key)
+	for _, part := range []string{"api_key", "authorization", "password", "secret", "token", "private_key", "shared_secret"} {
+		if strings.Contains(key, part) {
+			return true
+		}
+	}
+	return false
 }
 
 // retryBackoff determines the backoff duration from the Retry-After header,

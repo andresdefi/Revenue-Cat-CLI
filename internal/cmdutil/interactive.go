@@ -2,10 +2,15 @@ package cmdutil
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/andresdefi/rc/internal/output"
 	"github.com/charmbracelet/huh"
 )
+
+// SafetyProjectName is set when a command verifies the active project name.
+var SafetyProjectName string
 
 // PromptIfEmpty prompts for a value if it is empty and stdout is a TTY.
 // If not a TTY and the value is empty, returns an error.
@@ -63,7 +68,10 @@ func PromptConfirm(title string) (bool, error) {
 // ConfirmDestructive prompts for confirmation before a destructive operation.
 // Returns nil if confirmed, error if declined or non-interactive without --yes.
 func ConfirmDestructive(action, resourceType, resourceID string) error {
-	msg := fmt.Sprintf("%s %s %s?", action, resourceType, resourceID)
+	if requireTypedConfirmation() {
+		return confirmExactDestructive(action, resourceType, resourceID)
+	}
+	msg := destructiveMessage(action, resourceType, resourceID, "?")
 	confirmed, err := PromptConfirm(msg)
 	if err != nil {
 		return err
@@ -72,4 +80,32 @@ func ConfirmDestructive(action, resourceType, resourceID string) error {
 		return fmt.Errorf("aborted")
 	}
 	return nil
+}
+
+func requireTypedConfirmation() bool {
+	return os.Getenv("RC_REQUIRE_CONFIRM") == "1"
+}
+
+func confirmExactDestructive(action, resourceType, resourceID string) error {
+	msg := destructiveMessage(action, resourceType, resourceID, fmt.Sprintf(". Type %s to continue:", resourceID))
+	if !output.IsTTY() {
+		return fmt.Errorf("destructive operation requires typed confirmation for %s: run interactively or unset RC_REQUIRE_CONFIRM", resourceID)
+	}
+	var got string
+	if err := huh.NewInput().Title(msg).Value(&got).Run(); err != nil {
+		return err
+	}
+	if strings.TrimSpace(got) != resourceID {
+		return fmt.Errorf("aborted")
+	}
+	return nil
+}
+
+func destructiveMessage(action, resourceType, resourceID, suffix string) string {
+	action = strings.ToLower(action)
+	msg := fmt.Sprintf("You are about to %s %s %s", action, resourceType, resourceID)
+	if SafetyProjectName != "" {
+		msg += fmt.Sprintf(" from project %q", SafetyProjectName)
+	}
+	return msg + suffix
 }

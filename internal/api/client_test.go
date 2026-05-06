@@ -116,6 +116,18 @@ func TestClient_Post_Success(t *testing.T) {
 	}
 }
 
+func TestRedactJSONForLog(t *testing.T) {
+	got := string(redactJSONForLog([]byte(`{"api_key":"sk_secret","name":"visible","nested":{"shared_secret":"secret"},"items":[{"token":"tok"}]}`)))
+	for _, secret := range []string{"sk_secret", `"secret"`, `"tok"`} {
+		if strings.Contains(got, secret) {
+			t.Fatalf("redacted payload %s still contains secret %s", got, secret)
+		}
+	}
+	if !strings.Contains(got, `"name":"visible"`) {
+		t.Fatalf("redacted payload %s should preserve non-sensitive fields", got)
+	}
+}
+
 func TestClient_Post_NilBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {

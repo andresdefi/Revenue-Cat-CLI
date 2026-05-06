@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -37,19 +39,21 @@ import (
 )
 
 var (
-	projectID    string
-	outputFormat string
-	profileFlag  string
-	noColorFlag  bool
-	prettyFlag   bool
-	verboseFlag  bool
-	logLevelFlag string
-	quietFlag    bool
-	noHintsFlag  bool
-	agentFlag    bool
-	dryRunFlag   bool
-	forceFlag    bool
-	fieldsFlag   string
+	projectID                string
+	outputFormat             string
+	profileFlag              string
+	noColorFlag              bool
+	prettyFlag               bool
+	verboseFlag              bool
+	logLevelFlag             string
+	quietFlag                bool
+	noHintsFlag              bool
+	agentFlag                bool
+	dryRunFlag               bool
+	forceFlag                bool
+	fieldsFlag               string
+	requireProfileFlag       string
+	failIfProjectNameNotFlag string
 )
 
 func NewRootCmd() *cobra.Command {
@@ -128,6 +132,9 @@ audit logs, collaborators, and virtual currencies.`,
 			if forceFlag {
 				cmdutil.ForceYes = true
 			}
+			if err := enforceSafetyRails(&projectID); err != nil {
+				return err
+			}
 			cmdutil.FieldsFlag = fieldsFlag
 			output.FieldsFilter = fieldsFlag
 			output.DefaultFieldsPreset = fieldsPreset
@@ -150,6 +157,8 @@ audit logs, collaborators, and virtual currencies.`,
 	root.PersistentFlags().BoolVar(&dryRunFlag, "dry-run", false, "show what would be done without executing mutations")
 	root.PersistentFlags().BoolVarP(&forceFlag, "yes", "y", false, "skip confirmation prompts for destructive operations")
 	root.PersistentFlags().StringVar(&fieldsFlag, "fields", "", "comma-separated list of fields to include in JSON output")
+	root.PersistentFlags().StringVar(&requireProfileFlag, "require-profile", "", "fail unless the resolved profile name matches this value")
+	root.PersistentFlags().StringVar(&failIfProjectNameNotFlag, "fail-if-project-name-not", "", "fail unless the resolved project name exactly matches this value")
 
 	// Meta
 	root.AddCommand(newVersionCmd())
@@ -196,6 +205,46 @@ audit logs, collaborators, and virtual currencies.`,
 	root.AddCommand(transfer.NewMigrateCmd(&projectID, &outputFormat))
 
 	return root
+}
+
+func enforceSafetyRails(projectID *string) error {
+	if requireProfileFlag != "" {
+		profile := cmdutil.ResolveProfile()
+		if profile != requireProfileFlag {
+			return fmt.Errorf("profile safety check failed: resolved profile %q, require-profile %q", profile, requireProfileFlag)
+		}
+	}
+	if failIfProjectNameNotFlag != "" {
+		pid, err := cmdutil.ResolveProject(projectID)
+		if err != nil {
+			return err
+		}
+		project, err := fetchProjectForSafetyCheck(pid)
+		if err != nil {
+			return err
+		}
+		cmdutil.SafetyProjectName = project.Name
+		if project.Name != failIfProjectNameNotFlag {
+			return fmt.Errorf("project safety check failed: resolved project %q (%s), expected %q", project.Name, project.ID, failIfProjectNameNotFlag)
+		}
+	}
+	return nil
+}
+
+func fetchProjectForSafetyCheck(projectID string) (api.Project, error) {
+	client, err := api.NewClient()
+	if err != nil {
+		return api.Project{}, err
+	}
+	data, err := client.Get("/projects/"+url.PathEscape(projectID), nil)
+	if err != nil {
+		return api.Project{}, fmt.Errorf("failed to verify project name: %w", err)
+	}
+	var project api.Project
+	if err := json.Unmarshal(data, &project); err != nil {
+		return api.Project{}, fmt.Errorf("failed to parse project safety check response: %w", err)
+	}
+	return project, nil
 }
 
 func agentEnvEnabled() bool {

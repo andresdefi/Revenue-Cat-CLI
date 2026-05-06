@@ -453,7 +453,12 @@ These flags work on all commands:
 | `--no-hints` | | Suppress post-mutation next-step hints |
 | `--dry-run` | | Preview mutations without executing (shows method, path, body) |
 | `--yes` | `-y` | Skip confirmation prompts on destructive operations |
+| `--require-profile` | | Fail unless the resolved profile matches the expected name |
+| `--fail-if-project-name-not` | | Fail unless the resolved project name exactly matches the expected name |
 | `--no-color` | | Disable color output (also respects `NO_COLOR` env var) |
+
+Set `RC_REQUIRE_CONFIRM=1` to require typed destructive confirmations even when `--yes` is passed.
+Use `--log-level info` to emit mutation start/finish summaries with request IDs and redacted payloads.
 
 ### Destructive operations
 
