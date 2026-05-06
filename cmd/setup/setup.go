@@ -40,6 +40,36 @@ type productSetupReport struct {
 	NextCommands []string        `json:"next_commands"`
 }
 
+type subscriptionSetOptions struct {
+	AppID              string `json:"app_id"`
+	MonthlyStoreID     string `json:"monthly_store_id"`
+	AnnualStoreID      string `json:"annual_store_id"`
+	Type               string `json:"type"`
+	EntitlementKey     string `json:"entitlement_key"`
+	EntitlementName    string `json:"entitlement_name"`
+	OfferingKey        string `json:"offering_key"`
+	OfferingName       string `json:"offering_name"`
+	MonthlyPackageKey  string `json:"monthly_package_key"`
+	MonthlyPackageName string `json:"monthly_package_name"`
+	AnnualPackageKey   string `json:"annual_package_key"`
+	AnnualPackageName  string `json:"annual_package_name"`
+	MakeCurrent        bool   `json:"make_current"`
+}
+
+type subscriptionSetReport struct {
+	Object       string                 `json:"object"`
+	ProjectID    string                 `json:"project_id"`
+	DryRun       bool                   `json:"dry_run"`
+	Status       string                 `json:"status"`
+	Options      subscriptionSetOptions `json:"options"`
+	Products     []resourceSummary      `json:"products"`
+	Entitlement  resourceSummary        `json:"entitlement"`
+	Offering     resourceSummary        `json:"offering"`
+	Packages     []resourceSummary      `json:"packages"`
+	Actions      []setupAction          `json:"actions"`
+	NextCommands []string               `json:"next_commands"`
+}
+
 type resourceSummary struct {
 	ID    string `json:"id"`
 	Label string `json:"label"`
@@ -63,6 +93,7 @@ Setup commands compose lower-level RevenueCat API operations into repeatable
 project configuration flows.`,
 	}
 	root.AddCommand(newProductCmd(projectID, outputFormat))
+	root.AddCommand(newSubscriptionSetCmd(projectID, outputFormat))
 	return root
 }
 
@@ -152,6 +183,194 @@ package key.`,
 	cmd.Flags().StringVar(&opts.PackageName, "package-name", opts.PackageName, "package display name")
 	cmd.Flags().BoolVar(&opts.MakeCurrent, "make-current", false, "make the offering current after setup")
 	return cmd
+}
+
+func newSubscriptionSetCmd(projectID, outputFormat *string) *cobra.Command {
+	opts := subscriptionSetOptions{
+		Type:               "subscription",
+		EntitlementKey:     "premium",
+		EntitlementName:    "Premium",
+		OfferingKey:        "default",
+		OfferingName:       "Default",
+		MonthlyPackageKey:  "$rc_monthly",
+		MonthlyPackageName: "Monthly",
+		AnnualPackageKey:   "$rc_annual",
+		AnnualPackageName:  "Annual",
+	}
+
+	cmd := &cobra.Command{
+		Use:   "subscription-set",
+		Short: "Set up monthly and annual subscription access",
+		Long: `Set up monthly and annual subscription access.
+
+This workflow creates or reuses one entitlement, one offering, monthly and
+annual products, and the matching RevenueCat packages. It attaches both
+products to the entitlement and to their packages, so users do not need to
+remember the product/entitlement/offering/package object graph.`,
+		Example: `  # Set up a standard monthly + annual subscription set
+  rc setup subscription-set \
+    --app-id app1a2b3c4 \
+    --monthly-store-id com.example.app.monthly \
+    --annual-store-id com.example.app.annual \
+    --entitlement-key premium \
+    --offering-key default \
+    --make-current`,
+		RunE: func(c *cobra.Command, args []string) error {
+			if err := cmdutil.PromptIfEmpty(&opts.AppID, "App ID", "app1a2b3c4d5"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptIfEmpty(&opts.MonthlyStoreID, "Monthly store product identifier", "com.example.premium.monthly"); err != nil {
+				return err
+			}
+			if err := cmdutil.PromptIfEmpty(&opts.AnnualStoreID, "Annual store product identifier", "com.example.premium.annual"); err != nil {
+				return err
+			}
+			if opts.EntitlementName == "" {
+				opts.EntitlementName = opts.EntitlementKey
+			}
+			if opts.OfferingName == "" {
+				opts.OfferingName = opts.OfferingKey
+			}
+			if opts.MonthlyPackageName == "" {
+				opts.MonthlyPackageName = opts.MonthlyPackageKey
+			}
+			if opts.AnnualPackageName == "" {
+				opts.AnnualPackageName = opts.AnnualPackageKey
+			}
+
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+
+			report, err := runSubscriptionSetSetup(client, pid, opts)
+			if err != nil {
+				return err
+			}
+			format := cmdutil.GetOutputFormat(outputFormat)
+			output.Print(format, report, renderSubscriptionSetReport(report))
+			if !api.DryRun {
+				output.Success("Subscription set setup complete")
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&opts.AppID, "app-id", "", "RevenueCat app ID (required)")
+	cmd.Flags().StringVar(&opts.MonthlyStoreID, "monthly-store-id", "", "monthly store product identifier (required)")
+	cmd.Flags().StringVar(&opts.AnnualStoreID, "annual-store-id", "", "annual store product identifier (required)")
+	cmd.Flags().StringVar(&opts.Type, "type", opts.Type, "product type: subscription, one_time, consumable, non_consumable")
+	cmd.Flags().StringVar(&opts.EntitlementKey, "entitlement-key", opts.EntitlementKey, "entitlement lookup key")
+	cmd.Flags().StringVar(&opts.EntitlementName, "entitlement-name", opts.EntitlementName, "entitlement display name")
+	cmd.Flags().StringVar(&opts.OfferingKey, "offering-key", opts.OfferingKey, "offering lookup key")
+	cmd.Flags().StringVar(&opts.OfferingName, "offering-name", opts.OfferingName, "offering display name")
+	cmd.Flags().StringVar(&opts.MonthlyPackageKey, "monthly-package-key", opts.MonthlyPackageKey, "monthly package lookup key")
+	cmd.Flags().StringVar(&opts.MonthlyPackageName, "monthly-package-name", opts.MonthlyPackageName, "monthly package display name")
+	cmd.Flags().StringVar(&opts.AnnualPackageKey, "annual-package-key", opts.AnnualPackageKey, "annual package lookup key")
+	cmd.Flags().StringVar(&opts.AnnualPackageName, "annual-package-name", opts.AnnualPackageName, "annual package display name")
+	cmd.Flags().BoolVar(&opts.MakeCurrent, "make-current", false, "make the offering current after setup")
+	return cmd
+}
+
+func runSubscriptionSetSetup(client *api.Client, projectID string, opts subscriptionSetOptions) (*subscriptionSetReport, error) {
+	actions := &productSetupReport{Status: "ok"}
+	entitlement, entitlementExists, err := ensureEntitlement(client, projectID, productOptions{
+		EntitlementKey:  opts.EntitlementKey,
+		EntitlementName: opts.EntitlementName,
+	}, actions)
+	if err != nil {
+		return nil, err
+	}
+	offering, offeringExists, err := ensureOffering(client, projectID, productOptions{
+		OfferingKey:  opts.OfferingKey,
+		OfferingName: opts.OfferingName,
+	}, actions)
+	if err != nil {
+		return nil, err
+	}
+
+	monthlyProduct, monthlyPackage, err := ensureSubscriptionSetItem(client, projectID, opts, subscriptionSetItem{
+		StoreID:     opts.MonthlyStoreID,
+		PackageKey:  opts.MonthlyPackageKey,
+		PackageName: opts.MonthlyPackageName,
+	}, offering.ID, entitlement.ID, entitlementExists, actions)
+	if err != nil {
+		return nil, err
+	}
+	annualProduct, annualPackage, err := ensureSubscriptionSetItem(client, projectID, opts, subscriptionSetItem{
+		StoreID:     opts.AnnualStoreID,
+		PackageKey:  opts.AnnualPackageKey,
+		PackageName: opts.AnnualPackageName,
+	}, offering.ID, entitlement.ID, entitlementExists, actions)
+	if err != nil {
+		return nil, err
+	}
+	if opts.MakeCurrent {
+		if err := ensureOfferingCurrent(client, projectID, offering, offeringExists, actions); err != nil {
+			return nil, err
+		}
+	}
+
+	report := &subscriptionSetReport{
+		Object:    "subscription_set_setup",
+		ProjectID: projectID,
+		DryRun:    api.DryRun,
+		Status:    actions.Status,
+		Options:   opts,
+		Products: []resourceSummary{
+			{ID: monthlyProduct.ID, Label: opts.MonthlyStoreID, State: monthlyProduct.State},
+			{ID: annualProduct.ID, Label: opts.AnnualStoreID, State: annualProduct.State},
+		},
+		Entitlement: resourceSummary{ID: entitlement.ID, Label: opts.EntitlementKey, State: entitlement.State},
+		Offering:    resourceSummary{ID: offering.ID, Label: opts.OfferingKey, State: offering.State},
+		Packages: []resourceSummary{
+			{ID: monthlyPackage.ID, Label: opts.MonthlyPackageKey},
+			{ID: annualPackage.ID, Label: opts.AnnualPackageKey},
+		},
+		Actions: actions.Actions,
+		NextCommands: []string{
+			fmt.Sprintf("rc entitlements products %s --all", entitlement.ID),
+			fmt.Sprintf("rc offerings publish %s", offering.ID),
+			"rc launch-check",
+		},
+	}
+	return report, nil
+}
+
+type subscriptionSetItem struct {
+	StoreID     string
+	PackageKey  string
+	PackageName string
+}
+
+func ensureSubscriptionSetItem(client *api.Client, projectID string, opts subscriptionSetOptions, item subscriptionSetItem, offeringID, entitlementID string, entitlementExists bool, report *productSetupReport) (api.Product, api.Package, error) {
+	productOpts := productOptions{
+		AppID:       opts.AppID,
+		StoreID:     item.StoreID,
+		Type:        opts.Type,
+		DisplayName: item.StoreID,
+		PackageKey:  item.PackageKey,
+		PackageName: item.PackageName,
+	}
+	product, productExists, err := ensureProduct(client, projectID, productOpts, report)
+	if err != nil {
+		return api.Product{}, api.Package{}, err
+	}
+	pkg, packageExists, err := ensurePackage(client, projectID, offeringID, productOpts, report)
+	if err != nil {
+		return api.Product{}, api.Package{}, err
+	}
+	if err := ensureEntitlementProduct(client, projectID, entitlementID, product.ID, entitlementExists && productExists, report); err != nil {
+		return api.Product{}, api.Package{}, err
+	}
+	if err := ensurePackageProduct(client, projectID, pkg.ID, product.ID, packageExists && productExists, report); err != nil {
+		return api.Product{}, api.Package{}, err
+	}
+	return product, pkg, nil
 }
 
 func runProductSetup(client *api.Client, projectID string, opts productOptions) (*productSetupReport, error) {
@@ -412,5 +631,26 @@ func renderProductSetupReport(report *productSetupReport) func(t table.Writer) {
 			{"resource", "package", report.Package.ID, report.Package.Label},
 		})
 		t.AppendFooter(table.Row{report.Status, "setup", "product", fmt.Sprintf("%d action(s)", len(report.Actions))})
+	}
+}
+
+func renderSubscriptionSetReport(report *subscriptionSetReport) func(t table.Writer) {
+	return func(t table.Writer) {
+		t.AppendHeader(table.Row{"Status", "Area", "Action", "Message"})
+		for _, action := range report.Actions {
+			t.AppendRow(table.Row{action.Status, action.Area, action.Action, action.Message})
+		}
+		t.AppendSeparator()
+		t.AppendRows([]table.Row{
+			{"resource", "entitlement", report.Entitlement.ID, report.Entitlement.Label},
+			{"resource", "offering", report.Offering.ID, report.Offering.Label},
+		})
+		for _, product := range report.Products {
+			t.AppendRow(table.Row{"resource", "product", product.ID, product.Label})
+		}
+		for _, pkg := range report.Packages {
+			t.AppendRow(table.Row{"resource", "package", pkg.ID, pkg.Label})
+		}
+		t.AppendFooter(table.Row{report.Status, "setup", "subscription-set", fmt.Sprintf("%d action(s)", len(report.Actions))})
 	}
 }

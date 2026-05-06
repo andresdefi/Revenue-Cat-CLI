@@ -86,6 +86,54 @@ func TestSetupProductMissingStoreID(t *testing.T) {
 	cmdtest.AssertErrorContains(t, result, "missing required value: Store product identifier")
 }
 
+func TestSetupSubscriptionSetCreatesMonthlyAndAnnualPath(t *testing.T) {
+	result := cmdtest.Run(t,
+		[]string{
+			"setup", "subscription-set",
+			"--app-id", "app_new",
+			"--monthly-store-id", "com.example.pro.monthly",
+			"--annual-store-id", "com.example.pro.annual",
+			"--entitlement-key", "pro",
+			"--offering-key", "default",
+			"--make-current",
+			"--output", "json",
+		},
+		cmdtest.WithHandler(newSetupSubscriptionSetCreateHandler()),
+	)
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"object": "subscription_set_setup"`)
+	cmdtest.AssertOutputContains(t, result, `"status": "changed"`)
+	cmdtest.AssertRequestCountAtLeast(t, result, http.MethodPost, "/projects/proj_cmdtest/products", 2)
+	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/entitlements")
+	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings")
+	cmdtest.AssertRequestCountAtLeast(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings/ofrnge_new/packages", 2)
+	cmdtest.AssertRequestCountAtLeast(t, result, http.MethodPost, "/projects/proj_cmdtest/entitlements/entl_new/actions/attach_products", 2)
+	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/packages/pkge_monthly/actions/attach_products")
+	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/packages/pkge_annual/actions/attach_products")
+	cmdtest.AssertRequested(t, result, http.MethodPost, "/projects/proj_cmdtest/offerings/ofrnge_new")
+}
+
+func TestSetupSubscriptionSetDryRunDoesNotMutate(t *testing.T) {
+	result := cmdtest.Run(t, []string{
+		"--dry-run",
+		"setup", "subscription-set",
+		"--app-id", "app_missing",
+		"--monthly-store-id", "com.example.dryrun.monthly",
+		"--annual-store-id", "com.example.dryrun.annual",
+		"--output", "json",
+	}, cmdtest.WithHandler(setupEmptyHandler))
+	cmdtest.AssertSuccess(t, result)
+	cmdtest.AssertOutputContains(t, result, `"object": "subscription_set_setup"`)
+	cmdtest.AssertOutputContains(t, result, `"dry_run": true`)
+	cmdtest.AssertOutputContains(t, result, `"status": "planned"`)
+
+	for _, req := range result.Requests {
+		if req.Method == http.MethodPost || req.Method == http.MethodDelete {
+			t.Fatalf("dry-run should not mutate, got %s %s", req.Method, req.Path)
+		}
+	}
+}
+
 func setupEmptyHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeSetupJSON(w, map[string]any{"object": "error", "type": "unexpected", "message": "unexpected mutation"})
@@ -112,6 +160,47 @@ func setupCreateHandler(w http.ResponseWriter, r *http.Request) {
 		writeSetupJSON(w, map[string]any{"object": "offering", "id": "ofrnge_new", "project_id": cmdtest.TestProjectID, "lookup_key": "pro", "display_name": "pro", "is_current": true, "state": "active", "created_at": 1713072000000})
 	default:
 		writeSetupJSON(w, map[string]any{"object": "error", "type": "not_found", "message": "not found"})
+	}
+}
+
+func newSetupSubscriptionSetCreateHandler() http.HandlerFunc {
+	productCreates := 0
+	packageCreates := 0
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet:
+			writeSetupJSON(w, setupList())
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/products"):
+			productCreates++
+			productID := "prod_monthly"
+			storeID := "com.example.pro.monthly"
+			if productCreates == 2 {
+				productID = "prod_annual"
+				storeID = "com.example.pro.annual"
+			}
+			writeSetupJSON(w, map[string]any{"object": "product", "id": productID, "store_identifier": storeID, "type": "subscription", "state": "active", "display_name": storeID, "app_id": "app_new", "created_at": 1713072000000})
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/entitlements"):
+			writeSetupJSON(w, map[string]any{"object": "entitlement", "id": "entl_new", "project_id": cmdtest.TestProjectID, "lookup_key": "pro", "display_name": "Premium", "state": "active", "created_at": 1713072000000})
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/offerings"):
+			writeSetupJSON(w, map[string]any{"object": "offering", "id": "ofrnge_new", "project_id": cmdtest.TestProjectID, "lookup_key": "default", "display_name": "Default", "is_current": false, "state": "active", "created_at": 1713072000000})
+		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/packages"):
+			packageCreates++
+			packageID := "pkge_monthly"
+			lookupKey := "$rc_monthly"
+			displayName := "Monthly"
+			if packageCreates == 2 {
+				packageID = "pkge_annual"
+				lookupKey = "$rc_annual"
+				displayName = "Annual"
+			}
+			writeSetupJSON(w, map[string]any{"object": "package", "id": packageID, "lookup_key": lookupKey, "display_name": displayName, "created_at": 1713072000000})
+		case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/actions/attach_products"):
+			writeSetupJSON(w, map[string]any{"object": "ok"})
+		case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/offerings/ofrnge_new"):
+			writeSetupJSON(w, map[string]any{"object": "offering", "id": "ofrnge_new", "project_id": cmdtest.TestProjectID, "lookup_key": "default", "display_name": "Default", "is_current": true, "state": "active", "created_at": 1713072000000})
+		default:
+			writeSetupJSON(w, map[string]any{"object": "error", "type": "not_found", "message": "not found"})
+		}
 	}
 }
 

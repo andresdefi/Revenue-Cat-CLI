@@ -687,8 +687,10 @@ func TestNewRootCmd_SetupSubcommand(t *testing.T) {
 	for _, c := range setupCmd.Commands() {
 		subNames[c.Name()] = true
 	}
-	if !subNames["product"] {
-		t.Error("setup should have 'product' subcommand")
+	for _, name := range []string{"product", "subscription-set"} {
+		if !subNames[name] {
+			t.Errorf("setup should have %q subcommand", name)
+		}
 	}
 }
 
