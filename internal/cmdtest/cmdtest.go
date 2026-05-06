@@ -183,6 +183,7 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 	oldForceYes := cmdutil.ForceYes
 	oldNoHints := cmdutil.NoHints
 	oldFieldsFlag := cmdutil.FieldsFlag
+	oldSafetyProjectName := cmdutil.SafetyProjectName
 	api.BaseURL = server.URL
 	api.DryRun = false
 	output.PrettyJSON = true
@@ -205,6 +206,7 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 		cmdutil.NoHints = oldNoHints
 		cmdutil.FieldsFlag = oldFieldsFlag
 		cmdutil.ActiveProfile = ""
+		cmdutil.SafetyProjectName = oldSafetyProjectName
 	})
 
 	home := t.TempDir()
@@ -468,6 +470,8 @@ func handleGET(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case p == "/projects":
 		writeJSON(w, http.StatusOK, list(project()))
+	case strings.HasPrefix(p, "/projects/") && !strings.Contains(strings.TrimPrefix(p, "/projects/"), "/"):
+		writeJSON(w, http.StatusOK, project())
 	case strings.HasSuffix(p, "/apps"):
 		writeJSON(w, http.StatusOK, list(app()))
 	case strings.Contains(p, "/apps/") && strings.HasSuffix(p, "/public_api_keys"):
