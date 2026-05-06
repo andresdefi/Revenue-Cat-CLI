@@ -2628,6 +2628,7 @@ Examples:
   rc subscriptions list --store-subscription-id 100001234567890
   rc subscriptions get sub1ab2c3d4e5
   rc subscriptions transactions sub1ab2c3d4e5
+  rc subscriptions extend sub1ab2c3d4e5 --days 14
   rc subscriptions cancel sub1ab2c3d4e5
   rc subscriptions refund sub1ab2c3d4e5
 
@@ -2651,6 +2652,33 @@ List entitlements for a subscription
 ```bash
 # List entitlements for a subscription
   rc subscriptions entitlements sub1ab2c3d4e5
+```
+
+#### rc subscriptions extend
+
+Extend the current billing period of a subscription
+
+Extend the current billing period of a subscription
+
+Default fields preset: id,customer_id,status,current_period_ends_at,store
+
+**Flags**
+
+- `--days`: number of days to extend the current billing period Default: `0`.
+- `--reason`: extension reason code for Apple subscriptions
+- `--until-ms`: epoch-millisecond timestamp to extend the current billing period until Default: `0`.
+
+**Examples**
+
+```bash
+# Extend by 14 days
+  rc subscriptions extend sub1ab2c3d4e5 --days 14
+
+  # Extend until an absolute epoch-millisecond timestamp
+  rc subscriptions extend sub1ab2c3d4e5 --until-ms 1735689600000
+
+  # Include an Apple extension reason code
+  rc subscriptions extend sub1ab2c3d4e5 --days 14 --reason customer_satisfaction
 ```
 
 #### rc subscriptions get

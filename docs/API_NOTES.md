@@ -67,6 +67,21 @@ Confirmed and fixed in the CLI:
   fields. `--service-account-file` returns a clear error instead of sending an
   undocumented credential payload.
 
+## API Drift Detection
+
+- `make api-coverage` fetches RevenueCat's OpenAPI specification and writes
+  `docs/API_COVERAGE.md`.
+- `make api-drift` runs the same scan in check mode and exits non-zero when a
+  public OpenAPI endpoint is not statically discoverable in the CLI.
+- The scheduled `API Drift` GitHub Actions workflow runs weekly against the
+  live spec, uploads the generated coverage report, and opens one `api-drift`
+  issue when drift is detected.
+- The drift checker also compares same-named schema fields in the OpenAPI spec
+  with JSON tags in `internal/api/types.go` and prints warnings for fields that
+  are missing locally.
+- When adding or changing endpoint coverage, update the command implementation,
+  fixture/golden tests, docs, and then regenerate `docs/API_COVERAGE.md`.
+
 ## Pagination
 
 - List responses use `{ "object": "list", "items": [...], "next_page": ... }`.

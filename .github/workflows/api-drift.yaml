@@ -1,0 +1,58 @@
+name: API Drift
+
+on:
+  schedule:
+    - cron: "23 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Check RevenueCat OpenAPI coverage
+        id: drift
+        run: |
+          set -o pipefail
+          go run ./scripts/check-api-drift --check --out docs/API_COVERAGE.md 2>&1 | tee api-drift.log
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: |
+            docs/API_COVERAGE.md
+            api-drift.log
+
+      - name: Open drift issue
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create api-drift --color B60205 --description "RevenueCat OpenAPI drift" || true
+          existing="$(gh issue list --state open --label api-drift --json number --jq 'length')"
+          if [ "$existing" != "0" ]; then
+            echo "An open api-drift issue already exists."
+            exit 0
+          fi
+          {
+            echo "RevenueCat's OpenAPI spec no longer matches rc's implemented coverage."
+            echo
+            echo "Run: $RUN_URL"
+            echo
+            echo '```'
+            cat api-drift.log
+            echo '```'
+          } > api-drift-issue.md
+          gh issue create --title "RevenueCat API drift detected" --label api-drift --body-file api-drift-issue.md

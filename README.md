@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/andresdefi/Revenue-Cat-CLI?style=for-the-badge)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/andresdefi/Revenue-Cat-CLI/ci.yaml?branch=main&style=for-the-badge&label=CI)](https://github.com/andresdefi/Revenue-Cat-CLI/actions/workflows/ci.yaml)
 
-An unofficial command-line interface for the [RevenueCat REST API v2](https://www.revenuecat.com/docs/api-v2) with **100% API coverage** (95 endpoints). Manage your projects, products, entitlements, offerings, customers, subscriptions, and more from the terminal.
+An unofficial command-line interface for the [RevenueCat REST API v2](https://www.revenuecat.com/docs/api-v2) with **100% API coverage** (96 endpoints). Manage your projects, products, entitlements, offerings, customers, subscriptions, and more from the terminal.
 
 ## Table of Contents
 
@@ -374,6 +374,7 @@ rc import plan --file project-config.json --project proj_target --app-map app_so
 | [docs/COMMANDS.md](docs/COMMANDS.md) | Generated command reference from Cobra help |
 | [docs/AGENT_FIELDS.md](docs/AGENT_FIELDS.md) | Default field presets and available JSON fields for agent/script use |
 | [docs/WORKFLOWS.md](docs/WORKFLOWS.md) | Copyable RevenueCat workflow recipes |
+| [docs/API_COVERAGE.md](docs/API_COVERAGE.md) | Generated OpenAPI endpoint coverage report |
 | [docs/API_NOTES.md](docs/API_NOTES.md) | API semantics, pagination, transfer, and error notes |
 | [docs/CI_CD.md](docs/CI_CD.md) | CI/CD setup and non-interactive usage |
 | [docs/MCP.md](docs/MCP.md) | MCP server setup and exposed tool inventory |
@@ -669,7 +670,7 @@ brew reinstall andresdefi/tap/rc
 
 ## API Coverage
 
-**100% coverage** of the RevenueCat REST API v2 - all 95 endpoints across 16 resource groups, plus 110+ subcommands including bulk operations, data transfer, and MCP tools. Verified against the [official OpenAPI spec](https://www.revenuecat.com/docs/api-v2).
+**100% coverage** of the RevenueCat REST API v2 - all 96 endpoints across 16 resource groups, plus 110+ subcommands including bulk operations, data transfer, and MCP tools. Verified against the [official OpenAPI spec](https://www.revenuecat.com/docs/api-v2) by the scheduled API drift workflow and the generated [coverage report](docs/API_COVERAGE.md).
 
 ## Contributing
 

@@ -26,6 +26,7 @@ Examples:
   rc subscriptions list --store-subscription-id 100001234567890
   rc subscriptions get sub1ab2c3d4e5
   rc subscriptions transactions sub1ab2c3d4e5
+  rc subscriptions extend sub1ab2c3d4e5 --days 14
   rc subscriptions cancel sub1ab2c3d4e5
   rc subscriptions refund sub1ab2c3d4e5`,
 	}
@@ -35,6 +36,7 @@ Examples:
 	root.AddCommand(completions.WithCompletion(newGetCmd(projectID, outputFormat), c))
 	root.AddCommand(completions.WithCompletion(newTransactionsCmd(projectID, outputFormat), c))
 	root.AddCommand(completions.WithCompletion(newEntitlementsCmd(projectID, outputFormat), c))
+	root.AddCommand(completions.WithCompletion(newExtendCmd(projectID, outputFormat), c))
 	root.AddCommand(completions.WithCompletion(newCancelCmd(projectID), c))
 	root.AddCommand(completions.WithCompletion(newRefundCmd(projectID), c))
 	root.AddCommand(completions.WithCompletion(newRefundTransactionCmd(projectID), c))
@@ -319,6 +321,81 @@ func newEntitlementsCmd(projectID, outputFormat *string) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newExtendCmd(projectID, outputFormat *string) *cobra.Command {
+	var (
+		days    int
+		untilMS int64
+		reason  string
+	)
+	cmd := &cobra.Command{
+		Use:   "extend <subscription-id>",
+		Short: "Extend the current billing period of a subscription",
+		Example: `  # Extend by 14 days
+  rc subscriptions extend sub1ab2c3d4e5 --days 14
+
+  # Extend until an absolute epoch-millisecond timestamp
+  rc subscriptions extend sub1ab2c3d4e5 --until-ms 1735689600000
+
+  # Include an Apple extension reason code
+  rc subscriptions extend sub1ab2c3d4e5 --days 14 --reason customer_satisfaction`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(c *cobra.Command, args []string) error {
+			switch {
+			case days <= 0 && untilMS <= 0:
+				return fmt.Errorf("pass exactly one of --days or --until-ms")
+			case days > 0 && untilMS > 0:
+				return fmt.Errorf("pass exactly one of --days or --until-ms")
+			}
+			if err := cmdutil.ConfirmDestructive("Extend", "subscription", args[0]); err != nil {
+				return err
+			}
+			pid, err := cmdutil.ResolveProject(projectID)
+			if err != nil {
+				return err
+			}
+			client, err := api.NewClient()
+			if err != nil {
+				return err
+			}
+			body := map[string]any{}
+			if days > 0 {
+				body["extend_by_days"] = days
+			} else {
+				body["extend_until_ms"] = untilMS
+			}
+			if reason != "" {
+				body["extend_reason_code"] = reason
+			}
+			data, err := client.Post(fmt.Sprintf("/projects/%s/subscriptions/%s/actions/extend", url.PathEscape(pid), url.PathEscape(args[0])), body)
+			if err != nil {
+				return err
+			}
+			var sub api.Subscription
+			if err := json.Unmarshal(data, &sub); err != nil {
+				return fmt.Errorf("failed to parse response: %w", err)
+			}
+			format := cmdutil.GetOutputFormat(outputFormat)
+			output.Print(format, sub, func(t table.Writer) {
+				t.AppendHeader(table.Row{"Field", "Value"})
+				t.AppendRows([]table.Row{
+					{"ID", sub.ID},
+					{"Customer", sub.CustomerID},
+					{"Status", sub.Status},
+					{"Current Period Ends At", formatOptionalTimestamp(sub.CurrentPeriodEndsAt)},
+				})
+			})
+			output.Success("Subscription %s extended", args[0])
+			output.Next("rc subscriptions get %s to verify", args[0])
+			return nil
+		},
+	}
+	cmd.Flags().IntVar(&days, "days", 0, "number of days to extend the current billing period")
+	cmd.Flags().Int64Var(&untilMS, "until-ms", 0, "epoch-millisecond timestamp to extend the current billing period until")
+	cmd.Flags().StringVar(&reason, "reason", "", "extension reason code for Apple subscriptions")
+	cmdutil.SetFieldsPreset(cmd, []string{"id", "customer_id", "status", "current_period_ends_at", "store"})
+	return cmd
 }
 
 func newCancelCmd(projectID *string) *cobra.Command {
