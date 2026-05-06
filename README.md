@@ -105,6 +105,7 @@ Create/setup commands prompt for missing required values when run in a terminal.
 | `rc config profiles` | List configured profiles |
 | `rc launch-check` | Check whether project setup has the required launch paths |
 | `rc setup product` | Create or reuse a complete product access path |
+| `rc setup subscription-set` | Create or reuse monthly and annual subscription access |
 
 ### Authentication
 

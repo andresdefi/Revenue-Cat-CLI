@@ -87,6 +87,19 @@ rc setup product \
 package, and product attachments needed for a working access path. Use the
 lower-level commands below when you need separate review or custom sequencing.
 
+For the common monthly plus annual subscription setup, use the subscription-set
+workflow so both store products share one entitlement and offering:
+
+```bash
+rc setup subscription-set \
+  --app-id app1a2b3c4d5 \
+  --monthly-store-id com.example.app.monthly \
+  --annual-store-id com.example.app.annual \
+  --entitlement-key premium \
+  --offering-key default \
+  --make-current
+```
+
 ```bash
 rc products create \
   --app-id app1a2b3c4d5 \

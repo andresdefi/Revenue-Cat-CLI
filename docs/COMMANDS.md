@@ -2578,6 +2578,46 @@ package key.
   rc setup product --app-id app1a2b3c4 --store-id com.example.app.monthly --make-current
 ```
 
+#### rc setup subscription-set
+
+Set up monthly and annual subscription access
+
+Set up monthly and annual subscription access.
+
+This workflow creates or reuses one entitlement, one offering, monthly and
+annual products, and the matching RevenueCat packages. It attaches both
+products to the entitlement and to their packages, so users do not need to
+remember the product/entitlement/offering/package object graph.
+
+**Flags**
+
+- `--annual-package-key`: annual package lookup key Default: `$rc_annual`.
+- `--annual-package-name`: annual package display name Default: `Annual`.
+- `--annual-store-id`: annual store product identifier (required)
+- `--app-id`: RevenueCat app ID (required)
+- `--entitlement-key`: entitlement lookup key Default: `premium`.
+- `--entitlement-name`: entitlement display name Default: `Premium`.
+- `--make-current`: make the offering current after setup Default: `false`.
+- `--monthly-package-key`: monthly package lookup key Default: `$rc_monthly`.
+- `--monthly-package-name`: monthly package display name Default: `Monthly`.
+- `--monthly-store-id`: monthly store product identifier (required)
+- `--offering-key`: offering lookup key Default: `default`.
+- `--offering-name`: offering display name Default: `Default`.
+- `--type`: product type: subscription, one_time, consumable, non_consumable Default: `subscription`.
+
+**Examples**
+
+```bash
+# Set up a standard monthly + annual subscription set
+  rc setup subscription-set \
+    --app-id app1a2b3c4 \
+    --monthly-store-id com.example.app.monthly \
+    --annual-store-id com.example.app.annual \
+    --entitlement-key premium \
+    --offering-key default \
+    --make-current
+```
+
 ### rc subscriptions
 
 Manage subscriptions
