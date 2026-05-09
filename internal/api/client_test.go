@@ -134,10 +134,9 @@ func TestClient_Post_NilBody(t *testing.T) {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
 
-		// With nil body, Content-Type should not be set
 		ct := r.Header.Get("Content-Type")
-		if ct == "application/json" {
-			t.Errorf("Content-Type should not be application/json for nil body")
+		if ct != "application/json" {
+			t.Errorf("Content-Type = %q, want application/json", ct)
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -156,6 +155,9 @@ func TestClient_Delete_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "DELETE" {
 			t.Errorf("expected DELETE, got %s", r.Method)
+		}
+		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
+			t.Errorf("Content-Type = %q, want application/json", ct)
 		}
 		if r.URL.Path != "/projects/proj_123" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
