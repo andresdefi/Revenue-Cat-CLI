@@ -207,6 +207,7 @@ func TestGoldenArchiveActionRequestBodies(t *testing.T) {
 			result := cmdtest.Run(t, tt.args)
 			cmdtest.AssertSuccess(t, result)
 			cmdtest.AssertRequestBody(t, result, http.MethodPost, tt.path, "")
+			cmdtest.AssertRequestHeader(t, result, http.MethodPost, tt.path, "Content-Type", "application/json")
 		})
 	}
 }

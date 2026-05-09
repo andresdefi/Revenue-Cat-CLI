@@ -33,6 +33,7 @@ type Request struct {
 	Path   string
 	Query  string
 	Body   string
+	Header http.Header
 }
 
 type Result struct {
@@ -153,6 +154,7 @@ func Run(t *testing.T, args []string, opts ...Option) Result {
 			Path:   r.URL.Path,
 			Query:  r.URL.RawQuery,
 			Body:   string(body),
+			Header: r.Header.Clone(),
 		})
 		key := r.Method + " " + r.URL.Path
 		requestCounts[key]++
@@ -327,6 +329,20 @@ func AssertRequestBody(t *testing.T, result Result, method, requestPath, want st
 		}
 		if req.Body != want {
 			t.Fatalf("request body for %s %s = %q, want %q", method, requestPath, req.Body, want)
+		}
+		return
+	}
+	t.Fatalf("missing request %s %s; got %#v", method, requestPath, result.Requests)
+}
+
+func AssertRequestHeader(t *testing.T, result Result, method, requestPath, key, want string) {
+	t.Helper()
+	for _, req := range result.Requests {
+		if req.Method != method || req.Path != requestPath {
+			continue
+		}
+		if got := req.Header.Get(key); got != want {
+			t.Fatalf("request header %s for %s %s = %q, want %q", key, method, requestPath, got, want)
 		}
 		return
 	}

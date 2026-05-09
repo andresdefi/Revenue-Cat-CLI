@@ -251,7 +251,7 @@ func (c *Client) do(method, path string, query url.Values, body any) ([]byte, er
 
 		req.Header.Set("Authorization", "Bearer "+c.token)
 		req.Header.Set("User-Agent", UserAgent)
-		if body != nil {
+		if method != "GET" {
 			req.Header.Set("Content-Type", "application/json")
 		}
 
